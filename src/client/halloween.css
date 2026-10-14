@@ -108,13 +108,13 @@ body.halloween-theme:not(.in-game) play-page > div > div.fixed.bg-surface {
 }
 
 /* Nav Bar Logo Image (Blue -> Orange with Jack-o'-Lantern candlelight flicker) */
-body.halloween-theme:not(.in-game) desktop-nav-bar img[src*="OpenFrontLogo"],
-body.halloween-theme:not(.in-game) mobile-nav-bar img[src*="OpenFrontLogo"],
+body.halloween-theme:not(.in-game) desktop-nav-bar img[src*="BorderfallLogo"],
+body.halloween-theme:not(.in-game) mobile-nav-bar img[src*="BorderfallLogo"],
 body.halloween-theme:not(.in-game)
   play-page
   div.fixed
-  img[src*="OpenFrontLogo"],
-body.halloween-theme:not(.in-game) img[src*="OpenFrontLogo"] {
+  img[src*="BorderfallLogo"],
+body.halloween-theme:not(.in-game) img[src*="BorderfallLogo"] {
   filter: hue-rotate(150deg) saturate(1.7) brightness(1.3)
     drop-shadow(0 0 10px rgba(255, 122, 0, 0.8));
   animation: hw-candle-flicker 3.2s infinite ease-in-out !important;
@@ -737,13 +737,13 @@ body.halloween-theme:not(.in-game) h1::before {
 
 @media (prefers-reduced-motion: reduce) {
   body.halloween-theme:not(.in-game) h1::before,
-  body.halloween-theme:not(.in-game) desktop-nav-bar img[src*="OpenFrontLogo"],
-  body.halloween-theme:not(.in-game) mobile-nav-bar img[src*="OpenFrontLogo"],
+  body.halloween-theme:not(.in-game) desktop-nav-bar img[src*="BorderfallLogo"],
+  body.halloween-theme:not(.in-game) mobile-nav-bar img[src*="BorderfallLogo"],
   body.halloween-theme:not(.in-game)
     play-page
     div.fixed
-    img[src*="OpenFrontLogo"],
-  body.halloween-theme:not(.in-game) img[src*="OpenFrontLogo"],
+    img[src*="BorderfallLogo"],
+  body.halloween-theme:not(.in-game) img[src*="BorderfallLogo"],
   body.halloween-theme:not(.in-game) .l-header__highlightText {
     animation: none !important;
   }

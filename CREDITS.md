@@ -2,8 +2,18 @@
 
 ## Code
 
-OpenFront is licensed under AGPL-3.0.  
-See [Contributors](https://github.com/openfrontio/OpenFrontIO/graphs/contributors) for code contributors.
+Borderfall is a fork of [OpenFront](https://github.com/openfrontio/OpenFrontIO), © OpenFront and
+Contributors, licensed under AGPL-3.0.  
+See [Contributors](https://github.com/openfrontio/OpenFrontIO/graphs/contributors) for OpenFront code contributors.
+
+## Art Assets
+
+Assets in `resources/` are by OpenFront and Contributors, licensed under CC BY-SA 4.0.
+
+## Fonts
+
+[Chakra Petch](https://github.com/m4rc1e/Chakra-Petch) by The Chakra Petch Project Authors  
+Licensed under the [SIL Open Font License 1.1](resources/fonts/ChakraPetch-OFL.txt)
 
 ## Map Data
 

@@ -18,6 +18,7 @@ export default [
       "src/server/gatekeeper/**",
       "tests/pathfinding/playground/**",
       ".claude/**",
+      "legacy/**",
     ],
   },
   { files: ["**/*.{js,mjs,cjs,ts}"] },

@@ -1,24 +1,48 @@
 <p align="center">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="proprietary/images/OpenFrontLogoDark.svg">
-    <source media="(prefers-color-scheme: light)" srcset="proprietary/images/OpenFrontLogo.svg">
-    <img src="proprietary/images/OpenFrontLogo.svg" alt="OpenFrontIO Logo" width="300">
-  </picture>
+  <img src="resources/images/BorderfallLogo.png" alt="Borderfall" width="300">
 </p>
 
-[OpenFront.io](https://openfront.io/) is an online real-time strategy game focused on territorial control and alliance building. Players compete to expand their territory, build structures, and form strategic alliances in various maps based on real-world geography.
+Borderfall is an online real-time strategy game about territorial control, trade and alliances. It
+is a fork of [OpenFront](https://github.com/openfrontio/OpenFrontIO) (itself a fork/rewrite of
+[WarFront.io](https://github.com/WarFrontIO)) and is not affiliated with or endorsed by OpenFront.
 
-This is a fork/rewrite of WarFront.io. Credit to https://github.com/WarFrontIO.
-
-![CI](https://github.com/openfrontio/OpenFrontIO/actions/workflows/ci.yml/badge.svg)
-[![Crowdin](https://badges.crowdin.net/openfront-mls/localized.svg)](https://crowdin.com/project/openfront-mls)
-[![CLA assistant](https://cla-assistant.io/readme/badge/openfrontio/OpenFrontIO)](https://cla-assistant.io/openfrontio/OpenFrontIO)
+![CI](https://github.com/kfidak13/TerritoryGame/actions/workflows/ci.yml/badge.svg)
 [![License: AGPL v3](https://img.shields.io/badge/License-AGPL%20v3-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
 [![Assets: CC BY-SA 4.0](https://img.shields.io/badge/Assets-CC%20BY--SA%204.0-lightgrey.svg)](https://creativecommons.org/licenses/by-sa/4.0/)
 
+## What Borderfall adds
+
+Planned on top of OpenFront's game (see `legacy/README.md` for the full design notes):
+
+- **Regional goods.** Food (fertile plains, rivers), Oil (deserts, offshore) and Metal (mountains,
+  hills). No region has all three, so nations have to trade. Food is a soft rule (a shortage slows
+  troop growth). Oil and Metal are hard rules: **Oil moves** (warships, missiles), **Metal stands**
+  (defense posts, SAMs, silos, city upgrades).
+- **Trading and diplomacy.** Player trade offers (any mix of gold, troops, goods, tiles or a
+  ceasefire, with counter-offers), trade pacts that boost goods income, and embargoes.
+- **Smarter AI.** Difficulty changes how well bots and nations decide, never how many troops they
+  get.
+- **Pacing.** Games are tuned to finish in under 40 minutes.
+
+## Syncing with OpenFront
+
+The OpenFront repository is configured as the `upstream` remote, so its fixes and features can be
+merged in:
+
+```bash
+git fetch --no-tags upstream main
+git merge upstream/main
+```
+
+The original Borderfall prototype lives in `legacy/` and is tagged `borderfall-m0`.
+
 ## License
 
-OpenFront source code is licensed under the **GNU Affero General Public License v3.0**
+Borderfall, like OpenFront, is licensed under the **GNU Affero General Public License v3.0**. The
+source code for the running game is available at https://github.com/kfidak13/TerritoryGame.
+
+OpenFront's AGPL additional terms require keeping its copyright notice visible. It currently appears
+in:
 
 Current copyright notices appear in:
 
@@ -31,6 +55,12 @@ See the [LICENSE](LICENSE) for complete requirements.
 
 For asset licensing, see [LICENSE-ASSETS](LICENSE-ASSETS).  
 For license history, see [LICENSING.md](LICENSING.md).
+
+OpenFront's proprietary assets (logo, font, music; its `proprietary/` folder) are not licensed for
+other projects and have been removed. Borderfall uses its own logo and the
+[Chakra Petch](https://fonts.google.com/specimen/Chakra+Petch) font (SIL Open Font License, see
+`resources/fonts/ChakraPetch-OFL.txt`). Menu music, gameplay music and the game-start alert are not
+yet replaced, so those sounds are currently silent.
 
 ## 🌟 Features
 
@@ -57,8 +87,8 @@ npm install --global --ignore-scripts npm@12.1.0
 1. **Clone the repository**
 
    ```bash
-   git clone https://github.com/openfrontio/OpenFrontIO.git
-   cd OpenFrontIO
+   git clone https://github.com/kfidak13/TerritoryGame.git
+   cd TerritoryGame
    ```
 
 2. **Install dependencies**
