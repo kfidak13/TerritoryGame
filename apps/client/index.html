@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Borderfall</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@600;700&family=Inter:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body>
+    <div id="map"></div>
+
+    <section id="join" class="overlay">
+      <form id="join-form" class="card">
+        <h1 class="title">Borderfall</h1>
+        <p class="subtitle">Claim the land. Hold the line.</p>
+        <label for="name-input">Commander name</label>
+        <input id="name-input" maxlength="20" autocomplete="off" required />
+        <button type="submit">Join game</button>
+        <p class="meta">Lobby <span id="game-id"></span></p>
+      </form>
+    </section>
+
+    <section id="disconnected" class="overlay" hidden>
+      <div class="card">
+        <h2>Connection lost</h2>
+        <p class="subtitle">Your territory is safe for a minute. Reconnect to keep playing.</p>
+        <button id="reconnect-btn" type="button">Reconnect</button>
+      </div>
+    </section>
+
+    <div id="hud" hidden>
+      <div class="panel status">
+        <span id="conn-dot" class="dot"></span>
+        <span id="clock">00:00</span>
+        <span class="sep"></span>
+        <span id="lobby-label"></span>
+      </div>
+      <div class="panel players">
+        <h3>Players</h3>
+        <ul id="player-list"></ul>
+      </div>
+      <div class="panel hint" id="hint"></div>
+      <div class="panel tile-info" id="tile-info"></div>
+      <div class="banner" id="desync-banner" hidden>
+        Desync detected at tick <span id="desync-tick"></span>. Reload to resync.
+      </div>
+    </div>
+
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
