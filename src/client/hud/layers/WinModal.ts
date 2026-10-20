@@ -47,6 +47,7 @@ import {
   reconcileXp,
 } from "../../ProvisionalXpAtDeath";
 import { PlaySoundEffectEvent } from "../../sound/Sounds";
+import { STANDALONE } from "../../Standalone";
 import { steamSDK } from "../../SteamSDK";
 import { SendWinnerEvent } from "../../Transport";
 import { GameView } from "../../view";
@@ -397,6 +398,9 @@ export class WinModal extends LitElement implements Controller {
   }
 
   innerHtml() {
+    // Borderfall (standalone): every promo here is OpenFront's (Steam,
+    // Discord, cosmetics, tutorial video), so the slot stays empty.
+    if (STANDALONE) return html``;
     // The Steam desktop build has nothing to wishlist — fall through to the
     // other promos so the box is never empty.
     const canWishlist = !steamSDK.isOnSteam();

@@ -21,6 +21,7 @@ import { ScheduledPublicGameType } from "@openfront/shared/WireSchemas";
 import { logger } from "./Logger";
 import { getMapLandTiles } from "./MapLandTiles";
 import { MapWeightOverrides } from "./MapWeights";
+import { ServerEnv } from "./ServerEnv";
 
 const log = logger.child({});
 
@@ -153,7 +154,8 @@ export class MapPlaylist {
 
   public async gameConfig(type: ScheduledPublicGameType): Promise<GameConfig> {
     this.scheduled++;
-    const trusted = this.scheduled % TRUSTED_PUBLIC_EVERY === 0;
+    const trusted =
+      ServerEnv.trustedLobbies() && this.scheduled % TRUSTED_PUBLIC_EVERY === 0;
     const config = await this.rollConfig(type, trusted);
     if (trusted) {
       config.trusted = true;

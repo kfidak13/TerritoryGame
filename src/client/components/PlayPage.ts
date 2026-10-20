@@ -2,11 +2,7 @@ import { assetUrl } from "@openfront/shared/AssetUrls";
 import { LitElement, html } from "lit";
 import { customElement } from "lit/decorators.js";
 import "./CosmeticBackground";
-import "./NavAccountMenu";
 import "./NavUtilityIcons";
-import "./NewsBox";
-import "./SteamWishlist";
-import "./StreamingNow";
 
 @customElement("play-page")
 export class PlayPage extends LitElement {
@@ -72,7 +68,6 @@ export class PlayPage extends LitElement {
               class="col-start-3 justify-self-end shrink-0 flex items-center gap-0.5"
             >
               <nav-utility-icons size="mobile"></nav-utility-icons>
-              <nav-account-menu variant="mobile"></nav-account-menu>
             </div>
           </div>
         </div>
@@ -88,10 +83,10 @@ export class PlayPage extends LitElement {
             class="lg:hidden h-[calc(env(safe-area-inset-top)+56px)] -mb-4"
           ></div>
 
-          <!-- Left column: news banner + identity row, stacked tight. -->
+          <!-- Left column: identity row. Borderfall (standalone): the news
+               banner and the Streaming Now panel showed OpenFront's news and
+               streams and are left out. -->
           <div class="flex flex-col gap-2 min-w-0">
-            <news-box></news-box>
-
             <!-- Identity row: username over the currently selected cosmetic background. -->
             <div
               class="relative bg-surface border-y border-white/10 overflow-visible flex items-center sm:min-h-[60px] sm:flex-1 sm:z-20 sm:border-y-0 sm:rounded-xl"
@@ -109,21 +104,9 @@ export class PlayPage extends LitElement {
               </div>
             </div>
           </div>
-
-          <!-- Right column: Streaming Now (desktop only), stretched to the left column's
-               full height so the top strip has no dead space. -->
-          <streaming-now
-            class="hidden lg:flex lg:h-full lg:flex-col w-full min-w-0"
-          ></streaming-now>
         </div>
 
         <game-mode-selector></game-mode-selector>
-
-        <!-- Desktop gets the compact footer button instead. -->
-        <steam-wishlist
-          campaign="home_mobile"
-          class="block px-2 pb-4 lg:hidden"
-        ></steam-wishlist>
       </div>
     `;
   }

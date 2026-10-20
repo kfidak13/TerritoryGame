@@ -16,6 +16,7 @@ import { getApiBase } from "./ApiBase";
 import { ClientEnv } from "./ClientEnv";
 import { isDesktopShell } from "./DesktopShell";
 import { pagePin } from "./PagePin";
+import { STANDALONE } from "./Standalone";
 import { isReplayShellHost } from "./VersionedReplay";
 
 // Multi-server v2 (docs/MultiServer.md, "Server list v2"): the API says which
@@ -410,6 +411,9 @@ function warnMalformedOnce(detail: unknown): void {
  * attempt leaves `cached` alone — the last good list keeps serving.
  */
 function fetchOnce(): Promise<ServerList | null> {
+  // No list API to ask: the page's own server is the answer ("fallback"),
+  // and never counting an attempt keeps multiplayer from reading as an outage.
+  if (STANDALONE) return Promise.resolve(null);
   if (inflight !== null) return inflight;
   const site = safeSite();
   if (site === undefined) return Promise.resolve(null);
@@ -438,7 +442,7 @@ function fetchOnce(): Promise<ServerList | null> {
  * rather than to a live server.
  */
 export function startServerListPolling(): void {
-  if (polling) return;
+  if (polling || STANDALONE) return;
   try {
     if (safeSite() === undefined) return;
     if (isReplayShellHost(window.location.hostname)) return;

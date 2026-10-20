@@ -113,35 +113,8 @@ export class NavUtilityIcons extends LitElement {
     const currentPage = window.currentPageId;
     return html`
       <div class="flex items-center gap-1">
-        <div class="relative">
-          <button
-            class="${this.buttonClass()} ${currentPage === "page-news"
-              ? "active"
-              : ""}"
-            data-page="page-news"
-            data-i18n-aria-label="main.news"
-            data-i18n-title="main.news"
-            @click=${this._notifications.onNewsClick}
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="1.8"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              class="w-6 h-6 pointer-events-none"
-              aria-hidden="true"
-            >
-              <path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9" />
-              <path d="M13.73 21a2 2 0 0 1-3.46 0" />
-            </svg>
-          </button>
-          ${this._notifications.showNewsDot()
-            ? this.renderDot("bg-red-500")
-            : ""}
-        </div>
+        <!-- Borderfall (standalone): the news bell showed OpenFront's news
+             feed and is left out. -->
         <div class="relative">
           <button
             class="${this.buttonClass()} ${currentPage === "page-help"

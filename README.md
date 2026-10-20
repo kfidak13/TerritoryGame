@@ -24,6 +24,17 @@ Planned on top of OpenFront's game (see `legacy/README.md` for the full design n
   get.
 - **Pacing.** Games are tuned to finish in under 40 minutes.
 
+## Standalone
+
+OpenFront's closed-source API (accounts, store, cosmetics, ranked matchmaking, news, ads, the
+multi-server registry) is not part of Borderfall. The client runs in standalone mode
+(`src/client/Standalone.ts`): those menus, promos and third-party scripts are gone, and the game
+server schedules its own public lobbies. Solo, public lobbies, private lobbies and join-by-code all
+work with just `npm run dev`.
+
+Game server switches: `MASTER_PORT` (default 3000) moves the master's port; `TRUSTED_LOBBIES=true`
+re-enables OpenFront's trusted-only lobby rotation (which needs the API to vouch for accounts).
+
 ## Syncing with OpenFront
 
 The OpenFront repository is configured as the `upstream` remote, so its fixes and features can be
@@ -43,8 +54,6 @@ source code for the running game is available at https://github.com/kfidak13/Ter
 
 OpenFront's AGPL additional terms require keeping its copyright notice visible. It currently appears
 in:
-
-Current copyright notices appear in:
 
 - Footer: "© OpenFront and Contributors"
 - Loading screen: "© OpenFront and Contributors"
@@ -131,25 +140,6 @@ To run just the server with development settings:
 
 ```bash
 npm run start:server-dev
-```
-
-### Connecting to staging or production backends
-
-Sometimes it's useful to connect to production servers when replaying a game, testing user profiles, purchases, or login flow.
-
-> To replay a production game, make sure you're on the same commit that the game you want to replay was executed on, you can find the `gitCommit` value via `https://api.openfront.io/game/[gameId]`.
-> Unfinished games cannot be replayed on localhost.
-
-To connect to staging api servers:
-
-```bash
-npm run dev:staging
-```
-
-To connect to production api servers:
-
-```bash
-npm run dev:prod
 ```
 
 ## 🛠️ Development Tools

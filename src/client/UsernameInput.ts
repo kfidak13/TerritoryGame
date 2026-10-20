@@ -1,6 +1,6 @@
 import { UserMeResponse } from "@openfront/shared/ApiSchemas";
 import { sanitizeClanTag } from "@openfront/shared/SharedUtil";
-import { html, LitElement } from "lit";
+import { html, LitElement, nothing } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import { translateText } from "../client/Utils";
 import { getUserMe, invalidateUserMe } from "./Api";
@@ -22,6 +22,7 @@ import {
   type ClaimGrace,
   type ResolvedPlayerName,
 } from "./PlayerName";
+import { STANDALONE } from "./Standalone";
 import {
   parseSteamGrantStore,
   STEAM_GRANT_NOTICE_KEY,
@@ -1022,11 +1023,13 @@ export class UsernameInput extends LitElement {
       <!-- The buttons differ in width, so this resizes the name field — which
            is transparent and left-aligned, so only its invisible right edge
            moves. -->
-      <div class="no-game-portal shrink-0 h-full max-h-[44px]">
-        ${this.verifiedActive
-          ? this.renderUseCustomButton()
-          : this.renderUseVerifiedButton()}
-      </div>
+      ${STANDALONE
+        ? nothing
+        : html`<div class="no-game-portal shrink-0 h-full max-h-[44px]">
+            ${this.verifiedActive
+              ? this.renderUseCustomButton()
+              : this.renderUseVerifiedButton()}
+          </div>`}
     `;
   }
 

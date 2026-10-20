@@ -335,6 +335,11 @@ export class ServerEnv {
   static apiKey(): string {
     return process.env.API_KEY ?? "";
   }
+  // Borderfall (standalone): trusted-only public lobbies admit only accounts
+  // the API vouches for, and without the API nobody is. Off unless opted in.
+  static trustedLobbies(): boolean {
+    return process.env.TRUSTED_LOBBIES === "true";
+  }
   // Long-lived shared secret for the trusted admin bot HTTP API.
   // Undefined when unset, which disables the admin bot API entirely.
   static adminBotKey(): string | undefined {

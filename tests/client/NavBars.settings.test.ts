@@ -75,11 +75,12 @@ describe("nav-utility-icons settings cogwheel", () => {
     expect(shared(settings)).toEqual(shared(help));
   });
 
-  it("sits last in the cluster, immediately left of the profile control", () => {
+  // Borderfall (standalone): no news bell and no account menu in the cluster.
+  it("sits last in the cluster", () => {
     const buttons = Array.from(
       icons.querySelectorAll<HTMLElement>(".nav-menu-item[data-page]"),
     ).map((b) => b.dataset.page);
-    expect(buttons).toEqual(["page-news", "page-help", "page-settings"]);
+    expect(buttons).toEqual(["page-help", "page-settings"]);
   });
 
   it("marks the button active once the settings page is shown", async () => {
@@ -101,14 +102,12 @@ describe("the nav bars that host the cluster", () => {
     window.currentPageId = "page-play";
   });
 
-  it("puts the cogwheel in the desktop bar, immediately left of the avatar", async () => {
+  it("puts the cogwheel in the desktop bar, last in the cluster", async () => {
     const bar = await mount("desktop-nav-bar");
     expect(settingsButton(bar)).not.toBeNull();
 
     const cluster = bar.querySelector("nav-utility-icons")!;
-    expect(cluster.nextElementSibling?.tagName.toLowerCase()).toBe(
-      "nav-account-menu",
-    );
+    expect(cluster.nextElementSibling).toBeNull();
   });
 
   it("puts the cogwheel in the mobile top bar too", async () => {
@@ -116,8 +115,6 @@ describe("the nav bars that host the cluster", () => {
     const cluster = page.querySelector("nav-utility-icons")!;
     expect(cluster.getAttribute("size")).toBe("mobile");
     expect(settingsButton(cluster)).not.toBeNull();
-    expect(cluster.nextElementSibling?.tagName.toLowerCase()).toBe(
-      "nav-account-menu",
-    );
+    expect(cluster.nextElementSibling).toBeNull();
   });
 });

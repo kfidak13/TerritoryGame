@@ -3,6 +3,7 @@ import { html, LitElement, nothing } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { isDesktopShell } from "../DesktopShell";
 import { gamePortal } from "../GamePortal";
+import { STANDALONE } from "../Standalone";
 import { getGamesPlayed, translateText } from "../Utils";
 
 const SHOWN_KEY = "purchaseNudgeShown";
@@ -34,6 +35,7 @@ export class PurchaseNudgeModal extends LitElement {
       return;
     }
     if (
+      STANDALONE ||
       gamePortal.isOnGamePortal() ||
       isDesktopShell() ||
       getGamesPlayed() <= MIN_GAMES_PLAYED ||

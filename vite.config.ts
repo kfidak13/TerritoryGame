@@ -181,6 +181,8 @@ function randomWorkerCreateProxy(numWorkers: number): Plugin {
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), "");
   const isProduction = mode === "production";
+  // The master's port (src/server/Master.ts); override when 3000 is taken.
+  const masterPort = env.MASTER_PORT ?? "3000";
   // Dev identity: the same INSTANCE_LETTER / NUM_WORKERS defaults the dev
   // server boots with (ServerEnv), so the dev-served index.html carries the
   // one-entry map production RenderHtml injects. The proxy below needs the
@@ -428,7 +430,7 @@ export default defineConfig(({ mode }) => {
     define: {
       __ASSET_MANIFEST__: JSON.stringify(assetManifest),
       "process.env.WEBSOCKET_URL": JSON.stringify(
-        isProduction ? "" : "localhost:3000",
+        isProduction ? "" : `localhost:${masterPort}`,
       ),
       "process.env.GAME_ENV": JSON.stringify(isProduction ? "prod" : "dev"),
       // Force empty under vitest (mode "test") so the getApiBase localhost-
@@ -474,7 +476,7 @@ export default defineConfig(({ mode }) => {
       open: process.env.SKIP_BROWSER_OPEN !== "true",
       proxy: {
         "/lobbies": {
-          target: "ws://localhost:3000",
+          target: `ws://localhost:${masterPort}`,
           ws: true,
           changeOrigin: true,
         },
@@ -497,7 +499,7 @@ export default defineConfig(({ mode }) => {
         },
         // API proxies
         "/api": {
-          target: "http://localhost:3000",
+          target: `http://localhost:${masterPort}`,
           changeOrigin: true,
           secure: false,
         },

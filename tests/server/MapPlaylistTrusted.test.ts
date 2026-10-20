@@ -1,5 +1,5 @@
 import { GameConfig, GameConfigSchema } from "@openfront/engine-api/Schemas";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { MapPlaylist } from "../../src/server/MapPlaylist";
 
 vi.mock("../../src/server/MapLandTiles", () => ({
@@ -12,6 +12,10 @@ vi.mock("../../src/server/MapLandTiles", () => ({
 // 7 is coprime with the 3-type scheduling cycle, so the trusted slot rotates
 // across all game types instead of pinning to one.
 describe("MapPlaylist trusted-only public games", () => {
+  // Borderfall runs without the API, so the rotation is opt-in (ServerEnv).
+  beforeEach(() => vi.stubEnv("TRUSTED_LOBBIES", "true"));
+  afterEach(() => vi.unstubAllEnvs());
+
   it("marks every 7th game trusted-only across all types", async () => {
     const playlist = new MapPlaylist();
     const trusted: boolean[] = [];
