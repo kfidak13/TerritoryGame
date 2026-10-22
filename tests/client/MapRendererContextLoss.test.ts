@@ -8,6 +8,7 @@ const stub = vi.hoisted(() => ({
   constructed: 0,
   disposeArgs: [] as Array<{ releaseContext?: boolean } | undefined>,
   failConstruct: false,
+  deposits: [] as Array<Uint8Array | null>,
 }));
 
 vi.mock("../../src/client/render/gl/Renderer", () => ({
@@ -24,6 +25,9 @@ vi.mock("../../src/client/render/gl/Renderer", () => ({
     setLayerVisible() {}
     setLayerAlpha() {}
     setLayerDestroyedMask() {}
+    setDeposits(d: Uint8Array | null) {
+      stub.deposits.push(d);
+    }
   },
 }));
 
@@ -51,6 +55,7 @@ describe("MapRenderer context loss", () => {
     stub.constructed = 0;
     stub.disposeArgs = [];
     stub.failConstruct = false;
+    stub.deposits = [];
   });
 
   // A GPU-process crash is a recoverable loss, but only while the page leaves
@@ -89,6 +94,20 @@ describe("MapRenderer context loss", () => {
 
     expect(stub.constructed).toBe(2);
     expect(reupload).toHaveBeenCalledOnce();
+    view.dispose();
+  });
+
+  // Borderfall goods deposits are pushed once per game, so the facade has to
+  // hand them to the rebuilt renderer itself.
+  it("re-applies goods deposits on restore", () => {
+    const { view, canvas } = makeRenderer();
+    const deposits = new Uint8Array([0, 1, 2, 3]);
+    view.setDeposits(deposits);
+
+    canvas.dispatchEvent(new Event("webglcontextlost", { cancelable: true }));
+    canvas.dispatchEvent(new Event("webglcontextrestored"));
+
+    expect(stub.deposits).toEqual([deposits, deposits]);
     view.dispose();
   });
 

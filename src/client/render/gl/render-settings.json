@@ -114,6 +114,17 @@
     "enemyG": 0,
     "enemyB": 0
   },
+  "deposit": {
+    "foodColor": "#ffcc00",
+    "oilColor": "#111111",
+    "metalColor": "#1e90ff",
+    "tintAlpha": 0.15,
+    "dotAlpha": 0.85,
+    "dotRadius": 0.9,
+    "dotSpacing": 4,
+    "dotMinZoom": 1.5,
+    "dotFullZoom": 3
+  },
   "railroad": {
     "railMinZoom": 3,
     "railFadeRange": 2,

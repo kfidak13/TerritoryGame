@@ -37,6 +37,7 @@ import { BorderStampPass } from "./passes/BorderStampPass";
 import { CoordinateGridPass } from "./passes/CoordinateGridPass";
 import { CrosshairPass } from "./passes/CrosshairPass";
 import { DefenseCoveragePass } from "./passes/DefenseCoveragePass";
+import { DepositPass } from "./passes/DepositPass";
 import { FalloutBloomPass } from "./passes/FalloutBloomPass";
 import { FalloutLightPass } from "./passes/FalloutLightPass";
 import { FxPass } from "./passes/fx-pass";
@@ -124,6 +125,7 @@ export class GPURenderer {
   private borderStampPass: BorderStampPass;
   private borderPass: BorderComputePass;
   private defenseCoveragePass: DefenseCoveragePass;
+  private depositPass: DepositPass;
   private bloomPass: FalloutBloomPass;
   private pointLightPass: PointLightPass;
   private falloutLightPass: FalloutLightPass;
@@ -639,6 +641,7 @@ export class GPURenderer {
       mapH,
       this.settings,
     );
+    this.depositPass = new DepositPass(gl, mapW, mapH, this.settings);
     try {
       this.gridView = window.localStorage.getItem(GRID_VIEW_KEY) === "true";
     } catch {
@@ -1360,6 +1363,7 @@ export class GPURenderer {
     gl.enable(gl.BLEND);
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
 
+    this.depositPass.draw(cam, zoom);
     this.spawnOverlayPass.draw(cam);
     if (pe.borderStamp) this.borderStampPass.draw(cam);
     if (pe.railroad) this.railroadPass.draw(cam, zoom);
@@ -1412,6 +1416,11 @@ export class GPURenderer {
    * start (and again after context restore).  Layers are drawn in array order
    * between the terrain and territory passes.
    */
+  /** Borderfall goods deposits, one byte per tile (null = none). */
+  setDeposits(deposits: Uint8Array | null): void {
+    this.depositPass.setDeposits(deposits);
+  }
+
   setMapLayers(layers: MapLayer[], images: Map<string, ImageBitmap>): void {
     // Dispose any previous layer passes.
     for (const p of this.mapLayerPasses.values()) p.dispose();
@@ -1492,6 +1501,7 @@ export class GPURenderer {
     this.borderStampPass.dispose();
     this.borderPass.dispose();
     this.defenseCoveragePass.dispose();
+    this.depositPass.dispose();
     this.bloomPass.dispose();
     this.pointLightPass.dispose();
     this.falloutLightPass.dispose();

@@ -177,6 +177,22 @@ export interface RenderSettings {
     enemyG: number;
     enemyB: number;
   };
+  /** Borderfall goods deposits (DepositPass). */
+  deposit: {
+    foodColor: string;
+    oilColor: string;
+    metalColor: string;
+    /** Tint over every deposit tile, at any zoom. */
+    tintAlpha: number;
+    dotAlpha: number;
+    /** Dot radius, in tiles. */
+    dotRadius: number;
+    /** Tiles between dots; one dot per tile reads as noise. */
+    dotSpacing: number;
+    /** Zoom (screen px per tile) where dots start fading in / are fully in. */
+    dotMinZoom: number;
+    dotFullZoom: number;
+  };
   railroad: {
     railMinZoom: number;
     railFadeRange: number;

@@ -1,4 +1,5 @@
 import { PlayerType } from "@openfront/engine-api/game/GameTypes";
+import { computeDeposits, depositSeed } from "@openfront/engine-lib/game/Goods";
 import { assetUrl } from "@openfront/shared/AssetUrls";
 import {
   type EffectAttributesFor,
@@ -155,6 +156,8 @@ export class WebGLFrameBuilder {
   private readonly lastSpawnTile = new Map<number, number>();
   /** Skin atlas allocated once on first syncPlayers — player set is locked at game start. */
   private skinsInitialized = false;
+  /** Goods deposits are a function of the map: pushed once per game. */
+  private depositsPushed = false;
   // The renderer needs to know which player is "me" so affiliation tint,
   // unit colors, and SAM-radius perspective work. Push it once the local
   // player's update arrives (may take several ticks during join).
@@ -239,6 +242,7 @@ export class WebGLFrameBuilder {
     this.syncLocalPlayer(gameView);
     this.syncSpawnOverlay(gameView);
     this.syncSmallPlayerGlow(gameView);
+    this.syncDeposits(gameView);
     this.syncTerrainDeltas(gameView);
     this.syncNukeImpacts(gameView);
     this.resolveDeadUnitExplosions(gameView);
@@ -313,6 +317,21 @@ export class WebGLFrameBuilder {
         gameView.y(spawnTile),
       );
     }
+  }
+
+  /**
+   * Borderfall goods deposits, computed with the engine's own deterministic
+   * generator so the markers match what players actually own. MapRenderer
+   * keeps them across context restores.
+   */
+  private syncDeposits(gameView: GameView): void {
+    if (this.depositsPushed) return;
+    this.depositsPushed = true;
+    const config = gameView.config();
+    if (!config.goodsEnabled()) return;
+    this.view.setDeposits(
+      computeDeposits(gameView, depositSeed(config.gameConfig().gameMap)),
+    );
   }
 
   /**
