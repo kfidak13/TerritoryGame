@@ -9,6 +9,8 @@ import {
   EmojiUpdate,
   GameUpdateType,
   TargetPlayerUpdate,
+  TradeOfferReplyUpdate,
+  TradeOfferUpdate,
   UnitIncomingUpdate,
 } from "@openfront/engine-api/game/GameUpdates";
 import { EventBus } from "@openfront/shared/EventBus";
@@ -135,6 +137,8 @@ export class EventsDisplay extends LitElement implements Controller {
     [GameUpdateType.UnitIncoming, this.onUnitIncomingEvent.bind(this)],
     [GameUpdateType.AllianceExpired, this.onAllianceExpiredEvent.bind(this)],
     [GameUpdateType.DonateEvent, this.onDonateEvent.bind(this)],
+    [GameUpdateType.TradeOffer, this.onTradeOfferEvent.bind(this)],
+    [GameUpdateType.TradeOfferReply, this.onTradeOfferReplyEvent.bind(this)],
   ] as const;
 
   constructor() {
@@ -505,6 +509,61 @@ export class EventsDisplay extends LitElement implements Controller {
       highlight: true,
       createdAt: this.game.ticks(),
       focusID: other.smallID(),
+    });
+  }
+
+  // Borderfall trading: the sender hears an offer went out and how it ended;
+  // both sides hear when a deal went through or fell apart.
+  private onTradeOfferEvent(update: TradeOfferUpdate) {
+    const me = this.game.myPlayer();
+    if (!me || update.senderID !== me.smallID()) return;
+    const other = this.game.playerBySmallID(update.recipientID) as PlayerView;
+    this.addEvent({
+      description: translateText("events_display.trade_offer_sent", {
+        name: other.displayName(),
+      }),
+      type: MessageType.TRADE_OFFER,
+      highlight: true,
+      createdAt: this.game.ticks(),
+      focusID: update.recipientID,
+    });
+  }
+
+  private onTradeOfferReplyEvent(update: TradeOfferReplyUpdate) {
+    const me = this.game.myPlayer();
+    if (!me) return;
+    const isSender = update.senderID === me.smallID();
+    if (!isSender && update.recipientID !== me.smallID()) return;
+    const otherID = isSender ? update.recipientID : update.senderID;
+    const other = this.game.playerBySmallID(otherID) as PlayerView;
+
+    let key: string;
+    let type = MessageType.TRADE_REJECTED;
+    switch (update.status) {
+      case "accepted":
+        key = "events_display.trade_accepted";
+        type = MessageType.TRADE_ACCEPTED;
+        break;
+      case "failed":
+        key = "events_display.trade_failed";
+        break;
+      case "rejected":
+        if (!isSender) return;
+        key = "events_display.trade_rejected";
+        break;
+      case "expired":
+        if (!isSender) return;
+        key = "events_display.trade_expired";
+        break;
+      case "cancelled":
+        return;
+    }
+    this.addEvent({
+      description: translateText(key, { name: other.displayName() }),
+      type,
+      highlight: true,
+      createdAt: this.game.ticks(),
+      focusID: otherID,
     });
   }
 

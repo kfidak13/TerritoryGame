@@ -125,6 +125,11 @@
     "dotMinZoom": 1.5,
     "dotFullZoom": 3
   },
+  "tileMask": {
+    "firstColor": "#ff9f1c",
+    "secondColor": "#2ec4b6",
+    "alpha": 0.55
+  },
   "railroad": {
     "railMinZoom": 3,
     "railFadeRange": 2,

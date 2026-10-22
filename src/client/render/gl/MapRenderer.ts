@@ -47,6 +47,7 @@ export class MapRenderer {
   private layerDestroyedMasks = new Map<string, Uint8Array>();
   // Borderfall goods deposits; static per game, so kept for context restore.
   private deposits: Uint8Array | null = null;
+  private tileMask: Uint8Array | null = null;
 
   /**
    * Called after a lost WebGL context is restored and the renderer has been
@@ -133,6 +134,7 @@ export class MapRenderer {
       return;
     }
     if (this.deposits) this.renderer?.setDeposits(this.deposits);
+    if (this.tileMask) this.renderer?.setTileMask(this.tileMask);
     // Re-apply stored layers to the new renderer.
     if (this.storedLayers.length > 0 && this.storedLayerImages.size > 0) {
       this.renderer?.setMapLayers(this.storedLayers, this.storedLayerImages);
@@ -331,6 +333,12 @@ export class MapRenderer {
   setDeposits(deposits: Uint8Array | null): void {
     this.deposits = deposits;
     this.renderer?.setDeposits(deposits);
+  }
+
+  /** Tint tiles, e.g. land in a trade offer; null clears. */
+  setTileMask(mask: Uint8Array | null): void {
+    this.tileMask = mask;
+    this.renderer?.setTileMask(mask);
   }
 
   /** Toggle visibility of a single map layer. */

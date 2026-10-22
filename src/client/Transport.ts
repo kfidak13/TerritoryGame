@@ -11,6 +11,7 @@ import {
   AllPlayersStats,
   ClientID,
   Intent,
+  TradeTerms,
   Winner,
 } from "@openfront/engine-api/Schemas";
 import {
@@ -180,6 +181,28 @@ export class SendEmbargoAllIntentEvent implements GameEvent {
   constructor(public readonly action: "start" | "stop") {}
 }
 
+/** Borderfall: offer a trade (engine-lib/game/Trade.ts). */
+export class SendTradeOfferIntentEvent implements GameEvent {
+  constructor(
+    public readonly recipient: PlayerView,
+    public readonly give: TradeTerms,
+    public readonly ask: TradeTerms,
+    public readonly ceasefire: boolean,
+    public readonly pact: boolean,
+  ) {}
+}
+
+export class SendTradeReplyIntentEvent implements GameEvent {
+  constructor(
+    public readonly offerID: number,
+    public readonly accept: boolean,
+  ) {}
+}
+
+export class SendEndTradePactIntentEvent implements GameEvent {
+  constructor(public readonly partner: PlayerView) {}
+}
+
 export class SendDeleteUnitIntentEvent implements GameEvent {
   constructor(public readonly unitId: number) {}
 }
@@ -331,6 +354,26 @@ export class Transport {
       this.onSendEmbargoAllIntent(e),
     );
     this.subscribe(BuildUnitIntentEvent, (e) => this.onBuildUnitIntent(e));
+    this.subscribe(SendTradeOfferIntentEvent, (e) =>
+      this.sendIntent({
+        type: "trade_offer",
+        recipient: e.recipient.id(),
+        give: e.give,
+        ask: e.ask,
+        ceasefire: e.ceasefire,
+        pact: e.pact,
+      }),
+    );
+    this.subscribe(SendTradeReplyIntentEvent, (e) =>
+      this.sendIntent({
+        type: "trade_reply",
+        offerID: e.offerID,
+        accept: e.accept,
+      }),
+    );
+    this.subscribe(SendEndTradePactIntentEvent, (e) =>
+      this.sendIntent({ type: "end_trade_pact", partner: e.partner.id() }),
+    );
 
     this.subscribe(PauseGameIntentEvent, (e) => this.onPauseGameIntent(e));
     this.subscribe(SendWinnerEvent, (e) => this.onSendWinnerEvent(e));

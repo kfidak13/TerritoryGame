@@ -207,12 +207,16 @@ describe("PlayerPanel - action buttons follow PlayerActions capability flags", (
         canSendAllianceRequest: true,
         canDonateGold: true,
         canDonateTroops: true,
+        canTrade: true,
+        hasTradePact: true,
       },
     };
 
     (panel as any).renderActions(my, other);
 
     const labels = renderedLabels();
+    expect(labels).toContain("player_panel.trade");
+    expect(labels).toContain("player_panel.end_pact");
     expect(labels).toContain("player_panel.emotes");
     expect(labels).toContain("player_panel.target");
     expect(labels).toContain("player_panel.troops");
@@ -232,6 +236,7 @@ describe("PlayerPanel - action buttons follow PlayerActions capability flags", (
     const labels = renderedLabels();
     expect(labels).toContain("player_panel.chat");
     expect(labels).toContain("player_panel.start_trade");
+    expect(labels).not.toContain("player_panel.trade");
     expect(labels).not.toContain("player_panel.emotes");
     expect(labels).not.toContain("player_panel.target");
     expect(labels).not.toContain("player_panel.break_alliance");

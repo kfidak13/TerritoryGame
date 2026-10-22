@@ -38,6 +38,7 @@ import {
   SendEmbargoAllIntentEvent,
   SendEmbargoIntentEvent,
   SendEmojiIntentEvent,
+  SendEndTradePactIntentEvent,
   SendTargetPlayerIntentEvent,
 } from "../../Transport";
 import { UIState } from "../../UIState";
@@ -49,6 +50,7 @@ import { EmojiTable } from "./EmojiTable";
 import "./PlayerModerationModal";
 import "./PlayerReportModal";
 import "./SendResourceModal";
+import { OpenTradePanelEvent } from "./TradePanel";
 const allianceIcon = assetUrl("images/AllianceIconWhite.svg");
 const chatIcon = assetUrl("images/ChatIconWhite.svg");
 const donateGoldIcon = assetUrl("images/DonateGoldIconWhite.svg");
@@ -327,6 +329,18 @@ export class PlayerPanel extends LitElement implements Controller {
   ) {
     e.stopPropagation();
     this.eventBus.emit(new SendEmbargoIntentEvent(other, "stop"));
+    this.hide();
+  }
+
+  private handleTradeClick(e: Event, other: PlayerView) {
+    e.stopPropagation();
+    this.eventBus.emit(new OpenTradePanelEvent(other));
+    this.hide();
+  }
+
+  private handleEndPactClick(e: Event, other: PlayerView) {
+    e.stopPropagation();
+    this.eventBus.emit(new SendEndTradePactIntentEvent(other));
     this.hide();
   }
 
@@ -760,9 +774,13 @@ export class PlayerPanel extends LitElement implements Controller {
             ? html`<span class="text-amber-400"
                 >${translateText("player_panel.stopped")}</span
               >`
-            : html`<span class="text-blue-400"
-                >${translateText("player_panel.active")}</span
-              >`}
+            : this.actions?.interaction?.hasTradePact
+              ? html`<span class="text-emerald-400"
+                  >${translateText("player_panel.trade_pact")}</span
+                >`
+              : html`<span class="text-blue-400"
+                  >${translateText("player_panel.active")}</span
+                >`}
         </div>
       </div>
     `;
@@ -942,6 +960,28 @@ export class PlayerPanel extends LitElement implements Controller {
           ? html``
           : html`
               <div class="grid auto-cols-fr grid-flow-col gap-1">
+                ${this.actions?.interaction?.canTrade
+                  ? actionButton({
+                      onClick: (e: MouseEvent) =>
+                        this.handleTradeClick(e, other),
+                      icon: startTradingIcon,
+                      iconAlt: "Trade",
+                      title: translateText("player_panel.trade"),
+                      label: translateText("player_panel.trade"),
+                      type: "sky",
+                    })
+                  : ""}
+                ${this.actions?.interaction?.hasTradePact
+                  ? actionButton({
+                      onClick: (e: MouseEvent) =>
+                        this.handleEndPactClick(e, other),
+                      icon: stopTradingIcon,
+                      iconAlt: "End trade pact",
+                      title: translateText("player_panel.end_pact"),
+                      label: translateText("player_panel.end_pact"),
+                      type: "red",
+                    })
+                  : ""}
                 ${canEmbargo
                   ? actionButton({
                       onClick: (e: MouseEvent) =>

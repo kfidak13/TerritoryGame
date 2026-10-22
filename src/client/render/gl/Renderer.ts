@@ -62,6 +62,7 @@ import { StructureLevelPass } from "./passes/StructureLevelPass";
 import { StructurePass } from "./passes/StructurePass";
 import { TerrainPass } from "./passes/TerrainPass";
 import { TerritoryPass } from "./passes/TerritoryPass";
+import { TileMaskPass } from "./passes/TileMaskPass";
 import { TrailPass } from "./passes/TrailPass";
 import { UnitPass } from "./passes/UnitPass";
 import { WorldTextPass } from "./passes/WorldTextPass";
@@ -126,6 +127,7 @@ export class GPURenderer {
   private borderPass: BorderComputePass;
   private defenseCoveragePass: DefenseCoveragePass;
   private depositPass: DepositPass;
+  private tileMaskPass: TileMaskPass;
   private bloomPass: FalloutBloomPass;
   private pointLightPass: PointLightPass;
   private falloutLightPass: FalloutLightPass;
@@ -642,6 +644,7 @@ export class GPURenderer {
       this.settings,
     );
     this.depositPass = new DepositPass(gl, mapW, mapH, this.settings);
+    this.tileMaskPass = new TileMaskPass(gl, mapW, mapH, this.settings);
     try {
       this.gridView = window.localStorage.getItem(GRID_VIEW_KEY) === "true";
     } catch {
@@ -1364,6 +1367,7 @@ export class GPURenderer {
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
 
     this.depositPass.draw(cam, zoom);
+    this.tileMaskPass.draw(cam);
     this.spawnOverlayPass.draw(cam);
     if (pe.borderStamp) this.borderStampPass.draw(cam);
     if (pe.railroad) this.railroadPass.draw(cam, zoom);
@@ -1419,6 +1423,11 @@ export class GPURenderer {
   /** Borderfall goods deposits, one byte per tile (null = none). */
   setDeposits(deposits: Uint8Array | null): void {
     this.depositPass.setDeposits(deposits);
+  }
+
+  /** Tint tiles (TileMaskPass), or clear with null. */
+  setTileMask(mask: Uint8Array | null): void {
+    this.tileMaskPass.setMask(mask);
   }
 
   setMapLayers(layers: MapLayer[], images: Map<string, ImageBitmap>): void {
@@ -1502,6 +1511,7 @@ export class GPURenderer {
     this.borderPass.dispose();
     this.defenseCoveragePass.dispose();
     this.depositPass.dispose();
+    this.tileMaskPass.dispose();
     this.bloomPass.dispose();
     this.pointLightPass.dispose();
     this.falloutLightPass.dispose();

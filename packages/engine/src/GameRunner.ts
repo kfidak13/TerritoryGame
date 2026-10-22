@@ -341,6 +341,11 @@ export class GameRunner {
         canDonateGold: player.canDonateGold(other),
         canDonateTroops: player.canDonateTroops(other),
         canEmbargo: !player.hasEmbargoAgainst(other),
+        canTrade:
+          other.type() !== PlayerType.Bot &&
+          other.isAlive() &&
+          player.canTrade(other),
+        hasTradePact: player.hasTradePactWith(other),
         allianceInfo: player.allianceInfo(other) ?? undefined,
       };
     }

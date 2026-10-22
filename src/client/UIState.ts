@@ -5,4 +5,6 @@ export interface UIState {
   ghostStructure: PlayerBuildableUnitType | null;
   rocketDirectionUp: boolean;
   upgradeMultiplier: number;
+  /** Borderfall: map clicks paint trade land instead of attacking. */
+  tradePainting?: boolean;
 }

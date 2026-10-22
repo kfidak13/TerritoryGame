@@ -5,6 +5,8 @@ import {
   AllianceRequestUpdate,
   BrokeAllianceUpdate,
   GameUpdateType,
+  TradeOfferReplyUpdate,
+  TradeOfferUpdate,
 } from "@openfront/engine-api/game/GameUpdates";
 import { EventBus } from "@openfront/shared/EventBus";
 import { html, LitElement } from "lit";
@@ -16,10 +18,13 @@ import {
   SendAllianceExtensionIntentEvent,
   SendAllianceRejectIntentEvent,
   SendAllianceRequestIntentEvent,
+  SendTradeReplyIntentEvent,
 } from "../../Transport";
 import { UIState } from "../../UIState";
 import { getMessageTypeClasses, translateText } from "../../Utils";
 import { GameView, PlayerView } from "../../view";
+import { payerLand, termsSummary } from "../TradeText";
+import { OpenTradePanelEvent, ShowTradeLandEvent } from "./TradePanel";
 
 interface ActionableEvent {
   description: string;
@@ -34,6 +39,8 @@ interface ActionableEvent {
   }[];
   priority?: number;
   allianceID?: number;
+  /** Borderfall: the trade offer an event answers. */
+  offerID?: number;
   duration?: Tick;
   requestorID: number;
 }
@@ -61,6 +68,8 @@ export class ActionableEvents extends LitElement implements Controller {
       GameUpdateType.AllianceExtension,
       this.onAllianceExtensionEvent.bind(this),
     ],
+    [GameUpdateType.TradeOffer, this.onTradeOfferEvent.bind(this)],
+    [GameUpdateType.TradeOfferReply, this.onTradeOfferReplyEvent.bind(this)],
   ] as const;
 
   createRenderRoot() {
@@ -294,6 +303,96 @@ export class ActionableEvents extends LitElement implements Controller {
     if (!myPlayer || myPlayer.smallID() !== update.playerID) return;
     this.removeAllianceRenewalEvents(update.allianceID);
     this.requestUpdate();
+  }
+
+  private onTradeOfferEvent(update: TradeOfferUpdate) {
+    const me = this.game.myPlayer();
+    if (!me || update.recipientID !== me.smallID()) return;
+    const sender = this.game.playerBySmallID(update.senderID) as PlayerView;
+    const hasLand = update.give.land.length > 0 || update.ask.land.length > 0;
+    const extras = [
+      update.ceasefire ? translateText("trade.with_ceasefire") : "",
+      update.pact ? translateText("trade.with_pact") : "",
+    ].filter((s) => s !== "");
+
+    this.eventBus.emit(new PlaySoundEffectEvent("alliance-suggested"));
+    this.addEvent({
+      description: [
+        translateText("events_display.trade_offer", {
+          name: sender.displayName(),
+          give: termsSummary(
+            update.give,
+            payerLand(this.game, update.give, sender).length,
+          ),
+          ask: termsSummary(
+            update.ask,
+            payerLand(this.game, update.ask, me).length,
+          ),
+        }),
+        ...extras,
+      ].join(" "),
+      buttons: [
+        ...(hasLand
+          ? [
+              {
+                text: translateText("trade.show_land"),
+                className: "btn-gray",
+                action: () =>
+                  this.eventBus.emit(
+                    new ShowTradeLandEvent(update.give, sender, update.ask, me),
+                  ),
+                preventClose: true,
+              },
+            ]
+          : []),
+        {
+          text: translateText("trade.accept"),
+          className: "btn",
+          action: () =>
+            this.eventBus.emit(
+              new SendTradeReplyIntentEvent(update.offerID, true),
+            ),
+        },
+        {
+          text: translateText("trade.reject"),
+          className: "btn-info",
+          action: () =>
+            this.eventBus.emit(
+              new SendTradeReplyIntentEvent(update.offerID, false),
+            ),
+        },
+        {
+          text: translateText("trade.counter"),
+          className: "btn-gray",
+          // Swap sides: what they ask is what we'd give.
+          action: () =>
+            this.eventBus.emit(
+              new OpenTradePanelEvent(sender, {
+                give: update.ask,
+                ask: update.give,
+                ceasefire: update.ceasefire,
+                pact: update.pact,
+                counterOf: update.offerID,
+              }),
+            ),
+        },
+      ],
+      type: MessageType.TRADE_OFFER,
+      createdAt: this.game.ticks(),
+      priority: 0,
+      duration: update.expiresAt - update.createdAt,
+      focusID: update.senderID,
+      requestorID: update.senderID,
+      offerID: update.offerID,
+    });
+  }
+
+  private onTradeOfferReplyEvent(update: TradeOfferReplyUpdate) {
+    const remaining = this.events.filter((e) => e.offerID !== update.offerID);
+    if (remaining.length !== this.events.length) {
+      this.events = remaining;
+      this.requestUpdate();
+    }
   }
 
   private emitGoToPlayerEvent(focusID: number) {

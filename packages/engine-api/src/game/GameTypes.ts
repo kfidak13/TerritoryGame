@@ -457,6 +457,9 @@ export interface PlayerInteraction {
   canDonateGold: boolean;
   canDonateTroops: boolean;
   canEmbargo: boolean;
+  /** Borderfall: whether a trade offer to them can go out. */
+  canTrade?: boolean;
+  hasTradePact?: boolean;
   allianceInfo?: AllianceInfo;
 }
 
@@ -490,6 +493,10 @@ export enum MessageType {
   DONATION_RECEIVED,
   CHAT,
   RENEW_ALLIANCE,
+  // Borderfall trading.
+  TRADE_OFFER,
+  TRADE_ACCEPTED,
+  TRADE_REJECTED,
 }
 
 // Message categories used for filtering events in the EventsDisplay
@@ -524,6 +531,9 @@ export const MESSAGE_TYPE_CATEGORIES: Record<MessageType, MessageCategory> = {
   [MessageType.RENEW_ALLIANCE]: MessageCategory.ALLIANCE,
   [MessageType.DONATION_SENT]: MessageCategory.TRADE,
   [MessageType.DONATION_RECEIVED]: MessageCategory.TRADE,
+  [MessageType.TRADE_OFFER]: MessageCategory.TRADE,
+  [MessageType.TRADE_ACCEPTED]: MessageCategory.TRADE,
+  [MessageType.TRADE_REJECTED]: MessageCategory.TRADE,
   [MessageType.CHAT]: MessageCategory.CHAT,
 } as const;
 

@@ -45,6 +45,7 @@ import { PlayerPanel } from "./layers/PlayerPanel";
 import { ReplayPanel } from "./layers/ReplayPanel";
 import { SettingsModal } from "./layers/SettingsModal";
 import { SpawnTimer } from "./layers/SpawnTimer";
+import { TradePanel } from "./layers/TradePanel";
 import { TutorialPanel } from "./layers/TutorialPanel";
 import { UnitDisplay } from "./layers/UnitDisplay";
 import { WinModal } from "./layers/WinModal";
@@ -66,6 +67,7 @@ export function createRenderer(
     ghostStructure: null,
     rocketDirectionUp: true,
     upgradeMultiplier: 1,
+    tradePainting: false,
   };
 
   //hide when the game renders
@@ -233,6 +235,16 @@ export function createRenderer(
   unitDisplay.eventBus = eventBus;
   unitDisplay.uiState = uiState;
 
+  const tradePanel = document.querySelector("trade-panel") as TradePanel;
+  if (!(tradePanel instanceof TradePanel)) {
+    console.error("TradePanel element not found in the DOM");
+  }
+  tradePanel.game = game;
+  tradePanel.eventBus = eventBus;
+  tradePanel.uiState = uiState;
+  tradePanel.transformHandler = transformHandler;
+  tradePanel.view = view;
+
   const playerPanel = document.querySelector("player-panel") as PlayerPanel;
   if (!(playerPanel instanceof PlayerPanel)) {
     console.error("player panel not found");
@@ -361,6 +373,7 @@ export function createRenderer(
     replayPanel,
     settingsModal,
     playerPanel,
+    tradePanel,
     headsUpMessage,
     multiTabModal,
     inGamePromo,

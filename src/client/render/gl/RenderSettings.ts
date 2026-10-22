@@ -193,6 +193,12 @@ export interface RenderSettings {
     dotMinZoom: number;
     dotFullZoom: number;
   };
+  /** TileMaskPass: e.g. trade land (first = you give, second = you ask). */
+  tileMask: {
+    firstColor: string;
+    secondColor: string;
+    alpha: number;
+  };
   railroad: {
     railMinZoom: number;
     railFadeRange: number;
