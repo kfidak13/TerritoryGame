@@ -10,9 +10,6 @@ import { GameUpdateType } from "@openfront/engine-api/game/GameUpdates";
 import { renderTroops } from "@openfront/engine-lib/Format";
 import {
   BUILDING_DAMAGE_CHANCE,
-  CROWDING_RADIUS,
-  CROWDING_TYPES,
-  crowdingLevels,
   DISASTER_GRACE_TICKS,
   DISASTER_MEAN_TICKS,
   DROUGHT_RADIUS,
@@ -27,6 +24,8 @@ import {
   OUTBREAK_TICKS,
   OUTBREAK_TROOP_DRAIN_PER_TICK,
   outbreakChance,
+  POLLUTION_RADIUS,
+  pollutionLevels,
   TORNADO_RADIUS,
   TORNADO_SPEED,
   TORNADO_TICKS,
@@ -329,19 +328,20 @@ export class DisasterExecution implements Execution {
   }
 
   /**
-   * Disease: roll once for the player's most crowded building; an outbreak
-   * stops every crowding building of theirs around it and drains troops.
+   * Disease: roll once for the player's city with the most of their
+   * industry nearby; an outbreak stops the cities around it and drains
+   * troops.
    */
   private checkOutbreak(player: Player, ticks: number): void {
     const mg = this.mg!;
     if (player.type() === PlayerType.Bot) return;
     let worst: Unit | null = null;
     let worstLevels = 0;
-    for (const u of player.units(CROWDING_TYPES)) {
-      if (u.isUnderConstruction() || u.isDisrupted()) continue;
-      const levels = crowdingLevels(mg, player, u.tile());
+    for (const city of player.units(UnitType.City)) {
+      if (city.isUnderConstruction() || city.isDisrupted()) continue;
+      const levels = pollutionLevels(mg, player, city.tile());
       if (levels > worstLevels) {
-        worst = u;
+        worst = city;
         worstLevels = levels;
       }
     }
@@ -350,25 +350,23 @@ export class DisasterExecution implements Execution {
     this.outbreak(player, worst.tile(), ticks);
   }
 
-  /** Starts an outbreak in the player's buildings around `tile`. */
+  /** Starts an outbreak in the player's cities around `tile`. */
   outbreak(player: Player, tile: TileRef, ticks: number): void {
     const mg = this.mg!;
     const until = ticks + OUTBREAK_TICKS;
-    let stopped = 0;
+    let sick = 0;
     for (const { unit } of mg.nearbyUnits(
       tile,
-      CROWDING_RADIUS,
-      CROWDING_TYPES,
+      POLLUTION_RADIUS,
+      UnitType.City,
     )) {
       if (unit.owner() !== player) continue;
       this.disrupt(unit, until);
-      stopped++;
+      sick++;
     }
     this.outbreaks.push({ player, tile, until });
-    this.announce(DisasterKind.Outbreak, tile, CROWDING_RADIUS);
-    this.tell(player, "events_display.disease_outbreak", {
-      buildings: stopped,
-    });
+    this.announce(DisasterKind.Outbreak, tile, POLLUTION_RADIUS);
+    this.tell(player, "events_display.disease_outbreak", { cities: sick });
   }
 
   private disrupt(unit: Unit, until: number): void {

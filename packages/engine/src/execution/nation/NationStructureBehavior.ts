@@ -10,11 +10,7 @@ import {
   Structures,
   UnitType,
 } from "@openfront/engine-api/game/GameTypes";
-import {
-  CROWDING_SAFE_LEVELS,
-  CROWDING_TYPES,
-  crowdingLevels,
-} from "@openfront/engine-lib/game/Disasters";
+import { keepsCitiesHealthy } from "@openfront/engine-lib/game/Disasters";
 import {
   FIELD_YIELD_PER_TICK,
   fieldArea,
@@ -1273,15 +1269,12 @@ export class NationStructureBehavior {
   }
 
   /**
-   * Borderfall disease: whether one more level of `type` at `tile` keeps the
-   * area within the crowding the nation tolerates (safe for other types).
+   * Borderfall disease: whether one more level of `type` at `tile` keeps
+   * the nation's cities clear of the industry that makes them sick.
    */
   private crowdingSafe(type: UnitType, tile: TileRef): boolean {
     if (!this.game.config().disastersEnabled()) return true;
-    if (!(CROWDING_TYPES as readonly UnitType[]).includes(type)) return true;
-    return (
-      crowdingLevels(this.game, this.player, tile, 1) <= CROWDING_SAFE_LEVELS
-    );
+    return keepsCitiesHealthy(this.game, this.player, type, tile);
   }
 
   /** Samples shore tiles adjacent to water reachable by another player (=> trading possible) */

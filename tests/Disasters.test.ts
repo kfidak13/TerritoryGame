@@ -6,12 +6,13 @@ import {
   UnitType,
 } from "@openfront/engine-api/game/GameTypes";
 import {
-  CROWDING_SAFE_LEVELS,
-  crowdingLevels,
   DROUGHT_TICKS,
   EARTHQUAKE_TROOP_LOSS,
+  OUTBREAK_CHECK_TICKS,
   OUTBREAK_TICKS,
   outbreakChance,
+  POLLUTION_SAFE_LEVELS,
+  pollutionLevels,
   TORNADO_TICKS,
 } from "@openfront/engine-lib/game/Disasters";
 import { workingLevels } from "@openfront/engine-lib/game/Goods";
@@ -136,28 +137,58 @@ describe("Disease", () => {
     executeTicks(game, 1);
   });
 
-  test("risk grows with crowding past the safe level", () => {
-    expect(outbreakChance(CROWDING_SAFE_LEVELS)).toBe(0);
-    expect(outbreakChance(CROWDING_SAFE_LEVELS + 1)).toBeCloseTo(0.1);
+  /** A building of `type` at (x, y) with `level` levels. */
+  function build(type: UnitType, x: number, y: number, level = 1) {
+    const u = rome.buildUnit(type, game.ref(x, y), {});
+    for (let i = 1; i < level; i++) u.increaseLevel();
+    return u;
+  }
+
+  /** Whether `city` falls sick within `checks` disease checks. */
+  function fallsSick(city: { isDisrupted(): boolean }, checks: number) {
+    for (let i = 0; i < checks * OUTBREAK_CHECK_TICKS; i++) {
+      game.executeNextTick();
+      if (city.isDisrupted()) return true;
+    }
+    return false;
+  }
+
+  test("risk grows with the industry near a city", () => {
+    expect(outbreakChance(POLLUTION_SAFE_LEVELS)).toBe(0);
+    expect(outbreakChance(POLLUTION_SAFE_LEVELS + 1)).toBeCloseTo(0.1);
     expect(outbreakChance(100)).toBe(0.5);
 
-    rome.buildUnit(UnitType.City, game.ref(2, 2), {});
-    rome.buildUnit(UnitType.Port, game.ref(coastX, 2), {});
-    rome.buildUnit(UnitType.DefensePost, game.ref(3, 3), {});
-    // Only the player's own cities, ports and factories count.
-    carthage.conquer(game.ref(coastX + 0, 15));
-    expect(crowdingLevels(game, rome, game.ref(2, 3))).toBe(2);
-    expect(crowdingLevels(game, carthage, game.ref(2, 3))).toBe(0);
+    build(UnitType.City, 2, 2, 5);
+    build(UnitType.Port, coastX, 2);
+    build(UnitType.Factory, 3, 5, 2);
+    build(UnitType.DefensePost, 3, 3);
+    // Only the player's own factories and ports count, not cities.
+    carthage.conquer(game.ref(coastX, 15));
+    expect(pollutionLevels(game, rome, game.ref(2, 3))).toBe(3);
+    expect(pollutionLevels(game, carthage, game.ref(2, 3))).toBe(0);
   });
 
-  test("an outbreak stops crowded buildings and drains troops until it ends", () => {
-    const city = rome.buildUnit(UnitType.City, game.ref(2, 2), {});
-    const port = rome.buildUnit(UnitType.Port, game.ref(coastX, 3), {});
+  test("cities away from industry never get sick, however many", () => {
+    const city = build(UnitType.City, 2, 2, 5);
+    for (let i = 0; i < 6; i++) build(UnitType.City, 1 + (i % 3), 5 + i, 3);
+    expect(fallsSick(city, 20)).toBe(false);
+  });
+
+  test("cities next to heavy industry do, and the industry keeps running", () => {
+    const city = build(UnitType.City, 2, 2);
+    const factory = build(UnitType.Factory, 3, 5, 6);
+    expect(fallsSick(city, 20)).toBe(true);
+    expect(factory.isDisrupted()).toBe(false);
+  });
+
+  test("an outbreak stops cities and drains troops until it ends", () => {
+    const city = build(UnitType.City, 2, 2);
+    const port = build(UnitType.Port, coastX, 3);
     const capWithCity = game.config().maxTroops(rome);
 
     disasters.outbreak(rome, city.tile(), game.ticks());
     expect(city.isDisrupted()).toBe(true);
-    expect(port.isDisrupted()).toBe(true);
+    expect(port.isDisrupted()).toBe(false);
     // A sick city adds no troops.
     expect(game.config().maxTroops(rome)).toBeLessThan(capWithCity);
 
@@ -171,16 +202,20 @@ describe("Disease", () => {
     expect(game.config().maxTroops(rome)).toBe(capWithCity);
   });
 
-  test("nations keep crowding buildings apart", () => {
-    for (let i = 0; i < CROWDING_SAFE_LEVELS; i++) {
-      rome.buildUnit(UnitType.City, game.ref(1 + (i % 4), 1 + i), {});
-    }
+  test("nations keep cities away from industry", () => {
+    build(UnitType.City, 2, 2);
+    build(UnitType.Factory, 3, 5, POLLUTION_SAFE_LEVELS);
     const ai = new NationStructureBehavior(new PseudoRandom(0), game, rome);
     const safe = (type: UnitType) =>
-      (ai as any).crowdingSafe(type, game.ref(2, 4));
-    expect(safe(UnitType.City)).toBe(false);
+      (ai as any).crowdingSafe(type, game.ref(2, 8));
+    // More industry would sicken the city; another city here is still fine.
     expect(safe(UnitType.Factory)).toBe(false);
+    expect(safe(UnitType.Port)).toBe(false);
+    expect(safe(UnitType.City)).toBe(true);
     expect(safe(UnitType.SAMLauncher)).toBe(true);
+
+    build(UnitType.Port, coastX, 10);
+    expect(safe(UnitType.City)).toBe(false);
   });
 
   test("survive a snapshot round trip mid-outbreak and mid-tornado", async () => {

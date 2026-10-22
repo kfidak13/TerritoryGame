@@ -16,10 +16,11 @@ import { GameLike, PlayerLike } from "@openfront/engine-api/game/ReadViews";
  *   Tornado     cuts a wandering path, killing troops and wrecking
  *               buildings along it
  *
- * Disease: where a player packs too many City, Port and Factory levels close
- * together, an outbreak may start. It drains the player's troops and stops
- * those buildings (no city troops, trade ships or trains) until it burns out.
- * Spreading them out avoids it.
+ * Disease: industry (Factories and Ports) next to where people live makes
+ * them sick. A city with too many levels of its owner's industry close by
+ * may break out: the outbreak drains the player's troops and stops the
+ * cities around it (they add no troops) until it burns out. Cities kept away
+ * from factories and ports never get sick.
  *
  * Sizes are fractions of the goods region size (Goods.ts regionSize), so they
  * scale with the map.
@@ -54,16 +55,12 @@ export const DROUGHT_TICKS = 3 * 60 * 10;
 export const TORNADO_TICKS = 150;
 export const TORNADO_SPEED = 0.5;
 
-/** Buildings that crowd into disease. */
-export const CROWDING_TYPES = [
-  UnitType.City,
-  UnitType.Port,
-  UnitType.Factory,
-] as const;
-/** Radius (tiles) within which a player's crowding buildings count together. */
-export const CROWDING_RADIUS = 25;
-/** Crowding levels an area holds safely; each level beyond adds risk. */
-export const CROWDING_SAFE_LEVELS = 8;
+/** Buildings whose levels make nearby cities sick. */
+export const INDUSTRY_TYPES = [UnitType.Factory, UnitType.Port] as const;
+/** Radius (tiles) within which a player's industry makes their cities sick. */
+export const POLLUTION_RADIUS = 25;
+/** Industry levels a city tolerates nearby; each level beyond adds risk. */
+export const POLLUTION_SAFE_LEVELS = 2;
 /** Outbreak chance per check for each level beyond the safe count. */
 export const OUTBREAK_CHANCE_PER_LEVEL = 0.1;
 export const OUTBREAK_MAX_CHANCE = 0.5;
@@ -75,10 +72,10 @@ export const OUTBREAK_TICKS = 900;
 export const OUTBREAK_TROOP_DRAIN_PER_TICK = 0.0003;
 
 /**
- * Levels of the player's own crowding buildings within CROWDING_RADIUS of
- * `tile`, plus `extra` (a building about to go there).
+ * Levels of the player's own industry within POLLUTION_RADIUS of `tile`,
+ * plus `extra` (industry about to go there).
  */
-export function crowdingLevels(
+export function pollutionLevels(
   game: GameLike,
   player: PlayerLike,
   tile: TileRef,
@@ -87,8 +84,8 @@ export function crowdingLevels(
   let levels = extra;
   for (const { unit } of game.nearbyUnits(
     tile,
-    CROWDING_RADIUS,
-    CROWDING_TYPES,
+    POLLUTION_RADIUS,
+    INDUSTRY_TYPES,
   )) {
     if (unit.owner() === player && !unit.isUnderConstruction()) {
       levels += unit.level();
@@ -97,9 +94,32 @@ export function crowdingLevels(
   return levels;
 }
 
-/** Chance an area this crowded breaks out at a disease check. */
+/**
+ * Whether another level of `type` at `tile` (a new building or an upgrade)
+ * leaves every one of the player's cities within what it tolerates.
+ */
+export function keepsCitiesHealthy(
+  game: GameLike,
+  player: PlayerLike,
+  type: UnitType,
+  tile: TileRef,
+): boolean {
+  if (type === UnitType.City) {
+    return pollutionLevels(game, player, tile) <= POLLUTION_SAFE_LEVELS;
+  }
+  if (!(INDUSTRY_TYPES as readonly UnitType[]).includes(type)) return true;
+  return game
+    .nearbyUnits(tile, POLLUTION_RADIUS, UnitType.City)
+    .every(
+      ({ unit }) =>
+        unit.owner() !== player ||
+        pollutionLevels(game, player, unit.tile(), 1) <= POLLUTION_SAFE_LEVELS,
+    );
+}
+
+/** Chance a city with this much industry nearby breaks out at a check. */
 export function outbreakChance(levels: number): number {
-  const excess = levels - CROWDING_SAFE_LEVELS;
+  const excess = levels - POLLUTION_SAFE_LEVELS;
   return excess <= 0
     ? 0
     : Math.min(OUTBREAK_MAX_CHANCE, excess * OUTBREAK_CHANCE_PER_LEVEL);
