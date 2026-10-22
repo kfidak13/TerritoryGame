@@ -3,6 +3,7 @@ import type {
   BonusEvent,
   ConquestFx,
   DeadUnitFx,
+  DisasterFx,
   FrameData,
   NameEntry,
   NukeTelegraphData,
@@ -37,6 +38,7 @@ export interface FrameUploadTarget {
   updateStructures(units: ReadonlyMap<number, UnitState>): void;
   applyDeadUnits(deadUnits: DeadUnitFx[]): void;
   applyConquestEvents(events: ConquestFx[]): void;
+  applyDisasterEvents(events: DisasterFx[]): void;
   applyBonusEvents(events: BonusEvent[]): void;
   updateAttackRings(rings: AttackRingInput[]): void;
   updateNukeTelegraphs(data: NukeTelegraphData[]): void;
@@ -105,6 +107,9 @@ export function uploadFrameData(
   }
   if (frame.events.bonusEvents.length > 0) {
     view.applyBonusEvents(frame.events.bonusEvents);
+  }
+  if (frame.events.disasterEvents.length > 0) {
+    view.applyDisasterEvents(frame.events.disasterEvents);
   }
 
   // --- Attack rings + nuke telegraphs ---

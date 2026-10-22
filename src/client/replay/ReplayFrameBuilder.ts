@@ -111,7 +111,12 @@ export class ReplayFrameBuilder {
       units: new Map(),
       players: new Map(),
       names: this.names,
-      events: { deadUnits: [], conquestEvents: [], bonusEvents: [] },
+      events: {
+        deadUnits: [],
+        conquestEvents: [],
+        bonusEvents: [],
+        disasterEvents: [], // ponytail: replays skip disaster FX
+      },
       changedTiles: null,
       railroadDirty: false,
       revealedRailTiles: this.railroads.revealedRailTiles,

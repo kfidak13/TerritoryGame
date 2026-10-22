@@ -83,6 +83,8 @@ export class TrainStationExecution implements Execution {
     if (!this.spawnTrains) return;
     if (this.random === undefined) throw new Error("Not initialized");
     if (currentTick < this.lastSpawnTick + this.ticksCooldown) return;
+    // Borderfall: no trains while disease holds the station's building.
+    if (this.unit.isDisrupted()) return;
     const cluster = station.getCluster();
     if (cluster === null) {
       return;

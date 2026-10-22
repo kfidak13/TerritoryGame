@@ -52,6 +52,7 @@ export class UnitImpl implements Unit {
   private _destroyer: Player | undefined = undefined;
   private _lastSetSafeFromPirates: number; // Only for trade ships
   private _underConstruction: boolean = false;
+  private _disrupted: boolean = false;
   private _lastOwner: PlayerImpl | null = null;
   private _troops: number;
   // Number of missiles in cooldown, if empty all missiles are ready.
@@ -188,6 +189,7 @@ export class UnitImpl implements Unit {
       lastPos: this._lastTile,
       health: this.hasHealth() ? Number(this._health) : undefined,
       underConstruction: this._underConstruction,
+      disrupted: this._disrupted || undefined,
       targetUnitId: this._targetUnit?.id() ?? undefined,
       targetTile: this.targetTile() ?? undefined,
       missileTimerQueue: this._missileTimerQueue,
@@ -547,6 +549,18 @@ export class UnitImpl implements Unit {
     }
   }
 
+  isDisrupted(): boolean {
+    return this._disrupted;
+  }
+
+  setDisrupted(disrupted: boolean): void {
+    if (this._disrupted !== disrupted) {
+      this._disrupted = disrupted;
+      this._owner._myUnitsVersion++;
+      this.mg.addUpdate(this.toUpdate());
+    }
+  }
+
   hash(): number {
     return this.tile() + simpleHash(this.type()) * this._id;
   }
@@ -839,6 +853,7 @@ export class UnitImpl implements Unit {
       destroyer: w.playerOrNull(this._destroyer),
       lastSetSafeFromPirates: this._lastSetSafeFromPirates,
       underConstruction: this._underConstruction,
+      disrupted: this._disrupted,
       lastOwner: w.playerOrNull(this._lastOwner),
       troops: this._troops,
       missileTimerQueue: [...this._missileTimerQueue],
@@ -894,6 +909,7 @@ export class UnitImpl implements Unit {
     this._destroyer = r.playerOrNull(s.destroyer) ?? undefined;
     this._lastSetSafeFromPirates = s.lastSetSafeFromPirates;
     this._underConstruction = s.underConstruction;
+    this._disrupted = s.disrupted ?? false;
     this._lastOwner = r.playerOrNull(s.lastOwner) as PlayerImpl | null;
     this._troops = s.troops;
     this._missileTimerQueue = [...s.missileTimerQueue];
@@ -951,6 +967,7 @@ export const UnitSnapshot = snapshotType({
     destroyer: zPlayerRef().nullable(),
     lastSetSafeFromPirates: zInt(),
     underConstruction: z.boolean(),
+    disrupted: z.boolean().optional(),
     lastOwner: zPlayerRef().nullable(),
     troops: zNum(),
     missileTimerQueue: z.array(zInt()),

@@ -433,6 +433,8 @@ export const UNIT_FIELDS: readonly FieldDef<UnitFields>[] = [
     ["samUpgradeTargetLevel", maybe(F64, null)],
     ["samUpgradeDuration", maybe(F64, null)],
   ),
+  // Borderfall disasters (appended; REPLAY_VERSION 4).
+  field(["disrupted", BOOL]),
 ];
 
 for (const [name, schema] of [

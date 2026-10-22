@@ -2,7 +2,7 @@
  * Borderfall pacing simulator: AI-only games, timed to the end.
  *
  * Plays public-FFA-style games (Medium nations from the map manifest, tribes,
- * goods on, overtime on) with the real engine and EngineConfig, no humans,
+ * goods, disasters and overtime on) with the real engine and EngineConfig, no humans,
  * until someone wins or a time cap passes, and reports how long each game
  * took and how the land leader's share grew. Use it to tune game length:
  * the target is 25-35 minutes, 40 at most.
@@ -11,6 +11,7 @@
  *   npm run sim:pacing -- [--maps world,europe] [--seeds 2] [--minutes 60]
  *                         [--bots 400] [--difficulty Medium]
  *                         [--overtime on|off] [--overtime-start 30]
+ *                         [--disasters on|off]
  *
  * Every run is deterministic for its map and seed.
  */
@@ -52,6 +53,7 @@ interface Options {
   bots: number;
   difficulty: Difficulty;
   overtime: boolean;
+  disasters: boolean;
   /** Overrides the minute overtime (the falling win bar) starts. */
   overtimeStart?: number;
 }
@@ -75,6 +77,7 @@ function parseArgs(argv: string[]): Options {
     bots: 400,
     difficulty: Difficulty.Medium,
     overtime: true,
+    disasters: true,
   };
   for (let i = 0; i < argv.length; i++) {
     const next = () => argv[++i] ?? "";
@@ -98,6 +101,9 @@ function parseArgs(argv: string[]): Options {
         break;
       case "--overtime":
         opts.overtime = next() !== "off";
+        break;
+      case "--disasters":
+        opts.disasters = next() !== "off";
         break;
       case "--overtime-start":
         opts.overtimeStart = Number(next());
@@ -140,6 +146,7 @@ async function playGame(
     instantBuild: false,
     randomSpawn: false,
     goods: true,
+    disasters: opts.disasters,
     overtime: opts.overtime
       ? {
           enabled: true,
@@ -259,7 +266,8 @@ async function main(): Promise<void> {
   out(
     `Pacing: ${opts.maps.join(", ")} x ${opts.seeds} seed(s), ` +
       `${opts.difficulty} nations, ${opts.bots} tribes, ` +
-      `overtime ${opts.overtime ? "on" : "off"}, cap ${opts.minutes} min`,
+      `overtime ${opts.overtime ? "on" : "off"}, ` +
+      `disasters ${opts.disasters ? "on" : "off"}, cap ${opts.minutes} min`,
   );
 
   const results: GameResult[] = [];
@@ -286,7 +294,7 @@ async function main(): Promise<void> {
   out(
     `\n${ended.length}/${results.length} games ended within ${opts.minutes} min` +
       (ended.length > 0
-        ? `; median ${median(ended)} min, range ${Math.min(...ended)}-${Math.max(...ended)}`
+        ? `; median ${median(ended).toFixed(1)} min, range ${Math.min(...ended)}-${Math.max(...ended)}`
         : ""),
   );
 }

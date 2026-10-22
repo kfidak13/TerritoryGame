@@ -333,8 +333,9 @@ export class StructurePass {
       this.instanceBuf.float32[off + 2] = unit.ownerID;
       this.instanceBuf.float32[off + 3] = unit.underConstruction ? 1 : 0;
       this.instanceBuf.float32[off + 4] = atlasIdx;
+      // 1 = marked for deletion (red X), 2 = Borderfall disrupted (sick tint)
       this.instanceBuf.float32[off + 5] =
-        unit.markedForDeletion !== false ? 1 : 0;
+        unit.markedForDeletion !== false ? 1 : unit.disrupted ? 2 : 0;
 
       count++;
     }

@@ -297,6 +297,9 @@ export interface Unit extends UnitLike {
   // Construction phase on structures
   isUnderConstruction(): boolean;
   setUnderConstruction(underConstruction: boolean): void;
+  // Borderfall: struck by disease or drought (DisasterExecution)
+  isDisrupted(): boolean;
+  setDisrupted(disrupted: boolean): void;
 
   // Upgradable Structures
   level(): number;

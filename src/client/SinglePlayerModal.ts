@@ -119,6 +119,7 @@ const DEFAULT_OPTIONS = {
   customAllianceMinutes: undefined as number | undefined,
   waterNukes: false,
   goods: true,
+  disasters: true,
   doomsdayClock: false,
   doomsdayClockSpeed: "normal" as DoomsdayClockSpeed,
   overtime: false,
@@ -209,6 +210,7 @@ export class SinglePlayerModal extends BaseModal {
     DEFAULT_OPTIONS.customAllianceMinutes;
   @state() private waterNukes: boolean = DEFAULT_OPTIONS.waterNukes;
   @state() private goods: boolean = DEFAULT_OPTIONS.goods;
+  @state() private disasters: boolean = DEFAULT_OPTIONS.disasters;
   @state() private doomsdayClock: boolean = DEFAULT_OPTIONS.doomsdayClock;
   @state() private doomsdayClockSpeed: DoomsdayClockSpeed =
     DEFAULT_OPTIONS.doomsdayClockSpeed;
@@ -534,6 +536,10 @@ export class SinglePlayerModal extends BaseModal {
                     checked: this.goods,
                   },
                   {
+                    labelKey: "game_settings.disasters",
+                    checked: this.disasters,
+                  },
+                  {
                     labelKey: "game_settings.instant_build",
                     checked: this.instantBuild,
                   },
@@ -627,6 +633,7 @@ export class SinglePlayerModal extends BaseModal {
       this.customAllianceMinutes !== DEFAULT_OPTIONS.customAllianceMinutes ||
       this.waterNukes !== DEFAULT_OPTIONS.waterNukes ||
       this.goods !== DEFAULT_OPTIONS.goods ||
+      this.disasters !== DEFAULT_OPTIONS.disasters ||
       this.doomsdayClock !== DEFAULT_OPTIONS.doomsdayClock ||
       // Pace only matters when the mode is on (startGame drops it when off).
       (this.doomsdayClock &&
@@ -704,6 +711,7 @@ export class SinglePlayerModal extends BaseModal {
     this.customAllianceMinutes = DEFAULT_OPTIONS.customAllianceMinutes;
     this.waterNukes = DEFAULT_OPTIONS.waterNukes;
     this.goods = DEFAULT_OPTIONS.goods;
+    this.disasters = DEFAULT_OPTIONS.disasters;
     this.doomsdayClock = DEFAULT_OPTIONS.doomsdayClock;
     this.doomsdayClockSpeed = DEFAULT_OPTIONS.doomsdayClockSpeed;
     this.overtime = DEFAULT_OPTIONS.overtime;
@@ -786,6 +794,9 @@ export class SinglePlayerModal extends BaseModal {
     switch (labelKey) {
       case "game_settings.goods":
         this.goods = checked;
+        break;
+      case "game_settings.disasters":
+        this.disasters = checked;
         break;
       case "game_settings.instant_build":
         this.instantBuild = checked;
@@ -1191,6 +1202,7 @@ export class SinglePlayerModal extends BaseModal {
                   : {}),
                 ...(this.waterNukes ? { waterNukes: true } : {}),
                 goods: this.goods,
+                disasters: this.disasters,
                 ...(this.doomsdayClock
                   ? {
                       doomsdayClock: {

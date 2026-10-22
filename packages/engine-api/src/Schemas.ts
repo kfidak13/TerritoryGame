@@ -292,6 +292,9 @@ export const GameConfigSchema = z.object({
   // Borderfall: regional goods (Food, Oil, Metal) from deposit tiles. Off by
   // default so OpenFront's rules and tests are unchanged; lobbies turn it on.
   goods: z.boolean().optional(),
+  // Borderfall: random disasters and disease from crowded buildings
+  // (engine-lib/game/Disasters.ts). Off when unset, like goods.
+  disasters: z.boolean().optional(),
   disableNavMesh: z.boolean().optional(),
   disableAlliances: z.boolean().nullable().optional(),
   disableClanTags: z.boolean().optional(),

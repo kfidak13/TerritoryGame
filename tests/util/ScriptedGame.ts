@@ -90,6 +90,7 @@ export function scriptedGameStart(
       instantBuild: false,
       randomSpawn: false,
       doomsdayClock: { enabled: true, speed: "veryfast" },
+      disasters: true,
       ...overrides,
     },
     players: SCRIPTED_HUMANS.map((clientID, i) => ({

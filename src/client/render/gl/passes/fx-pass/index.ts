@@ -13,6 +13,7 @@ import type {
   AttackRingInput,
   ConquestFx,
   DeadUnitFx,
+  DisasterFx,
   RendererConfig,
 } from "../../../types";
 import type { RenderSettings } from "../../RenderSettings";
@@ -22,10 +23,17 @@ import {
   calculateExplosionDurationMs,
   FxShockwavePass,
 } from "./FxShockwavePass";
-import { FxSpritePass } from "./FxSpritePass";
+import { FX_DUST, FxSpritePass } from "./FxSpritePass";
 
 export type { AttackRingInput } from "../../../types";
 export { calculateExplosionDurationMs };
+
+const DISASTER_COLORS: Record<string, [number, number, number]> = {
+  earthquake: [0.6, 0.38, 0.16],
+  hurricane: [0.3, 0.6, 1],
+  drought: [0.95, 0.75, 0.2],
+  outbreak: [0.45, 0.9, 0.3],
+};
 
 export class FxPass {
   private spritePass: FxSpritePass;
@@ -88,6 +96,25 @@ export class FxPass {
 
   applyConquestEvents(events: ConquestFx[]): void {
     this.spritePass.applyConquestEvents(events);
+  }
+
+  /** Borderfall: a ring over each disaster's area; dust along tornadoes. */
+  applyDisasterEvents(events: DisasterFx[]): void {
+    const now = this.timeFn();
+    for (const d of events) {
+      if (d.kind === "tornado") {
+        this.spritePass.pushFx(d.x, d.y, FX_DUST, now);
+        continue;
+      }
+      this.shockwavePass.pushNukeShockwave(d.x, d.y, d.radius, {
+        type: "shockwave",
+        colors: [DISASTER_COLORS[d.kind] ?? [1, 1, 1]],
+        maxRadius: d.radius,
+        speed: 0.5,
+        transitionSpeed: 0,
+        thickness: 3,
+      });
+    }
   }
 
   updateAttackRings(rings: AttackRingInput[]): void {

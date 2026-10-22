@@ -135,6 +135,7 @@ function createMockSAMStructures(
       markedForDeletion: false,
       health: 100,
       underConstruction: false,
+      disrupted: false,
       constructionStartTick: null,
       targetUnitId: null,
       targetTile: null,

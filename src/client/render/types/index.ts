@@ -11,6 +11,7 @@ export type {
   AttackRingInput,
   ConquestFx,
   DeadUnitFx,
+  DisasterFx,
   EmojiData,
   GhostPreviewData,
   NameEntry,

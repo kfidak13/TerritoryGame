@@ -190,6 +190,7 @@ export class GameView implements GameLike {
         deadUnits: [],
         conquestEvents: [],
         bonusEvents: [],
+        disasterEvents: [],
       },
       changedTiles: null,
       railroadDirty: false,
@@ -590,6 +591,16 @@ export class GameView implements GameLike {
     ev.deadUnits.length = 0;
     ev.conquestEvents.length = 0;
     ev.bonusEvents.length = 0;
+    ev.disasterEvents.length = 0;
+
+    for (const d of gu.updates[GameUpdateType.Disaster] ?? []) {
+      ev.disasterEvents.push({
+        x: this.x(d.tile),
+        y: this.y(d.tile),
+        radius: d.radius,
+        kind: d.kind,
+      });
+    }
 
     for (const u of gu.updates[GameUpdateType.Unit] ?? []) {
       if (u.isActive) continue;

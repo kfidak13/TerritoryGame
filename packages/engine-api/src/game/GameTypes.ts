@@ -506,6 +506,17 @@ export enum MessageType {
   TRADE_OFFER,
   TRADE_ACCEPTED,
   TRADE_REJECTED,
+  // Borderfall disasters and disease.
+  DISASTER,
+}
+
+/** Borderfall: what struck, for messages and map effects. */
+export enum DisasterKind {
+  Earthquake = "earthquake",
+  Hurricane = "hurricane",
+  Drought = "drought",
+  Tornado = "tornado",
+  Outbreak = "outbreak",
 }
 
 // Message categories used for filtering events in the EventsDisplay
@@ -515,6 +526,7 @@ export enum MessageCategory {
   ALLIANCE = "ALLIANCE",
   TRADE = "TRADE",
   CHAT = "CHAT",
+  DISASTER = "DISASTER",
 }
 
 // Ensures that all message types are included in a category
@@ -544,6 +556,7 @@ export const MESSAGE_TYPE_CATEGORIES: Record<MessageType, MessageCategory> = {
   [MessageType.TRADE_ACCEPTED]: MessageCategory.TRADE,
   [MessageType.TRADE_REJECTED]: MessageCategory.TRADE,
   [MessageType.CHAT]: MessageCategory.CHAT,
+  [MessageType.DISASTER]: MessageCategory.DISASTER,
 } as const;
 
 /**

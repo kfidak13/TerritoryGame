@@ -41,6 +41,7 @@ function makeUnit(
     markedForDeletion: false,
     health: null,
     underConstruction: false,
+    disrupted: false,
     targetUnitId: null,
     targetTile: null,
     troops: 0,

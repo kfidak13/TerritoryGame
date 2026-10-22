@@ -1,4 +1,4 @@
-import type { ConquestFx, DeadUnitFx } from "./Renderer";
+import type { ConquestFx, DeadUnitFx, DisasterFx } from "./Renderer";
 
 // ── Supporting event types ──────────────────────────────────────────────
 
@@ -23,4 +23,5 @@ export interface FrameEvents {
   readonly deadUnits: DeadUnitFx[];
   readonly conquestEvents: ConquestFx[];
   readonly bonusEvents: BonusEvent[];
+  readonly disasterEvents: DisasterFx[];
 }

@@ -79,6 +79,7 @@ function nuke(overrides: Partial<UnitState> = {}): UnitState {
     markedForDeletion: false,
     health: null,
     underConstruction: false,
+    disrupted: false,
     targetUnitId: null,
     targetTile: 305,
     troops: 0,

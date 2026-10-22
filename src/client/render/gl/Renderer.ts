@@ -18,6 +18,7 @@ import type {
   BonusEvent,
   ConquestFx,
   DeadUnitFx,
+  DisasterFx,
   GhostPreviewData,
   NameEntry,
   NukeTelegraphData,
@@ -1032,6 +1033,10 @@ export class GPURenderer {
       highlandColor: hexToRgb(this.settings.terrain.highlandColor) ?? undefined,
       mountainColor: hexToRgb(this.settings.terrain.mountainColor) ?? undefined,
     });
+  }
+
+  applyDisasterEvents(events: DisasterFx[]): void {
+    this.fxPass.applyDisasterEvents(events);
   }
 
   applyConquestEvents(events: ConquestFx[]): void {

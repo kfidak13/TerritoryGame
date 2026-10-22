@@ -43,6 +43,8 @@ export interface UnitLike {
   lastTile(): TileRef;
   isActive(): boolean;
   isUnderConstruction(): boolean;
+  /** Borderfall: struck by disease or drought, so it produces nothing. */
+  isDisrupted(): boolean;
   level(): number;
 }
 

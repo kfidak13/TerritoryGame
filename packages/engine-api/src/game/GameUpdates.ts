@@ -1,6 +1,7 @@
 import { AllPlayersStats, ClientID, TradeTerms, Winner } from "../Schemas";
 import { TileRef } from "./GameMap";
 import {
+  DisasterKind,
   EmojiMessage,
   GameUpdates,
   Gold,
@@ -118,6 +119,7 @@ export enum GameUpdateType {
   DonateEvent,
   TradeOffer,
   TradeOfferReply,
+  Disaster,
 }
 
 export type GameUpdate =
@@ -145,7 +147,8 @@ export type GameUpdate =
   | GamePausedUpdate
   | DonateEventUpdate
   | TradeOfferUpdate
-  | TradeOfferReplyUpdate;
+  | TradeOfferReplyUpdate
+  | DisasterUpdate;
 
 export interface BonusEventUpdate {
   type: GameUpdateType.BonusEvent;
@@ -211,6 +214,7 @@ export interface UnitUpdate {
   targetTile?: TileRef; // Only for nukes
   health?: number;
   underConstruction?: boolean;
+  disrupted?: boolean;
   missileTimerQueue: number[];
   level: number;
   hasTrainStation: boolean;
@@ -330,6 +334,14 @@ export type TradeOfferStatus =
   | "failed";
 
 /** Borderfall: a trade offer was settled one way or another. */
+/** Borderfall: where a disaster or outbreak hits, for the map effects. */
+export interface DisasterUpdate {
+  type: GameUpdateType.Disaster;
+  kind: DisasterKind;
+  tile: TileRef;
+  radius: number;
+}
+
 export interface TradeOfferReplyUpdate {
   type: GameUpdateType.TradeOfferReply;
   offerID: number;

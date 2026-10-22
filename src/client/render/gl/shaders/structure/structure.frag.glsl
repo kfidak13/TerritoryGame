@@ -230,8 +230,13 @@ void main() {
   }
   vec3 finalRGB = mix(bgColor.rgb, glyphColor, iconAlpha);
 
+  // Borderfall: disrupted (disease, drought) buildings turn a sickly green
+  if (vMarkedForDeletion > 1.5) {
+    finalRGB = mix(finalRGB, vec3(0.45, 0.8, 0.2), 0.55);
+  }
+
   // Red X overlay for units marked for deletion
-  if (vMarkedForDeletion > 0.5) {
+  if (vMarkedForDeletion > 0.5 && vMarkedForDeletion < 1.5) {
     float lineW = max(0.025, fw * 1.5);
     float d1 = abs(vLocalPos.x - vLocalPos.y) * 0.7071; // dist to y=x diagonal
     float d2 = abs(vLocalPos.x + vLocalPos.y) * 0.7071; // dist to y=-x diagonal

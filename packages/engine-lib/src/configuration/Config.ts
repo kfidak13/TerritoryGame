@@ -200,6 +200,10 @@ export class Config {
   instantBuild(): boolean {
     return this._gameConfig.instantBuild;
   }
+  /** Borderfall: disasters and disease (engine-lib/game/Disasters.ts). */
+  disastersEnabled(): boolean {
+    return this._gameConfig.disasters === true;
+  }
   /** Borderfall: regional goods (engine-lib/game/Goods.ts). */
   goodsEnabled(): boolean {
     return this._gameConfig.goods === true;
@@ -382,7 +386,7 @@ export class Config {
     const cityTroops = withCities
       ? player
           .units(UnitType.City)
-          .filter((u) => !u.isUnderConstruction())
+          .filter((u) => !u.isUnderConstruction() && !u.isDisrupted())
           .map((city) => city.level())
           .reduce((a, b) => a + b, 0) * this.cityTroopIncrease()
       : 0;

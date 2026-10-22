@@ -52,6 +52,11 @@ export class PortExecution implements Execution {
       this.createStation();
     }
 
+    // Borderfall: no trade while disease holds the port.
+    if (this.port.isDisrupted()) {
+      return;
+    }
+
     // Only check every 10 ticks for performance.
     if ((this.mg.ticks() + this.checkOffset) % 10 !== 0) {
       return;

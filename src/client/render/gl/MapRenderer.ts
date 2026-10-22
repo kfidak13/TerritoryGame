@@ -19,6 +19,7 @@ import type {
   BonusEvent,
   ConquestFx,
   DeadUnitFx,
+  DisasterFx,
   GhostPreviewData,
   NameEntry,
   NukeTelegraphData,
@@ -256,6 +257,10 @@ export class MapRenderer {
   applyDeadUnits(deadUnits: DeadUnitFx[]): void {
     this.renderer?.applyDeadUnits(deadUnits);
   }
+  applyDisasterEvents(events: DisasterFx[]): void {
+    this.renderer?.applyDisasterEvents(events);
+  }
+
   applyConquestEvents(events: ConquestFx[]): void {
     this.renderer?.applyConquestEvents(events);
   }

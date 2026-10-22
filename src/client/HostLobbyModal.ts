@@ -104,6 +104,7 @@ export class HostLobbyModal extends BaseModal {
   @state() private allowedPublicIds: string = "";
   @state() private waterNukes: boolean = false;
   @state() private goods: boolean = true;
+  @state() private disasters: boolean = true;
   @state() private lobbyId = "";
   @state() private lobbyUrlSuffix = "";
   @state() private clients: ClientInfo[] = [];
@@ -676,6 +677,10 @@ export class HostLobbyModal extends BaseModal {
                     checked: this.goods,
                   },
                   {
+                    labelKey: "game_settings.disasters",
+                    checked: this.disasters,
+                  },
+                  {
                     labelKey: "game_settings.instant_build",
                     checked: this.instantBuild,
                   },
@@ -1050,6 +1055,7 @@ export class HostLobbyModal extends BaseModal {
     this.allowedPublicIds = "";
     this.waterNukes = false;
     this.goods = true;
+    this.disasters = true;
     this.hostCheatsEnabled = false;
     this.hostCheatInfiniteGold = false;
     this.hostCheatInfiniteTroops = false;
@@ -1155,6 +1161,10 @@ export class HostLobbyModal extends BaseModal {
         break;
       case "game_settings.goods":
         this.goods = checked;
+        this.putGameConfig();
+        break;
+      case "game_settings.disasters":
+        this.disasters = checked;
         this.putGameConfig();
         break;
       case "game_settings.doomsday_clock":
@@ -1707,6 +1717,7 @@ export class HostLobbyModal extends BaseModal {
               : [],
             waterNukes: this.waterNukes ? true : null,
             goods: this.goods,
+            disasters: this.disasters,
             hostCheats: this.hostCheatsEnabled
               ? {
                   infiniteGold: this.hostCheatInfiniteGold || undefined,

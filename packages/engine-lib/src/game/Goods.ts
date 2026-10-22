@@ -172,12 +172,16 @@ export function buildingGood(type: UnitType): Good | null {
   return i === -1 ? null : (i as Good);
 }
 
-/** Finished building levels working each good's deposits, by Good. */
+/** Finished, working building levels on each good's deposits, by Good. */
 export function workingLevels(player: PlayerLike): GoodsAmounts {
   return GOODS.map((g) =>
     player
       .units(GOOD_BUILDINGS[g])
-      .reduce((n, u) => (u.isUnderConstruction() ? n : n + u.level()), 0),
+      .reduce(
+        (n, u) =>
+          u.isUnderConstruction() || u.isDisrupted() ? n : n + u.level(),
+        0,
+      ),
   ) as GoodsAmounts;
 }
 

@@ -61,6 +61,7 @@ export function unitStateFromUpdate(u: UnitUpdate): UnitState {
     markedForDeletion: u.markedForDeletion,
     health: u.health ?? null,
     underConstruction: u.underConstruction ?? false,
+    disrupted: u.disrupted ?? false,
     targetUnitId: u.targetUnitId ?? null,
     targetTile: u.targetTile ?? null,
     troops: u.troops,
@@ -95,6 +96,7 @@ export function applyUnitUpdateInPlace(target: UnitState, u: UnitUpdate): void {
   target.markedForDeletion = u.markedForDeletion;
   target.health = u.health ?? null;
   target.underConstruction = u.underConstruction ?? false;
+  target.disrupted = u.disrupted ?? false;
   target.targetUnitId = u.targetUnitId ?? null;
   target.targetTile = u.targetTile ?? null;
   target.troops = u.troops;

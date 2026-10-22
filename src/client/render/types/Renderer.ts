@@ -117,6 +117,8 @@ export interface UnitState {
   markedForDeletion: number | false; // -1 -> false, else tick
   health: number | null;
   underConstruction: boolean;
+  /** Borderfall: struck by disease or drought. */
+  disrupted: boolean;
   targetUnitId: number | null;
   targetTile: number | null;
   troops: number;
@@ -192,6 +194,14 @@ export type NukeExplosionRenderParams =
 export const DEFAULT_NUKE_EXPLOSION_COLOR: readonly [number, number, number] = [
   0.6, 0.1, 1,
 ];
+
+/** Borderfall: a disaster or outbreak hitting the map (DisasterUpdate). */
+export interface DisasterFx {
+  x: number; // world tile X
+  y: number;
+  radius: number; // tiles
+  kind: string; // DisasterKind
+}
 
 /** Conquest event data for the gold popup + sword sprite FX. */
 export interface ConquestFx {

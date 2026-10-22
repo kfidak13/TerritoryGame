@@ -11,6 +11,11 @@ import {
   UnitType,
 } from "@openfront/engine-api/game/GameTypes";
 import {
+  CROWDING_SAFE_LEVELS,
+  CROWDING_TYPES,
+  crowdingLevels,
+} from "@openfront/engine-lib/game/Disasters";
+import {
   FIELD_YIELD_PER_TICK,
   fieldArea,
   GOOD_BUILDINGS,
@@ -1163,7 +1168,10 @@ export class NationStructureBehavior {
     }
 
     // Filter to only upgradable structures
-    const upgradable = structures.filter((s) => this.player.canUpgradeUnit(s));
+    const upgradable = structures.filter(
+      (s) =>
+        this.player.canUpgradeUnit(s) && this.crowdingSafe(s.type(), s.tile()),
+    );
     if (upgradable.length === 0) {
       return null;
     }
@@ -1255,12 +1263,25 @@ export class NationStructureBehavior {
     for (const t of tiles) {
       const v = valueFunction(t);
       if (v <= bestValue && bestTile !== null) continue;
+      if (!this.crowdingSafe(type, t)) continue;
       if (!this.player.canBuild(type, t)) continue;
       // Found a better tile
       bestTile = t;
       bestValue = v;
     }
     return bestTile;
+  }
+
+  /**
+   * Borderfall disease: whether one more level of `type` at `tile` keeps the
+   * area within the crowding the nation tolerates (safe for other types).
+   */
+  private crowdingSafe(type: UnitType, tile: TileRef): boolean {
+    if (!this.game.config().disastersEnabled()) return true;
+    if (!(CROWDING_TYPES as readonly UnitType[]).includes(type)) return true;
+    return (
+      crowdingLevels(this.game, this.player, tile, 1) <= CROWDING_SAFE_LEVELS
+    );
   }
 
   /** Samples shore tiles adjacent to water reachable by another player (=> trading possible) */
