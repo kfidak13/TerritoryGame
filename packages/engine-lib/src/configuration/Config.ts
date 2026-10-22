@@ -77,16 +77,20 @@ const DOOMSDAY_CLOCK_DEFAULTS = {
 
 // Share of the land a side must hold to win, in every game mode.
 const PERCENT_TILES_OWNED_TO_WIN = 80;
+// Borderfall: with overtime on, the bar starts higher (no early wins short of
+// near-total conquest) and then falls. Tuned with tests/sim/PacingSim.ts so
+// public FFA games end in about 25-35 minutes (40 at most).
+const OVERTIME_START_PERCENT = 90;
 
 // Overtime tunables (anti-stalemate). Off unless enabled in GameConfig.
-// After startMinutes the percentage of tiles required to win falls from the
-// base by dropPercentPerMinute, with no floor: the bar keeps sinking until the
-// leading side crosses it, so a stalled game always ends. Only `enabled` and
-// `startMinutes` are wire-configurable.
+// After startMinutes the percentage of tiles required to win falls from
+// OVERTIME_START_PERCENT by dropPercentPerMinute, with no floor: the bar keeps
+// sinking until the leading side crosses it, so a stalled game always ends.
+// Only `enabled` and `startMinutes` are wire-configurable.
 const OVERTIME_DEFAULTS = {
   enabled: false,
-  startMinutes: 30,
-  dropPercentPerMinute: 2,
+  startMinutes: 20,
+  dropPercentPerMinute: 4,
 };
 
 export class Config {
@@ -300,11 +304,11 @@ export class Config {
   }
 
   percentageTilesOwnedToWin(elapsedGameSeconds: number): number {
-    const base = PERCENT_TILES_OWNED_TO_WIN;
     const sd = this.overtimeConfig();
     if (!sd.enabled) {
-      return base;
+      return PERCENT_TILES_OWNED_TO_WIN;
     }
+    const base = OVERTIME_START_PERCENT;
     // Whole seconds only: elapsedGameSeconds is ticks/10 and can carry a
     // fractional part. The bar moves in WHOLE percentage points (one step
     // every 60/dropPercentPerMinute seconds), so the HUD shows exactly the

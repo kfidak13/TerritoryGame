@@ -1697,7 +1697,7 @@ export class HostLobbyModal extends BaseModal {
             overtime: this.overtime
               ? {
                   enabled: true,
-                  startMinutes: this.overtimeStartMinutes ?? 30,
+                  startMinutes: this.overtimeStartMinutes ?? 20,
                 }
               : { enabled: false },
             anonymizeNames: this.anonymizeNames,

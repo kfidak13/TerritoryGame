@@ -1203,7 +1203,7 @@ export class SinglePlayerModal extends BaseModal {
                   ? {
                       overtime: {
                         enabled: true,
-                        startMinutes: this.overtimeStartMinutes ?? 30,
+                        startMinutes: this.overtimeStartMinutes ?? 20,
                       },
                     }
                   : {}),

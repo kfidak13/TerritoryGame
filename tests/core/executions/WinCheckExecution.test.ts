@@ -640,13 +640,14 @@ describe("WinCheckExecution - Overtime", () => {
       overtime: { enabled: true, startMinutes: 1 },
     });
     const config = game.config();
-    expect(config.percentageTilesOwnedToWin(0)).toBe(80);
+    // With overtime the bar starts at 90% (80% without; see below).
+    expect(config.percentageTilesOwnedToWin(0)).toBe(90);
     // Unchanged up to and including the start minute.
-    expect(config.percentageTilesOwnedToWin(60)).toBe(80);
-    // Whole percentage points only: 2%/min -> one 1% step every 30 seconds.
-    expect(config.percentageTilesOwnedToWin(89)).toBe(80);
-    expect(config.percentageTilesOwnedToWin(90)).toBe(79);
-    expect(config.percentageTilesOwnedToWin(119)).toBe(79);
+    expect(config.percentageTilesOwnedToWin(60)).toBe(90);
+    // Whole percentage points only: 4%/min -> one 1% step every 15 seconds.
+    expect(config.percentageTilesOwnedToWin(74)).toBe(90);
+    expect(config.percentageTilesOwnedToWin(75)).toBe(89);
+    expect(config.percentageTilesOwnedToWin(89)).toBe(89);
     expect(config.percentageTilesOwnedToWin(60 + 5 * 60)).toBe(70);
     // No floor: clamps at 0 so the leader always qualifies eventually.
     expect(config.percentageTilesOwnedToWin(60 + 41 * 60)).toBe(0);
@@ -663,7 +664,7 @@ describe("WinCheckExecution - Overtime", () => {
       playerTeams: 2,
       overtime: { enabled: true, startMinutes: 1 },
     });
-    expect(game.config().percentageTilesOwnedToWin(0)).toBe(80);
+    expect(game.config().percentageTilesOwnedToWin(0)).toBe(90);
     expect(game.config().percentageTilesOwnedToWin(60 + 5 * 60)).toBe(70);
   });
 
@@ -702,7 +703,8 @@ describe("WinCheckExecution - Overtime", () => {
       overtime: { enabled: true, startMinutes: 1 },
     });
 
-    // 79% of the land: under the 80% base, so no win until the bar shrinks.
+    // 89% of the land: under the 90% overtime base, so no win until the bar
+    // shrinks.
     const nationInfo = new PlayerInfo(
       "TestNation",
       PlayerType.Nation,
@@ -712,7 +714,7 @@ describe("WinCheckExecution - Overtime", () => {
     game.addPlayer(nationInfo);
     const nation = game.player("nation_id");
     const totalLand = game.numLandTiles();
-    const targetTiles = Math.floor(totalLand * 0.79);
+    const targetTiles = Math.floor(totalLand * 0.89);
     let assigned = 0;
     game.map().forEachTile((tile) => {
       if (assigned >= targetTiles) return;
@@ -730,7 +732,7 @@ describe("WinCheckExecution - Overtime", () => {
     expect(setWinnerSpy).not.toHaveBeenCalled();
     expect(winCheck.isActive()).toBe(true);
 
-    // Two game-minutes in, the bar is 78% — below the nation's 79%.
+    // Two game-minutes in, the bar is 86% — below the nation's 89%.
     while (game.elapsedGameSeconds() < 120) {
       game.executeNextTick();
     }

@@ -15,6 +15,14 @@ commands and engine rules (determinism, layer boundaries, i18n) and applies here
 - Browser checks: `playwright-cli` is installed globally; in-game state is readable through
   `document.querySelector("build-menu").game` (see `.claude/skills/run-openfront/SKILL.md`).
 
+## Pacing
+
+`npm run sim:pacing -- --maps world,europe --seeds 2` plays AI-only public-FFA-style games
+(Medium nations, tribes, goods and overtime on) headlessly and reports when each game ended and
+the leader's land share over time (`tests/sim/PacingSim.ts`). Target: 25-35 minute games, 40 at
+most. With overtime the win bar starts at 90% and falls 4% a minute from minute 20
+(`Config.percentageTilesOwnedToWin`); without overtime it is a flat 80%.
+
 ## Verification
 
 `npm run typecheck && npm run lint && npx prettier --check . && npm test`, plus

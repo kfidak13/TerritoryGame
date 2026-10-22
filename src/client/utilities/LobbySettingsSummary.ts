@@ -107,7 +107,7 @@ export function notableLobbySettings(
   if (c.overtime?.enabled)
     items.push({
       label: translateText("overtime.title"),
-      value: renderDuration((c.overtime.startMinutes ?? 30) * 60),
+      value: renderDuration((c.overtime.startMinutes ?? 20) * 60),
     });
   if (c.anonymizeNames)
     items.push({
