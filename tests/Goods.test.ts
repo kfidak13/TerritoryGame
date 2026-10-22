@@ -46,7 +46,7 @@ async function goodsGame(): Promise<{ game: Game; player: Player }> {
 
 describe("deposits", () => {
   test(
-    "are deterministic, exclusive per region, and cover every good",
+    "are deterministic, varied in size, and cover every good",
     { timeout: 60_000 },
     async () => {
       const game = await setup(MAP, { goods: true });
@@ -59,28 +59,36 @@ describe("deposits", () => {
       const counts = countDeposits(a);
       for (const g of GOODS) expect(counts[g]).toBeGreaterThan(100);
 
-      // One good per region, and only on land.
+      // Only on land; tally each region's tiles of the good it holds most.
       const map = game.map();
       const size = regionSize(map);
-      const seen = new Map<string, Good>();
+      const perRegion = new Map<string, number[]>();
       let onWater = 0;
-      let mixedRegions = 0;
       map.forEachTile((t) => {
         const good = depositGood(a[t]);
         if (good === null) return;
         if (!map.isLand(t)) onWater++;
         const key = `${Math.floor(map.x(t) / size)}:${Math.floor(map.y(t) / size)}`;
-        const prev = seen.get(key);
-        if (prev === undefined) seen.set(key, good);
-        else if (prev !== good) mixedRegions++;
+        const tally = perRegion.get(key) ?? [0, 0, 0];
+        tally[good]++;
+        perRegion.set(key, tally);
       });
       expect(onWater).toBe(0);
-      expect(mixedRegions).toBe(0);
 
       // Fields come out roughly even across goods, whatever the terrain.
       const fields: number[] = [0, 0, 0];
-      for (const good of seen.values()) fields[good]++;
+      const sizes: number[] = [];
+      for (const tally of perRegion.values()) {
+        const main = tally.indexOf(Math.max(...tally));
+        fields[main]++;
+        sizes.push(tally[main]);
+      }
       expect(Math.max(...fields)).toBeLessThanOrEqual(2 * Math.min(...fields));
+
+      // Rich and poor fields: the big ones at least twice the small ones.
+      sizes.sort((x, y) => x - y);
+      const at = (q: number) => sizes[Math.floor(q * (sizes.length - 1))];
+      expect(at(0.8)).toBeGreaterThanOrEqual(2 * at(0.2));
     },
   );
 

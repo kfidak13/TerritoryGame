@@ -14,7 +14,8 @@ import { simpleHash } from "../Util";
  * Borderfall regional goods.
  *
  * Every map is split into square regions. About half the regions hold one
- * deposit field: a round patch of land around a tile of fitting terrain,
+ * deposit field: an irregular patch of land, from poor to rich, around a tile
+ * of fitting terrain,
  *
  *   Metal  around a mountain (or highland) tile, in hilly regions
  *   Oil    around a shoreline tile in coastal regions, or on a highland
@@ -71,8 +72,19 @@ const MIN_REGION_SIZE = 24;
 const MIN_LAND_FRACTION = 0.15;
 // Chance a region holds a field at all.
 const FIELD_CHANCE = 0.5;
-// Field radius, as a fraction of the region size.
+// Field radius, as a fraction of the region size: the size of an average
+// field, which yields FIELD_YIELD_PER_TICK (depositYield).
 const FIELD_RADIUS = 0.3;
+// Field shapes: a core disc plus a few lobes, all relative to the field's
+// own scale, which varies so fields range from poor to rich.
+const FIELD_SCALE_MIN = 0.7;
+const FIELD_SCALE_MAX = 1.6;
+const FIELD_CORE = 0.6;
+const FIELD_LOBES_MIN = 3;
+const FIELD_LOBES_MAX = 6;
+const FIELD_LOBE_REACH = 0.7;
+const FIELD_LOBE_MIN = 0.3;
+const FIELD_LOBE_MAX = 0.6;
 // Terrain shares (of a region's land) that make a region suit a good.
 const METAL_MIN_HIGHGROUND = 0.25;
 const OIL_MIN_SHORELINE = 0.03;
@@ -218,19 +230,36 @@ export function computeDeposits(map: GameMap, seed: number): Uint8Array {
     if (center === null) continue;
     fields[good]++;
 
-    // A disc around the center, kept inside the region so regions never mix.
-    const cx = map.x(center);
-    const cy = map.y(center);
+    // An irregular blob: a core disc plus a few offset lobes, each field
+    // scaled on its own so some are rich and some poor (yield follows area).
+    // It may spill into neighboring regions, but never onto another field.
+    const scale = radius * random.nextFloat(FIELD_SCALE_MIN, FIELD_SCALE_MAX);
+    const lobes = [
+      { x: map.x(center), y: map.y(center), r: scale * FIELD_CORE },
+    ];
+    const lobeCount = random.nextInt(FIELD_LOBES_MIN, FIELD_LOBES_MAX + 1);
+    for (let i = 0; i < lobeCount; i++) {
+      const reach = scale * FIELD_LOBE_REACH;
+      lobes.push({
+        x: lobes[0].x + Math.round(random.nextFloat(-reach, reach)),
+        y: lobes[0].y + Math.round(random.nextFloat(-reach, reach)),
+        r: scale * random.nextFloat(FIELD_LOBE_MIN, FIELD_LOBE_MAX),
+      });
+    }
     const byte = depositByte(good);
-    for (let y = Math.max(region.y0, cy - radius); y <= cy + radius; y++) {
-      if (y >= region.y1) break;
-      for (let x = Math.max(region.x0, cx - radius); x <= cx + radius; x++) {
-        if (x >= region.x1) break;
-        const dx = x - cx;
-        const dy = y - cy;
-        if (dx * dx + dy * dy > radius * radius) continue;
-        const ref = map.ref(x, y);
-        if (usable(ref)) deposits[ref] = byte;
+    for (const lobe of lobes) {
+      const r = Math.ceil(lobe.r);
+      const yEnd = Math.min(height - 1, lobe.y + r);
+      const xEnd = Math.min(width - 1, lobe.x + r);
+      for (let y = Math.max(0, lobe.y - r); y <= yEnd; y++) {
+        for (let x = Math.max(0, lobe.x - r); x <= xEnd; x++) {
+          const dx = x - lobe.x;
+          const dy = y - lobe.y;
+          if (dx * dx + dy * dy > lobe.r * lobe.r) continue;
+          const ref = map.ref(x, y);
+          const free = deposits[ref] === NO_DEPOSIT || deposits[ref] === byte;
+          if (usable(ref) && free) deposits[ref] = byte;
+        }
       }
     }
   }
