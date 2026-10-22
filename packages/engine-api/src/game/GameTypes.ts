@@ -207,6 +207,10 @@ export enum UnitType {
   MIRVWarhead = "MIRV Warhead",
   Train = "Train",
   Factory = "Factory",
+  // Borderfall goods buildings (engine-lib/game/Goods.ts).
+  Farm = "Farm",
+  Mineshaft = "Mineshaft",
+  OilExtractor = "Oil Extractor",
 }
 
 export enum TrainType {
@@ -236,6 +240,9 @@ export const Structures = unitTypeGroup([
   UnitType.MissileSilo,
   UnitType.Port,
   UnitType.Factory,
+  UnitType.Farm,
+  UnitType.Mineshaft,
+  UnitType.OilExtractor,
 ] as const);
 
 export const BuildMenus = unitTypeGroup([

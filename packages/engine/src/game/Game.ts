@@ -113,6 +113,12 @@ export interface UnitParamsMap {
   [UnitType.SAMLauncher]: Record<string, never>;
 
   [UnitType.City]: Record<string, never>;
+
+  [UnitType.Farm]: Record<string, never>;
+
+  [UnitType.Mineshaft]: Record<string, never>;
+
+  [UnitType.OilExtractor]: Record<string, never>;
 }
 
 // Type helper to get params type for a specific unit type

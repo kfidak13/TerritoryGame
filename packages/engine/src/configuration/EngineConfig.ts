@@ -360,6 +360,18 @@ export class EngineConfig extends Config {
           UnitType.Factory,
           UnitType.Port,
         );
+      // Borderfall goods buildings: each one costs a little more.
+      case UnitType.Farm:
+      case UnitType.Mineshaft:
+        return this.costWrapper(
+          (numUnits: number) => Math.min(500_000, (numUnits + 1) * 100_000),
+          type,
+        );
+      case UnitType.OilExtractor:
+        return this.costWrapper(
+          (numUnits: number) => Math.min(750_000, (numUnits + 1) * 150_000),
+          UnitType.OilExtractor,
+        );
       case UnitType.TransportShip:
       case UnitType.Shell:
       case UnitType.SAMMissile:

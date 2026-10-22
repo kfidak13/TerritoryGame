@@ -164,6 +164,12 @@ export class ConstructionExecution implements Execution {
       case UnitType.Factory:
         this.mg.addExecution(new FactoryExecution(this.structure!));
         break;
+      // Borderfall goods buildings need no execution: production follows
+      // their finished levels (Goods.ts workingLevels).
+      case UnitType.Farm:
+      case UnitType.Mineshaft:
+      case UnitType.OilExtractor:
+        break;
       default:
         console.warn(
           `unit type ${this.constructionType} cannot be constructed`,
@@ -180,6 +186,9 @@ export class ConstructionExecution implements Execution {
       case UnitType.SAMLauncher:
       case UnitType.City:
       case UnitType.Factory:
+      case UnitType.Farm:
+      case UnitType.Mineshaft:
+      case UnitType.OilExtractor:
         return true;
       default:
         return false;

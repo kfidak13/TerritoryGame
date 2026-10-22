@@ -11,6 +11,7 @@ import { GameConfig } from "@openfront/engine-api/Schemas";
 import { pow } from "../DetMath";
 import { DoomsdayClockSpeed } from "../game/DoomsdayClock";
 import {
+  buildingGood,
   FOOD_LAND_FED_FRACTION,
   foodGrowthModifier,
   foodUpkeep,
@@ -186,6 +187,8 @@ export class Config {
   }
 
   isUnitDisabled(unitType: UnitType): boolean {
+    // Borderfall goods buildings only exist with goods on.
+    if (buildingGood(unitType) !== null && !this.goodsEnabled()) return true;
     return this._gameConfig.disabledUnits?.includes(unitType) ?? false;
   }
   instantBuild(): boolean {
@@ -257,6 +260,14 @@ export class Config {
       case UnitType.Factory:
         info = {
           constructionDuration: this.instantBuild() ? 0 : 2 * 10,
+          upgradable: true,
+        };
+        break;
+      case UnitType.Farm:
+      case UnitType.Mineshaft:
+      case UnitType.OilExtractor:
+        info = {
+          constructionDuration: this.instantBuild() ? 0 : 5 * 10,
           upgradable: true,
         };
         break;

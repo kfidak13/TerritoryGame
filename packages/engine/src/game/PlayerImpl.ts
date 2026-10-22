@@ -38,8 +38,8 @@ import { ReadonlyTileSet } from "@openfront/engine-api/game/ReadViews";
 import { ClientID } from "@openfront/engine-api/Schemas";
 import { andFN, manhattanDistFN } from "@openfront/engine-lib/game/GameMapImpl";
 import {
+  buildingGood,
   canAffordGoods,
-  depositYield,
   GOODS_STOCK_CAP,
   goodsCost,
   goodsIncome,
@@ -1445,7 +1445,7 @@ export class PlayerImpl implements Player {
 
   goodsIncome(): GoodsAmounts {
     const pacts = tradePactMultiplier(this.tradePacts().length);
-    return goodsIncome(this._deposits, depositYield(this.mg.map()) * pacts);
+    return goodsIncome(this, this.mg.map(), pacts);
   }
 
   /** One tick of goods: deposits produce, troops eat (PlayerExecution). */
@@ -1743,6 +1743,10 @@ export class PlayerImpl implements Player {
       case UnitType.City:
       case UnitType.Factory:
         return this.landBasedStructureSpawn(targetTile, validTiles);
+      case UnitType.Farm:
+      case UnitType.Mineshaft:
+      case UnitType.OilExtractor:
+        return this.depositStructureSpawn(unitType, targetTile, validTiles);
       default:
         assertNever(unitType);
     }
@@ -1844,6 +1848,19 @@ export class PlayerImpl implements Player {
 
   landBasedUnitSpawn(tile: TileRef): TileRef | false {
     return this.mg.isLand(tile) && !this.mg.isImpassable(tile) ? tile : false;
+  }
+
+  /** Borderfall goods buildings stand on a deposit of the good they work. */
+  private depositStructureSpawn(
+    type: UnitType,
+    tile: TileRef,
+    validTiles: TileRef[] | null,
+  ): TileRef | false {
+    const good = buildingGood(type);
+    const tiles = (validTiles ?? this.validStructureSpawnTiles(tile)).filter(
+      (t) => this.mg.depositAt(t) === good,
+    );
+    return tiles.length > 0 ? tiles[0] : false;
   }
 
   landBasedStructureSpawn(

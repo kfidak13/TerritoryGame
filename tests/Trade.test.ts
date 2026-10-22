@@ -4,7 +4,7 @@ import {
   PlayerType,
 } from "@openfront/engine-api/game/GameTypes";
 import { TradeTerms } from "@openfront/engine-api/Schemas";
-import { depositYield, goodsIncome } from "@openfront/engine-lib/game/Goods";
+import { goodsIncome } from "@openfront/engine-lib/game/Goods";
 import {
   emptyTerms,
   MAX_TRADE_PACTS,
@@ -254,8 +254,8 @@ describe("trade pacts", () => {
     expect(alice.hasTradePactWith(bob)).toBe(true);
     expect(bob.tradePacts()).toEqual([alice]);
 
-    const base = goodsIncome([0, 100, 0], depositYield(game.map()));
     (alice as unknown as { _deposits: number[] })._deposits[Good.Oil] = 100;
+    const base = goodsIncome(alice, game.map(), 1);
     expect(alice.goodsIncome()[Good.Oil]).toBeCloseTo(
       base[Good.Oil] * (1 + TRADE_PACT_BONUS),
     );

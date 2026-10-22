@@ -29,7 +29,9 @@ import { simpleHash } from "../Util";
  * name: the same in every game on a map, and computed identically by the
  * engine and the client.
  *
- * Fields yield the same per second on every map scale. Food is a soft rule
+ * A worked field yields the same per second on every map scale: owned
+ * deposits only trickle until a Farm, Mineshaft or Oil Extractor works them.
+ * Food is a soft rule
  * (land feeds half a player's city-free troop cap; troops beyond that eat,
  * and hungry troops slow troop growth), Oil moves (warships, missiles) and
  * Metal stands (defense posts, SAMs, silos, structure upgrades).
@@ -106,13 +108,43 @@ function fieldRadius(map: GameMap): number {
   return Math.max(2, Math.round(regionSize(map) * FIELD_RADIUS));
 }
 
+/** Tiles in an average field on this map. */
+export function fieldArea(map: GameMap): number {
+  const r = fieldRadius(map);
+  return Math.PI * r * r;
+}
+
 /**
- * Goods one deposit tile yields per tick on this map: a full field yields
- * FIELD_YIELD_PER_TICK whatever the map's scale.
+ * Goods one worked deposit tile yields per tick on this map: a fully worked
+ * average field yields FIELD_YIELD_PER_TICK whatever the map's scale.
  */
 export function depositYield(map: GameMap): number {
-  const r = fieldRadius(map);
-  return FIELD_YIELD_PER_TICK / (Math.PI * r * r);
+  return FIELD_YIELD_PER_TICK / fieldArea(map);
+}
+
+/** Share of its output an owned deposit tile gives with no building working it. */
+export const UNWORKED_SHARE = 0.25;
+
+/** The building that works each good's deposits, indexed by Good. */
+export const GOOD_BUILDINGS = [
+  UnitType.Farm,
+  UnitType.OilExtractor,
+  UnitType.Mineshaft,
+] as const;
+
+/** The good a building works, or null for any other unit. */
+export function buildingGood(type: UnitType): Good | null {
+  const i = (GOOD_BUILDINGS as readonly UnitType[]).indexOf(type);
+  return i === -1 ? null : (i as Good);
+}
+
+/** Finished building levels working each good's deposits, by Good. */
+export function workingLevels(player: PlayerLike): GoodsAmounts {
+  return GOODS.map((g) =>
+    player
+      .units(GOOD_BUILDINGS[g])
+      .reduce((n, u) => (u.isUnderConstruction() ? n : n + u.level()), 0),
+  ) as GoodsAmounts;
 }
 
 /** Deterministic seed for a map's deposits. */
@@ -306,7 +338,8 @@ export function countDeposits(deposits: Uint8Array): GoodsAmounts {
 
 /**
  * Goods a build consumes, on top of its gold. Oil moves (ships, missiles),
- * Metal stands (land defenses, silos, and every structure upgrade). Null
+ * Metal stands (land defenses, silos, oil extractors, and every structure
+ * upgrade; Farms and Mineshafts start free so anyone can get going). Null
  * when the build is free of goods. With one field (1 per second) of a good:
  * a warship every 40s, a hydrogen bomb every 5 minutes, a MIRV every 15.
  */
@@ -337,9 +370,14 @@ export function goodsCost(
     case UnitType.MissileSilo:
       cost[Good.Metal] = 100;
       break;
+    case UnitType.OilExtractor:
+      cost[Good.Metal] = upgrade ? 40 : 20;
+      break;
     case UnitType.City:
     case UnitType.Port:
     case UnitType.Factory:
+    case UnitType.Farm:
+    case UnitType.Mineshaft:
       if (upgrade) cost[Good.Metal] = 40;
       break;
   }
@@ -353,16 +391,27 @@ export function canAffordGoods(
   return cost === null || GOODS.every((g) => stock[g] >= cost[g]);
 }
 
-/** Goods `deposits` produce per tick, indexed by Good (PlayerLike.goodsIncome). */
+/**
+ * Goods a player's deposits produce per tick, by Good (PlayerLike.goodsIncome).
+ * Every owned deposit tile gives UNWORKED_SHARE of its output; each finished
+ * level of the good's building works up to one average field of them at
+ * full output. `multiplier` covers trade pacts.
+ */
 export function goodsIncome(
-  deposits: Readonly<GoodsAmounts>,
-  yieldPerTile: number,
+  player: PlayerLike,
+  map: GameMap,
+  multiplier: number,
 ): GoodsAmounts {
-  return [
-    deposits[Good.Food] * yieldPerTile,
-    deposits[Good.Oil] * yieldPerTile,
-    deposits[Good.Metal] * yieldPerTile,
-  ];
+  const perTile = depositYield(map) * multiplier;
+  const area = fieldArea(map);
+  const deposits = player.deposits();
+  const levels = workingLevels(player);
+  return GOODS.map((g) => {
+    const worked = Math.min(deposits[g], levels[g] * area);
+    return (
+      perTile * (UNWORKED_SHARE * deposits[g] + (1 - UNWORKED_SHARE) * worked)
+    );
+  }) as GoodsAmounts;
 }
 
 /**

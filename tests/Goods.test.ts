@@ -17,7 +17,9 @@ import {
   foodState,
   goodsCost,
   regionSize,
+  UNWORKED_SHARE,
 } from "@openfront/engine-lib/game/Goods";
+import { ConstructionExecution } from "@openfront/engine/execution/ConstructionExecution";
 import { PlayerExecution } from "@openfront/engine/execution/PlayerExecution";
 import { Game, Player } from "@openfront/engine/game/Game";
 import { describe, expect, test } from "vitest";
@@ -116,7 +118,7 @@ describe("deposits", () => {
 });
 
 describe("goods economy", () => {
-  test("owned deposits produce, and counts follow conquest", async () => {
+  test("owned deposits trickle, and counts follow conquest", async () => {
     const { game, player } = await goodsGame();
     const metal = depositTiles(game, Good.Metal, 10);
     for (const t of metal) player.conquer(t);
@@ -126,12 +128,47 @@ describe("goods economy", () => {
     game.executeNextTick();
     const before = player.goods()[Good.Metal];
     game.executeNextTick();
-    expect(player.goods()[Good.Metal] - before).toBeCloseTo(
-      10 * depositYield(game.map()),
-    );
+    const expected = 10 * depositYield(game.map()) * UNWORKED_SHARE;
+    expect((player.goods()[Good.Metal] - before) / expected).toBeCloseTo(1, 6);
 
     player.relinquish(metal[0]);
     expect(player.deposits()[Good.Metal]).toBe(9);
+  });
+
+  test("a Mineshaft works its good's deposits at full output", async () => {
+    const { game, player } = await goodsGame();
+    const metal = depositTiles(game, Good.Metal, 10);
+    for (const t of metal) player.conquer(t);
+    const food = depositTiles(game, Good.Food, 1)[0];
+    player.conquer(food);
+    player.addGold(10_000_000n);
+
+    // Only on its own good's deposit.
+    expect(player.canBuild(UnitType.Mineshaft, food)).toBe(false);
+    expect(player.canBuild(UnitType.Mineshaft, metal[0])).toBe(metal[0]);
+
+    const trickle = player.goodsIncome()[Good.Metal];
+    game.addExecution(
+      new ConstructionExecution(player, UnitType.Mineshaft, metal[0]),
+    );
+    for (let i = 0; i < 5; i++) game.executeNextTick();
+    expect(player.units(UnitType.Mineshaft)).toHaveLength(1);
+    // One level works up to an average field: all ten tiles here.
+    expect(player.goodsIncome()[Good.Metal] / trickle).toBeCloseTo(
+      1 / UNWORKED_SHARE,
+      6,
+    );
+    expect(player.goodsIncome()[Good.Food]).toBeCloseTo(
+      depositYield(game.map()) * UNWORKED_SHARE,
+      10,
+    );
+  });
+
+  test("goods buildings need goods on", async () => {
+    const game = await setup(MAP, {});
+    expect(game.config().isUnitDisabled(UnitType.Farm)).toBe(true);
+    const on = await setup(MAP, { goods: true });
+    expect(on.config().isUnitDisabled(UnitType.Farm)).toBe(false);
   });
 
   test("hungry troops slow growth in proportion", async () => {
