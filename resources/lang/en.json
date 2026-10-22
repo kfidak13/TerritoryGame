@@ -618,7 +618,11 @@
     "allied_afk_neighbor_info": "You can attack disconnected players even if you are allied with them.",
     "army_limit_warning": "You're near your army limit! Consider sending troops to teammates.",
     "attack_ratio": "{percent}%\n({troops})",
+    "food": "Food: stockpile and net change per second. Troops eat food; owning food deposits produces it.",
+    "food_shortage": "Food shortage! Your troops grow slower until you capture more food deposits or have fewer troops.",
     "low_troops_warning": "You are very low on troops - You should always keep some troops for defense.",
+    "metal": "Metal: stockpile and production per second. Needed for defense posts, SAMs, silos and structure upgrades.",
+    "oil": "Oil: stockpile and production per second. Needed for warships and nukes.",
     "teammate_afk_neighbor_info": "You can attack disconnected teammates.",
     "traitor_neighbor_info": "You can betray traitors without becoming a traitor yourself."
   },

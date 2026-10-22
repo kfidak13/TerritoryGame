@@ -1,12 +1,24 @@
 import { TileRef } from "@openfront/engine-api/game/GameMap";
-import { GameMode, GameType, Gold } from "@openfront/engine-api/game/GameTypes";
+import {
+  GameMode,
+  GameType,
+  Gold,
+  Good,
+  GOODS,
+  GoodsAmounts,
+} from "@openfront/engine-api/game/GameTypes";
 import { GameUpdateType } from "@openfront/engine-api/game/GameUpdates";
 import { ClientID } from "@openfront/engine-api/Schemas";
 import { Config } from "@openfront/engine-lib/configuration/Config";
 import { renderNumber, renderTroops } from "@openfront/engine-lib/Format";
+import {
+  foodState,
+  foodUpkeep,
+  goodsIncome,
+} from "@openfront/engine-lib/game/Goods";
 import { assetUrl } from "@openfront/shared/AssetUrls";
 import { EventBus } from "@openfront/shared/EventBus";
-import { LitElement, html } from "lit";
+import { html, LitElement } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { keyed } from "lit/directives/keyed.js";
 import { Controller } from "../../Controller";
@@ -19,6 +31,12 @@ import { PlayerView } from "../../view/PlayerView";
 import { goldCoinIcon, soldierIcon } from "../HotbarIcons";
 import { TutorialHighlight, TutorialHighlightEvent } from "../Tutorial";
 const swordIcon = assetUrl("images/SwordIcon.svg");
+// Borderfall goods, indexed by Good.
+const GOOD_HUD = [
+  { icon: "🌾", label: "control_panel.food" },
+  { icon: "🛢️", label: "control_panel.oil" },
+  { icon: "⚙️", label: "control_panel.metal" },
+];
 
 @customElement("control-panel")
 export class ControlPanel extends LitElement implements Controller {
@@ -57,6 +75,15 @@ export class ControlPanel extends LitElement implements Controller {
   @state()
   private _goldGainPulseId: number = 0;
   private _goldGainTimeoutId: ReturnType<typeof setTimeout> | null = null;
+
+  // Borderfall goods: stockpiles, net change per tick, and whether troops are
+  // starving. Null when goods are off.
+  @state()
+  private _goods: {
+    stock: Readonly<GoodsAmounts>;
+    rate: GoodsAmounts;
+    starving: boolean;
+  } | null = null;
 
   @state()
   private _tutorialHighlight: TutorialHighlight | null = null;
@@ -135,6 +162,15 @@ export class ControlPanel extends LitElement implements Controller {
       .map((a) => a.troops)
       .reduce((a, b) => a + b, 0);
     this.troopRate = config.troopIncreaseRate(player) * 10;
+    if (config.goodsEnabled()) {
+      const rate = goodsIncome(player);
+      rate[Good.Food] -= foodUpkeep(player);
+      this._goods = {
+        stock: player.goods(),
+        rate,
+        starving: foodState(player) === "shortage",
+      };
+    }
 
     const helpEnabled = new UserSettings().helpMessages();
 
@@ -498,6 +534,46 @@ export class ControlPanel extends LitElement implements Controller {
     `;
   }
 
+  private renderGoods() {
+    if (this._goods === null) return "";
+    const { stock, rate, starving } = this._goods;
+    return html`
+      <div
+        class="flex gap-1.5 items-center mb-1 text-xs font-bold"
+        translate="no"
+      >
+        ${GOODS.map((good) => {
+          const short = good === Good.Food && starving;
+          // Per tick to per second, rounded so tiny drifts read as 0.0.
+          const perSecond = Math.round(rate[good] * 100) / 10;
+          const label = translateText(
+            short ? "control_panel.food_shortage" : GOOD_HUD[good].label,
+          );
+          return html`
+            <div
+              class="flex-1 flex items-center justify-center gap-1 border rounded-md px-1 py-0.5 tabular-nums ${short
+                ? "border-red-500 text-red-400"
+                : "border-gray-600 text-white"}"
+              title=${label}
+              aria-label=${label}
+            >
+              <span aria-hidden="true">${GOOD_HUD[good].icon}</span>
+              <span>${Math.floor(stock[good])}</span>
+              <span
+                class=${perSecond < 0
+                  ? "text-red-400"
+                  : perSecond > 0
+                    ? "text-green-400"
+                    : "text-gray-400"}
+                >${perSecond > 0 ? "+" : ""}${perSecond.toFixed(1)}/s</span
+              >
+            </div>
+          `;
+        })}
+      </div>
+    `;
+  }
+
   private renderDesktop() {
     return html`
       ${this.renderNotification()}
@@ -554,6 +630,7 @@ export class ControlPanel extends LitElement implements Controller {
           <span class="tabular-nums">${renderNumber(this._gold)}</span>
         </div>
       </div>
+      ${this.renderGoods()}
       <!-- Row 2: attack ratio | slider -->
       <div
         class="flex items-center gap-1.5 ${this.tutorialHighlightClass(
@@ -594,7 +671,7 @@ export class ControlPanel extends LitElement implements Controller {
 
   private renderMobile() {
     return html`
-      ${this.renderNotification()}
+      ${this.renderNotification()} ${this.renderGoods()}
       <div class="flex gap-2 items-center">
         <!-- Gold -->
         <div
