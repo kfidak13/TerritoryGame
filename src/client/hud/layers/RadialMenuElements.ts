@@ -7,6 +7,7 @@ import {
   NUKE_BULK_STEPS,
   PlayerActions,
   PlayerBuildableUnitType,
+  PlayerType,
   STRUCTURE_BULK_STEPS,
   Structures,
   UnitType,
@@ -26,6 +27,7 @@ import { EmojiTable } from "./EmojiTable";
 import { PlayerActionHandler } from "./PlayerActionHandler";
 import { PlayerPanel } from "./PlayerPanel";
 import { TooltipItem } from "./RadialMenu";
+import { OpenTradePanelEvent } from "./TradePanel";
 
 import { EventBus } from "@openfront/shared/EventBus";
 import {
@@ -43,6 +45,7 @@ const infoIcon = assetUrl("images/InfoIcon.svg");
 const swordIcon = assetUrl("images/SwordIconWhite.svg");
 const targetIcon = assetUrl("images/TargetIconWhite.svg");
 const traitorIcon = assetUrl("images/TraitorIconWhite.svg");
+const tradeIcon = assetUrl("images/TradingIconWhite.svg");
 const xIcon = assetUrl("images/XIcon.svg");
 
 export interface MenuElementParams {
@@ -212,6 +215,24 @@ const allyEmbargoElement: MenuElement = {
   text: translateText("player_panel.stop_trade"),
   action: (params: MenuElementParams) => {
     params.playerActionHandler.handleEmbargo(params.selected!, "start");
+    params.closeMenu();
+  },
+};
+
+// Borderfall: open the trade composer for the player under the cursor.
+// Hidden for tribes, which never trade; greyed out under an embargo.
+const tradeOfferElement: MenuElement = {
+  id: "trade_offer",
+  name: "trade_offer",
+  displayed: (params: MenuElementParams) =>
+    params.selected !== null && params.selected.type() !== PlayerType.Bot,
+  disabled: (params: MenuElementParams) =>
+    !params.playerActions?.interaction?.canTrade,
+  color: COLORS.trade,
+  icon: tradeIcon,
+  tooltipKeys: [{ key: "player_panel.trade", className: "title" }],
+  action: (params: MenuElementParams) => {
+    params.eventBus.emit(new OpenTradePanelEvent(params.selected!));
     params.closeMenu();
   },
 };
@@ -830,6 +851,7 @@ export const rootMenuElement: MenuElement = {
         : [
             isAllied && !isDisconnected ? allyBreakElement : boatMenuElement,
             inExtensionWindow ? allyExtendElement : allyRequestElement,
+            tradeOfferElement,
             showDonateInsteadOfAttack
               ? donateGoldRadialElement
               : attackMenuElement,
