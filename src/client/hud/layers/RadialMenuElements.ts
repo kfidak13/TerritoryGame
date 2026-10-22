@@ -456,7 +456,9 @@ function goodsShortItem(
 /** Which radial build ring a unit belongs to (goods buildings get their own). */
 function menuFor(type: UnitType): "attack" | "build" | "goods" {
   if (BuildableAttacks.has(type)) return "attack";
-  return buildingGood(type) !== null ? "goods" : "build";
+  return buildingGood(type) !== null || type === UnitType.OilRig
+    ? "goods"
+    : "build";
 }
 
 function createMenuElements(
@@ -759,7 +761,8 @@ export const buildMenuElement: MenuElement = {
   },
 };
 
-// Borderfall: Farm, Mineshaft and Oil Extractor in a ring of their own.
+// Borderfall: Farm, Mineshaft, Oil Extractor and Oil Rig in a ring of their
+// own.
 const goodsMenuElement: MenuElement = {
   id: "build_goods",
   name: "goods",

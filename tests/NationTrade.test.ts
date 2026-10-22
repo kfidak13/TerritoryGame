@@ -31,7 +31,9 @@ const MAP = "world";
 function depositTiles(game: Game, good: Good, n: number): TileRef[] {
   const tiles: TileRef[] = [];
   game.map().forEachTile((t) => {
-    if (tiles.length < n && game.depositAt(t) === good) tiles.push(t);
+    if (tiles.length < n && game.isLand(t) && game.depositAt(t) === good) {
+      tiles.push(t);
+    }
   });
   return tiles;
 }

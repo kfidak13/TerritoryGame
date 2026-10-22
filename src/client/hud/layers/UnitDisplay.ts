@@ -28,6 +28,7 @@ import {
   mirvIcon,
   missileSiloIcon,
   oilExtractorIcon,
+  oilRigIcon,
   portIcon,
   samLauncherIcon,
   warshipIcon,
@@ -51,6 +52,7 @@ export class UnitDisplay extends LitElement implements Controller {
   private _farms = 0;
   private _mineshafts = 0;
   private _oilExtractors = 0;
+  private _oilRigs = 0;
   private allDisabled = false;
   private _hoveredUnit: PlayerBuildableUnitType | null = null;
   private tutorialHighlight: PlayerBuildableUnitType | null = null;
@@ -139,6 +141,7 @@ export class UnitDisplay extends LitElement implements Controller {
     this._farms = player.totalUnitLevels(UnitType.Farm);
     this._mineshafts = player.totalUnitLevels(UnitType.Mineshaft);
     this._oilExtractors = player.totalUnitLevels(UnitType.OilExtractor);
+    this._oilRigs = player.totalUnitLevels(UnitType.OilRig);
     this.requestUpdate();
   }
 
@@ -249,6 +252,13 @@ export class UnitDisplay extends LitElement implements Controller {
             UnitType.OilExtractor,
             "oil_extractor",
             this.keybinds["buildOilExtractor"]?.key ?? "KeyO",
+          )}
+          ${this.renderUnitItem(
+            oilRigIcon,
+            this._oilRigs,
+            UnitType.OilRig,
+            "oil_rig",
+            this.keybinds["buildOilRig"]?.key ?? "KeyI",
           )}
         </div>
       </div>

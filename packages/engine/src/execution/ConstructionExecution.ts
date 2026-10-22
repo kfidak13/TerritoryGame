@@ -165,10 +165,12 @@ export class ConstructionExecution implements Execution {
         this.mg.addExecution(new FactoryExecution(this.structure!));
         break;
       // Borderfall goods buildings need no execution: production follows
-      // their finished levels (Goods.ts workingLevels).
+      // their finished levels (Goods.ts goodsIncome), and PlayerExecution
+      // repairs rigs.
       case UnitType.Farm:
       case UnitType.Mineshaft:
       case UnitType.OilExtractor:
+      case UnitType.OilRig:
         break;
       default:
         console.warn(
@@ -189,6 +191,7 @@ export class ConstructionExecution implements Execution {
       case UnitType.Farm:
       case UnitType.Mineshaft:
       case UnitType.OilExtractor:
+      case UnitType.OilRig:
         return true;
       default:
         return false;

@@ -43,6 +43,8 @@ import {
   GOODS_STOCK_CAP,
   goodsCost,
   goodsIncome,
+  oilRigRange,
+  oilRigSpacing,
 } from "@openfront/engine-lib/game/Goods";
 import { TileSet } from "@openfront/engine-lib/game/TileSet";
 import {
@@ -1747,6 +1749,8 @@ export class PlayerImpl implements Player {
       case UnitType.Mineshaft:
       case UnitType.OilExtractor:
         return this.depositStructureSpawn(unitType, targetTile, validTiles);
+      case UnitType.OilRig:
+        return this.oilRigSpawn(targetTile);
       default:
         assertNever(unitType);
     }
@@ -1861,6 +1865,63 @@ export class PlayerImpl implements Player {
       (t) => this.mg.depositAt(t) === good,
     );
     return tiles.length > 0 ? tiles[0] : false;
+  }
+
+  /**
+   * Borderfall Oil Rigs stand on offshore Oil within oilRigRange of land the
+   * player owns, and oilRigSpacing from any other rig (one per field): the
+   * closest such tile to `tile`, a few tiles at most.
+   */
+  private oilRigSpawn(tile: TileRef): TileRef | false {
+    const mg = this.mg;
+    const map = mg.map();
+    const snap = 6;
+    const spacing = oilRigSpacing(map);
+    const candidates: { t: TileRef; d2: number }[] = [];
+    for (let dy = -snap; dy <= snap; dy++) {
+      for (let dx = -snap; dx <= snap; dx++) {
+        const x = map.x(tile) + dx;
+        const y = map.y(tile) + dy;
+        const d2 = dx * dx + dy * dy;
+        if (d2 > snap * snap || !map.isValidCoord(x, y)) continue;
+        const t = map.ref(x, y);
+        if (map.isOcean(t) && mg.depositAt(t) === Good.Oil) {
+          candidates.push({ t, d2 });
+        }
+      }
+    }
+    candidates.sort((a, b) => a.d2 - b.d2);
+    for (const { t } of candidates) {
+      const taken = mg.anyUnitNearby(
+        t,
+        spacing,
+        [UnitType.OilRig],
+        () => true,
+        undefined,
+        true,
+      );
+      if (taken) continue;
+      if (this.ownsTileNear(t, oilRigRange(map))) return t;
+    }
+    return false;
+  }
+
+  private ownsTileNear(tile: TileRef, range: number): boolean {
+    const map = this.mg.map();
+    const cx = map.x(tile);
+    const cy = map.y(tile);
+    const id = this.smallID();
+    for (let y = Math.max(0, cy - range); y <= cy + range; y++) {
+      if (y >= map.height()) break;
+      for (let x = Math.max(0, cx - range); x <= cx + range; x++) {
+        if (x >= map.width()) break;
+        const dx = x - cx;
+        const dy = y - cy;
+        if (dx * dx + dy * dy > range * range) continue;
+        if (map.ownerID(map.ref(x, y)) === id) return true;
+      }
+    }
+    return false;
   }
 
   landBasedStructureSpawn(

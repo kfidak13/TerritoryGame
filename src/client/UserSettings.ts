@@ -32,10 +32,11 @@ export function getDefaultKeybinds(isMac: boolean): Record<string, string> {
     buildHydrogenBomb: "Digit9",
     buildMIRV: "Digit0",
     // Borderfall goods buildings: H (harvest) and J for Farm and Mineshaft,
-    // O for the Oil Extractor.
+    // O for the Oil Extractor, I for the Oil Rig.
     buildFarm: "KeyH",
     buildMineshaft: "KeyJ",
     buildOilExtractor: "KeyO",
+    buildOilRig: "KeyI",
     attackRatioDown: "KeyT",
     attackRatioUp: "KeyY",
     boatAttack: "KeyB",

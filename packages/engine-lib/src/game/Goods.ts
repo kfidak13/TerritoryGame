@@ -22,6 +22,9 @@ import { simpleHash } from "../Util";
  *          plateau
  *   Food   around a plains tile, in lowland regions
  *
+ * Out at sea, many small Oil fields lie a few tiles off the coast: only an
+ * Oil Rig works them, and only a player owning land nearby can build one.
+ *
  * Each region takes, among the goods its terrain suits, the one the map has
  * fewest fields of so far, so the three goods come out roughly even on any
  * terrain. A good few regions suit (say, on a map without coast or hills)
@@ -39,6 +42,8 @@ import { simpleHash } from "../Util";
 
 /** Goods a whole deposit field yields per tick (10 ticks per second). */
 export const FIELD_YIELD_PER_TICK = 0.1;
+/** Share of its output an owned deposit tile gives with no building working it. */
+export const UNWORKED_SHARE = 0.25;
 /** Food one troop beyond the land-fed share eats per tick: a field feeds 300k. */
 export const FOOD_PER_TROOP = FIELD_YIELD_PER_TICK / 300_000;
 /** Share of the city-free troop cap that land feeds for free. */
@@ -95,6 +100,24 @@ const OIL_PLATEAU_MAX_MOUNTAIN = 0.1;
 const FOOD_MIN_PLAINS = 0.4;
 // A good fewer than this share of regions suit may go anywhere.
 const MIN_SUITED_SHARE = 0.2;
+// Offshore Oil: the chance a region with coastal sea holds a field, how far
+// off the coast its center lies (as fractions of the region size, the
+// minimum in tiles), and its radius (a fraction of a land field's).
+const OFFSHORE_CHANCE = 0.6;
+const OFFSHORE_MIN_COAST = 3;
+const OFFSHORE_MAX_COAST = 0.2;
+const OFFSHORE_RADIUS = 0.4;
+// Oil Rigs: a player must own land this far (a fraction of the region size)
+// from the rig, rigs stand at least this far apart (in offshore field radii,
+// so one per field), and each yields what an Oil Extractor adds to a field.
+const OIL_RIG_RANGE = 0.35;
+const OIL_RIG_SPACING = 3;
+export const OIL_RIG_YIELD_PER_TICK =
+  (1 - UNWORKED_SHARE) * FIELD_YIELD_PER_TICK;
+/** Oil Rig health: about six warship shells. */
+export const OIL_RIG_MAX_HEALTH = 1500;
+/** Health an Oil Rig regains per tick: a wrecked one is whole in 2.5 min. */
+export const OIL_RIG_REPAIR_PER_TICK = 1;
 
 export function regionSize(map: GameMap): number {
   const longEdge = Math.max(map.width(), map.height());
@@ -114,6 +137,20 @@ export function fieldArea(map: GameMap): number {
   return Math.PI * r * r;
 }
 
+function offshoreRadius(map: GameMap): number {
+  return Math.max(2, Math.round(fieldRadius(map) * OFFSHORE_RADIUS));
+}
+
+/** How far from a rig its owner must hold land. */
+export function oilRigRange(map: GameMap): number {
+  return Math.max(6, Math.round(regionSize(map) * OIL_RIG_RANGE));
+}
+
+/** How close two Oil Rigs may stand: one per offshore field. */
+export function oilRigSpacing(map: GameMap): number {
+  return offshoreRadius(map) * OIL_RIG_SPACING;
+}
+
 /**
  * Goods one worked deposit tile yields per tick on this map: a fully worked
  * average field yields FIELD_YIELD_PER_TICK whatever the map's scale.
@@ -121,9 +158,6 @@ export function fieldArea(map: GameMap): number {
 export function depositYield(map: GameMap): number {
   return FIELD_YIELD_PER_TICK / fieldArea(map);
 }
-
-/** Share of its output an owned deposit tile gives with no building working it. */
-export const UNWORKED_SHARE = 0.25;
 
 /** The building that works each good's deposits, indexed by Good. */
 export const GOOD_BUILDINGS = [
@@ -256,74 +290,152 @@ export function computeDeposits(map: GameMap, seed: number): Uint8Array {
     const tied = candidates.filter((g) => fields[g] === fewest);
     const good = tied[random.nextInt(0, tied.length)];
 
-    const center = pickCenter(map, region, radius, random, (ref) =>
-      centerFits(map, ref, good, anywhere[good]),
-    );
+    // Prefer a center a radius in from the region edges, so the field is
+    // round.
+    const fits = (ref: TileRef) =>
+      usable(ref) && centerFits(map, ref, good, anywhere[good]);
+    const center =
+      pickTile(map, region, radius, random, fits) ??
+      pickTile(map, region, 0, random, fits);
     if (center === null) continue;
     fields[good]++;
 
-    // An irregular blob: a core disc plus a few offset lobes, each field
-    // scaled on its own so some are rich and some poor (yield follows area).
-    // It may spill into neighboring regions, but never onto another field.
+    // Each field scaled on its own so some are rich and some poor (yield
+    // follows area). It may spill into neighboring regions.
     const scale = radius * random.nextFloat(FIELD_SCALE_MIN, FIELD_SCALE_MAX);
-    const lobes = [
-      { x: map.x(center), y: map.y(center), r: scale * FIELD_CORE },
-    ];
-    const lobeCount = random.nextInt(FIELD_LOBES_MIN, FIELD_LOBES_MAX + 1);
-    for (let i = 0; i < lobeCount; i++) {
-      const reach = scale * FIELD_LOBE_REACH;
-      lobes.push({
-        x: lobes[0].x + Math.round(random.nextFloat(-reach, reach)),
-        y: lobes[0].y + Math.round(random.nextFloat(-reach, reach)),
-        r: scale * random.nextFloat(FIELD_LOBE_MIN, FIELD_LOBE_MAX),
-      });
-    }
-    const byte = depositByte(good);
-    for (const lobe of lobes) {
-      const r = Math.ceil(lobe.r);
-      const yEnd = Math.min(height - 1, lobe.y + r);
-      const xEnd = Math.min(width - 1, lobe.x + r);
-      for (let y = Math.max(0, lobe.y - r); y <= yEnd; y++) {
-        for (let x = Math.max(0, lobe.x - r); x <= xEnd; x++) {
-          const dx = x - lobe.x;
-          const dy = y - lobe.y;
-          if (dx * dx + dy * dy > lobe.r * lobe.r) continue;
-          const ref = map.ref(x, y);
-          const free = deposits[ref] === NO_DEPOSIT || deposits[ref] === byte;
-          if (usable(ref) && free) deposits[ref] = byte;
-        }
-      }
+    paintField(map, deposits, center, scale, depositByte(good), random, usable);
+  }
+
+  // Offshore Oil, from its own seeded stream so the land fields above stay
+  // put: small fields a few tiles off the coast, out in the ocean.
+  const coast = coastDistance(map, Math.round(size * OFFSHORE_MAX_COAST));
+  const offshore = (ref: TileRef) => coast[ref] > 0;
+  const nearCoast = (ref: TileRef) => coast[ref] >= OFFSHORE_MIN_COAST;
+  const seaRandom = new PseudoRandom(seed + 1);
+  const offshoreRadius = Math.max(2, Math.round(radius * OFFSHORE_RADIUS));
+  for (let y0 = 0; y0 < height; y0 += size) {
+    for (let x0 = 0; x0 < width; x0 += size) {
+      if (seaRandom.next() >= OFFSHORE_CHANCE) continue;
+      const region = {
+        x0,
+        y0,
+        x1: Math.min(width, x0 + size),
+        y1: Math.min(height, y0 + size),
+      };
+      const center = pickTile(map, region, 0, seaRandom, nearCoast);
+      if (center === null) continue;
+      const scale =
+        offshoreRadius * seaRandom.nextFloat(FIELD_SCALE_MIN, FIELD_SCALE_MAX);
+      paintField(
+        map,
+        deposits,
+        center,
+        scale,
+        depositByte(Good.Oil),
+        seaRandom,
+        offshore,
+      );
     }
   }
   return deposits;
 }
 
 /**
- * A random fitting land tile, preferring ones a radius away from the region
- * edges so the field is round; null when the region has none.
+ * An irregular blob around `center`: a core disc plus a few offset lobes,
+ * all relative to `scale`, on tiles that `fits` and no other field holds.
  */
-function pickCenter(
+function paintField(
   map: GameMap,
-  region: Region,
-  radius: number,
+  deposits: Uint8Array,
+  center: TileRef,
+  scale: number,
+  byte: number,
+  random: PseudoRandom,
+  fits: (ref: TileRef) => boolean,
+): void {
+  const width = map.width();
+  const height = map.height();
+  const lobes = [{ x: map.x(center), y: map.y(center), r: scale * FIELD_CORE }];
+  const lobeCount = random.nextInt(FIELD_LOBES_MIN, FIELD_LOBES_MAX + 1);
+  for (let i = 0; i < lobeCount; i++) {
+    const reach = scale * FIELD_LOBE_REACH;
+    lobes.push({
+      x: lobes[0].x + Math.round(random.nextFloat(-reach, reach)),
+      y: lobes[0].y + Math.round(random.nextFloat(-reach, reach)),
+      r: scale * random.nextFloat(FIELD_LOBE_MIN, FIELD_LOBE_MAX),
+    });
+  }
+  for (const lobe of lobes) {
+    const r = Math.ceil(lobe.r);
+    const yEnd = Math.min(height - 1, lobe.y + r);
+    const xEnd = Math.min(width - 1, lobe.x + r);
+    for (let y = Math.max(0, lobe.y - r); y <= yEnd; y++) {
+      for (let x = Math.max(0, lobe.x - r); x <= xEnd; x++) {
+        const dx = x - lobe.x;
+        const dy = y - lobe.y;
+        if (dx * dx + dy * dy > lobe.r * lobe.r) continue;
+        const ref = map.ref(x, y);
+        const free = deposits[ref] === NO_DEPOSIT || deposits[ref] === byte;
+        if (fits(ref) && free) deposits[ref] = byte;
+      }
+    }
+  }
+}
+
+/**
+ * Per tile, how many steps of ocean lie between it and land (1 next to the
+ * coast), up to `max`; 0 for land, lakes, and open sea beyond `max`.
+ */
+function coastDistance(map: GameMap, max: number): Uint8Array {
+  const dist = new Uint8Array(map.width() * map.height());
+  let frontier: TileRef[] = [];
+  map.forEachTile((t) => {
+    if (map.isOceanShore(t)) {
+      map.forEachNeighbor(t, (n) => {
+        if (map.isOcean(n) && dist[n] === 0) {
+          dist[n] = 1;
+          frontier.push(n);
+        }
+      });
+    }
+  });
+  for (let d = 2; d <= Math.min(max, 255) && frontier.length > 0; d++) {
+    const next: TileRef[] = [];
+    for (const t of frontier) {
+      map.forEachNeighbor(t, (n) => {
+        if (map.isOcean(n) && dist[n] === 0) {
+          dist[n] = d;
+          next.push(n);
+        }
+      });
+    }
+    frontier = next;
+  }
+  return dist;
+}
+
+/**
+ * A random tile of the region, at least `inset` from its edges, that `fits`;
+ * null when there is none. Reservoir sampling: one pass, uniform.
+ */
+function pickTile(
+  map: GameMap,
+  region: { x0: number; y0: number; x1: number; y1: number },
+  inset: number,
   random: PseudoRandom,
   fits: (ref: TileRef) => boolean,
 ): TileRef | null {
-  const pick = (inset: number): TileRef | null => {
-    // Reservoir sampling: one pass, uniform over fitting tiles.
-    let chosen: TileRef | null = null;
-    let seen = 0;
-    for (let y = region.y0 + inset; y < region.y1 - inset; y++) {
-      for (let x = region.x0 + inset; x < region.x1 - inset; x++) {
-        const ref = map.ref(x, y);
-        if (!map.isLand(ref) || map.isImpassable(ref) || !fits(ref)) continue;
-        seen++;
-        if (random.nextInt(0, seen) === 0) chosen = ref;
-      }
+  let chosen: TileRef | null = null;
+  let seen = 0;
+  for (let y = region.y0 + inset; y < region.y1 - inset; y++) {
+    for (let x = region.x0 + inset; x < region.x1 - inset; x++) {
+      const ref = map.ref(x, y);
+      if (!fits(ref)) continue;
+      seen++;
+      if (random.nextInt(0, seen) === 0) chosen = ref;
     }
-    return chosen;
-  };
-  return pick(radius) ?? pick(0);
+  }
+  return chosen;
 }
 
 /** Deposit tiles of each good on the whole map. */
@@ -338,8 +450,9 @@ export function countDeposits(deposits: Uint8Array): GoodsAmounts {
 
 /**
  * Goods a build consumes, on top of its gold. Oil moves (ships, missiles),
- * Metal stands (land defenses, silos, oil extractors, and every structure
- * upgrade; Farms and Mineshafts start free so anyone can get going). Null
+ * Metal stands (land defenses, silos, oil extractors and rigs, and every
+ * structure upgrade; Farms and Mineshafts start free so anyone can get
+ * going). Null
  * when the build is free of goods. With one field (1 per second) of a good:
  * a warship every 40s, a hydrogen bomb every 5 minutes, a MIRV every 15.
  */
@@ -373,6 +486,9 @@ export function goodsCost(
     case UnitType.OilExtractor:
       cost[Good.Metal] = upgrade ? 40 : 20;
       break;
+    case UnitType.OilRig:
+      cost[Good.Metal] = 60;
+      break;
     case UnitType.City:
     case UnitType.Port:
     case UnitType.Factory:
@@ -395,7 +511,8 @@ export function canAffordGoods(
  * Goods a player's deposits produce per tick, by Good (PlayerLike.goodsIncome).
  * Every owned deposit tile gives UNWORKED_SHARE of its output; each finished
  * level of the good's building works up to one average field of them at
- * full output. `multiplier` covers trade pacts.
+ * full output, and each finished Oil Rig adds OIL_RIG_YIELD_PER_TICK of Oil.
+ * `multiplier` covers trade pacts.
  */
 export function goodsIncome(
   player: PlayerLike,
@@ -406,12 +523,17 @@ export function goodsIncome(
   const area = fieldArea(map);
   const deposits = player.deposits();
   const levels = workingLevels(player);
-  return GOODS.map((g) => {
+  const income = GOODS.map((g) => {
     const worked = Math.min(deposits[g], levels[g] * area);
     return (
       perTile * (UNWORKED_SHARE * deposits[g] + (1 - UNWORKED_SHARE) * worked)
     );
   }) as GoodsAmounts;
+  const rigs = player
+    .units(UnitType.OilRig)
+    .filter((u) => !u.isUnderConstruction()).length;
+  income[Good.Oil] += rigs * OIL_RIG_YIELD_PER_TICK * multiplier;
+  return income;
 }
 
 /**

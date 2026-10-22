@@ -10,7 +10,12 @@ import {
   Structures,
   UnitType,
 } from "@openfront/engine-api/game/GameTypes";
-import { fieldArea, GOOD_BUILDINGS } from "@openfront/engine-lib/game/Goods";
+import {
+  FIELD_YIELD_PER_TICK,
+  fieldArea,
+  GOOD_BUILDINGS,
+  oilRigRange,
+} from "@openfront/engine-lib/game/Goods";
 import { PseudoRandom } from "@openfront/engine-lib/PseudoRandom";
 import {
   readVersioned,
@@ -671,7 +676,7 @@ export class NationStructureBehavior {
       return true;
     }
 
-    if (this.maybeWorkDeposits()) {
+    if (this.maybeWorkDeposits() || this.maybeBuildOilRig()) {
       return true;
     }
 
@@ -988,6 +993,46 @@ export class NationStructureBehavior {
         .find((u) => !u.isUnderConstruction() && player.canUpgradeUnit(u));
       if (existing !== undefined && hasGoodsFor(game, player, type, true)) {
         return this.upgradeStructure(existing);
+      }
+    }
+    return false;
+  }
+
+  /**
+   * Borderfall: an Oil Rig on offshore Oil off a few sampled stretches of
+   * the nation's coast, when it can afford one and pumps less than two
+   * fields' worth of Oil.
+   */
+  private maybeBuildOilRig(): boolean {
+    const game = this.game;
+    const player = this.player;
+    const type = UnitType.OilRig;
+    if (!game.config().goodsEnabled() || game.config().isUnitDisabled(type)) {
+      return false;
+    }
+    if (player.goodsIncome()[Good.Oil] >= 2 * FIELD_YIELD_PER_TICK) {
+      return false;
+    }
+    if (player.gold() < this.cost(type) || !hasGoodsFor(game, player, type)) {
+      return false;
+    }
+    const shore = Array.from(player.borderTiles()).filter((t) =>
+      game.isOceanShore(t),
+    );
+    const range = oilRigRange(game.map());
+    for (let i = 0; i < Math.min(5, shore.length); i++) {
+      const from = shore[this.random.nextInt(0, shore.length)];
+      // ponytail: a few placement tries per stretch of coast; a field
+      // further out is found on a later pass.
+      let tries = 3;
+      for (const t of game.map().circleSearch(from, range)) {
+        if (!game.isOcean(t) || game.depositAt(t) !== Good.Oil) continue;
+        const site = player.canBuild(type, t);
+        if (site !== false) {
+          game.addExecution(new ConstructionExecution(player, type, site));
+          return true;
+        }
+        if (--tries === 0) break;
       }
     }
     return false;

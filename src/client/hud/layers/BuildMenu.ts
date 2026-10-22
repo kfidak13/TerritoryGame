@@ -42,6 +42,7 @@ const shieldIcon = assetUrl("images/ShieldIconWhite.svg");
 const farmIcon = assetUrl("images/FarmIconWhite.svg");
 const mineshaftIcon = assetUrl("images/MineshaftIconWhite.svg");
 const oilExtractorIcon = assetUrl("images/OilExtractorIconWhite.svg");
+const oilRigIcon = assetUrl("images/OilRigIconWhite.svg");
 
 export interface BuildItemDisplay {
   unitType: PlayerBuildableUnitType;
@@ -145,6 +146,13 @@ export const buildTable: BuildItemDisplay[][] = [
       icon: oilExtractorIcon,
       description: "build_menu.desc.oil_extractor",
       key: "unit_type.oil_extractor",
+      countable: true,
+    },
+    {
+      unitType: UnitType.OilRig,
+      icon: oilRigIcon,
+      description: "build_menu.desc.oil_rig",
+      key: "unit_type.oil_rig",
       countable: true,
     },
   ],

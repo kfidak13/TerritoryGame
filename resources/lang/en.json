@@ -198,6 +198,7 @@
       "mirv": "Huge explosion, only targets selected player",
       "missile_silo": "Used to launch nukes",
       "oil_extractor": "Works your Oil deposits on land at full output (they only trickle without one). Each level works one field's worth.",
+      "oil_rig": "Pumps an offshore Oil field near your coast, about what an Oil Extractor adds. Enemy warships can sink it; it repairs itself.",
       "port": "Sends trade ships to generate gold",
       "sam_launcher": "Defends against incoming nukes",
       "warship": "Captures trade ships, destroys ships and boats"
@@ -2613,6 +2614,8 @@
     "build_missile_silo_desc": "Build a Missile Silo under your cursor.",
     "build_oil_extractor": "Build Oil Extractor",
     "build_oil_extractor_desc": "Build an Oil Extractor under your cursor.",
+    "build_oil_rig": "Build Oil Rig",
+    "build_oil_rig_desc": "Build an Oil Rig under your cursor.",
     "build_port": "Build Port",
     "build_port_desc": "Build a Port under your cursor.",
     "build_sam_launcher": "Build SAM Launcher",

@@ -372,6 +372,11 @@ export class EngineConfig extends Config {
           (numUnits: number) => Math.min(750_000, (numUnits + 1) * 150_000),
           UnitType.OilExtractor,
         );
+      case UnitType.OilRig:
+        return this.costWrapper(
+          (numUnits: number) => Math.min(1_000_000, (numUnits + 1) * 200_000),
+          UnitType.OilRig,
+        );
       case UnitType.TransportShip:
       case UnitType.Shell:
       case UnitType.SAMMissile:

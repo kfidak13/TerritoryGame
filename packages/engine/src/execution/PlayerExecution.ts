@@ -5,6 +5,7 @@ import {
   Structures,
   UnitType,
 } from "@openfront/engine-api/game/GameTypes";
+import { OIL_RIG_REPAIR_PER_TICK } from "@openfront/engine-lib/game/Goods";
 import { zInt, zPlayerRef } from "@openfront/engine-lib/snapshot/SnapshotType";
 import { getMode, simpleHash } from "@openfront/engine-lib/Util";
 import { z } from "zod";
@@ -87,6 +88,12 @@ export class PlayerExecution implements Execution {
     this.player.decayRelations();
     for (const u of this.player.units()) {
       if (!Structures.has(u.type())) {
+        continue;
+      }
+      // Borderfall Oil Rigs stand at sea: never captured, only sunk, and
+      // slowly repaired between attacks.
+      if (u.type() === UnitType.OilRig) {
+        u.modifyHealth(OIL_RIG_REPAIR_PER_TICK);
         continue;
       }
 

@@ -35,7 +35,9 @@ const MAP = "world";
 function depositTiles(game: Game, good: Good, n: number): TileRef[] {
   const tiles: TileRef[] = [];
   game.map().forEachTile((t) => {
-    if (tiles.length < n && game.depositAt(t) === good) tiles.push(t);
+    if (tiles.length < n && game.isLand(t) && game.depositAt(t) === good) {
+      tiles.push(t);
+    }
   });
   return tiles;
 }
@@ -64,21 +66,28 @@ describe("deposits", () => {
       const counts = countDeposits(a);
       for (const g of GOODS) expect(counts[g]).toBeGreaterThan(100);
 
-      // Only on land; tally each region's tiles of the good it holds most.
+      // At sea only offshore Oil, in the ocean. Tally each region's land
+      // tiles of the good it holds most.
       const map = game.map();
       const size = regionSize(map);
       const perRegion = new Map<string, number[]>();
-      let onWater = 0;
+      let offshore = 0;
+      let wrongAtSea = 0;
       map.forEachTile((t) => {
         const good = depositGood(a[t]);
         if (good === null) return;
-        if (!map.isLand(t)) onWater++;
+        if (!map.isLand(t)) {
+          offshore++;
+          if (good !== Good.Oil || !map.isOcean(t)) wrongAtSea++;
+          return;
+        }
         const key = `${Math.floor(map.x(t) / size)}:${Math.floor(map.y(t) / size)}`;
         const tally = perRegion.get(key) ?? [0, 0, 0];
         tally[good]++;
         perRegion.set(key, tally);
       });
-      expect(onWater).toBe(0);
+      expect(offshore).toBeGreaterThan(100);
+      expect(wrongAtSea).toBe(0);
 
       // Fields come out roughly even across goods, whatever the terrain.
       const fields: number[] = [0, 0, 0];

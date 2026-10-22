@@ -49,6 +49,7 @@ export const STRUCTURE_TYPES: ReadonlySet<string> = new Set([
   UT_FARM,
   UT_MINESHAFT,
   UT_OIL_EXTRACTOR,
+  UT_OIL_RIG,
 ]);
 
 export const NUKE_TYPES: ReadonlySet<string> = new Set([
@@ -110,4 +111,5 @@ export const ALL_UNIT_TYPES = [
   UT_FARM,
   UT_MINESHAFT,
   UT_OIL_EXTRACTOR,
+  UT_OIL_RIG,
 ] as const;

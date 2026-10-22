@@ -23,6 +23,11 @@ function viewOf(game: Game): GameView {
     isImpassable: (t: number) => map.isImpassable(t),
     isShoreline: (t: number) => map.isShoreline(t),
     terrainType: (t: number) => map.terrainType(t),
+    isOcean: (t: number) => map.isOcean(t),
+    isOceanShore: (t: number) => map.isOceanShore(t),
+    forEachTile: (fn: (t: number) => void) => map.forEachTile(fn),
+    forEachNeighbor: (t: number, fn: (n: number) => void) =>
+      map.forEachNeighbor(t, fn),
   } as unknown as GameView;
 }
 

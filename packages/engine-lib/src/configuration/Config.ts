@@ -15,6 +15,7 @@ import {
   FOOD_LAND_FED_FRACTION,
   foodGrowthModifier,
   foodUpkeep,
+  OIL_RIG_MAX_HEALTH,
 } from "../game/Goods";
 import { assertNever } from "../Util";
 
@@ -188,7 +189,12 @@ export class Config {
 
   isUnitDisabled(unitType: UnitType): boolean {
     // Borderfall goods buildings only exist with goods on.
-    if (buildingGood(unitType) !== null && !this.goodsEnabled()) return true;
+    if (
+      (buildingGood(unitType) !== null || unitType === UnitType.OilRig) &&
+      !this.goodsEnabled()
+    ) {
+      return true;
+    }
     return this._gameConfig.disabledUnits?.includes(unitType) ?? false;
   }
   instantBuild(): boolean {
@@ -269,6 +275,12 @@ export class Config {
         info = {
           constructionDuration: this.instantBuild() ? 0 : 5 * 10,
           upgradable: true,
+        };
+        break;
+      case UnitType.OilRig:
+        info = {
+          constructionDuration: this.instantBuild() ? 0 : 10 * 10,
+          maxHealth: OIL_RIG_MAX_HEALTH,
         };
         break;
       case UnitType.TransportShip:

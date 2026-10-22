@@ -119,6 +119,8 @@ export interface UnitParamsMap {
   [UnitType.Mineshaft]: Record<string, never>;
 
   [UnitType.OilExtractor]: Record<string, never>;
+
+  [UnitType.OilRig]: Record<string, never>;
 }
 
 // Type helper to get params type for a specific unit type

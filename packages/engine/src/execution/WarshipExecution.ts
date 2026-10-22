@@ -141,6 +141,13 @@ export class WarshipExecution implements Execution {
       return;
     }
 
+    // Borderfall: shell an enemy Oil Rig in range.
+    if (this.warship.targetUnit()?.type() === UnitType.OilRig) {
+      this.shootTarget();
+      this.patrol();
+      return;
+    }
+
     // Priority 3: Hunt trade ship only if not healing and no enemy warship
     if (this.warship.targetUnit()?.type() === UnitType.TradeShip) {
       this.huntDownTradeShip();
@@ -255,7 +262,12 @@ export class WarshipExecution implements Execution {
 
   private findTargetUnit(): Unit | undefined {
     return this.findBestTarget(
-      [UnitType.TransportShip, UnitType.Warship, UnitType.TradeShip],
+      [
+        UnitType.TransportShip,
+        UnitType.Warship,
+        UnitType.OilRig,
+        UnitType.TradeShip,
+      ],
       true,
     );
   }
@@ -339,8 +351,12 @@ export class WarshipExecution implements Execution {
         }
       }
 
-      const typePriority =
-        type === UnitType.TransportShip ? 0 : type === UnitType.Warship ? 1 : 2;
+      const typePriority = [
+        UnitType.TransportShip,
+        UnitType.Warship,
+        UnitType.OilRig,
+        UnitType.TradeShip,
+      ].indexOf(type);
 
       if (
         bestUnit === undefined ||
