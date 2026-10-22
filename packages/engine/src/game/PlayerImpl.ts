@@ -45,6 +45,10 @@ import {
   goodsIncome,
 } from "@openfront/engine-lib/game/Goods";
 import { TileSet } from "@openfront/engine-lib/game/TileSet";
+import {
+  MAX_TRADE_PACTS,
+  tradePactMultiplier,
+} from "@openfront/engine-lib/game/Trade";
 import { PseudoRandom } from "@openfront/engine-lib/PseudoRandom";
 import {
   snapshotType,
@@ -171,6 +175,8 @@ export class PlayerImpl implements Player {
   private _betrayalCount: number = 0;
 
   private embargoes = new Map<PlayerID, Embargo>();
+  /** Borderfall trade pact partners (engine-lib/game/Trade.ts). */
+  private _tradePacts: Player[] = [];
 
   public _borderTiles = new TileSet();
 
@@ -415,6 +421,7 @@ export class PlayerImpl implements Player {
       goods: this.goodsUpdate(),
       deposits: this._deposits.slice() as GoodsAmounts,
       allies: allies,
+      tradePacts: this.tradePacts().map((p) => p.smallID()),
       embargoes: embargoes,
       isTraitor: this.isTraitor(),
       traitorRemainingTicks: this.getTraitorRemainingTicks(),
@@ -1273,6 +1280,8 @@ export class PlayerImpl implements Player {
       isTemporary: isTemporary,
       target: other,
     });
+    // No trading under an embargo, and attacks embargo the attacker.
+    this.endTradePact(other);
   }
 
   stopEmbargo(other: Player): void {
@@ -1290,6 +1299,36 @@ export class PlayerImpl implements Player {
     if (embargo !== undefined && !embargo.isTemporary) return;
 
     this.stopEmbargo(other);
+  }
+
+  tradePacts(): Player[] {
+    return this._tradePacts.filter((p) => p.isAlive());
+  }
+
+  hasTradePactWith(other: Player): boolean {
+    return this._tradePacts.includes(other);
+  }
+
+  canMakeTradePact(other: Player): boolean {
+    return (
+      this.canTrade(other) &&
+      !this.hasTradePactWith(other) &&
+      this.tradePacts().length < MAX_TRADE_PACTS &&
+      other.tradePacts().length < MAX_TRADE_PACTS
+    );
+  }
+
+  addTradePact(other: Player): void {
+    if (!this.canMakeTradePact(other)) return;
+    this._tradePacts.push(other);
+    (other as PlayerImpl)._tradePacts.push(this);
+  }
+
+  endTradePact(other: Player): void {
+    if (!this.hasTradePactWith(other)) return;
+    this._tradePacts = this._tradePacts.filter((p) => p !== other);
+    const theirs = other as PlayerImpl;
+    theirs._tradePacts = theirs._tradePacts.filter((p) => p !== this);
   }
 
   tradingPartners(): Player[] {
@@ -1404,11 +1443,12 @@ export class PlayerImpl implements Player {
     }
   }
 
-  /** One tick of goods: deposits produce, troops eat (PlayerExecution). */
   goodsIncome(): GoodsAmounts {
-    return goodsIncome(this._deposits, depositYield(this.mg.map()));
+    const pacts = tradePactMultiplier(this.tradePacts().length);
+    return goodsIncome(this._deposits, depositYield(this.mg.map()) * pacts);
   }
 
+  /** One tick of goods: deposits produce, troops eat (PlayerExecution). */
   tickGoods(): void {
     this.addGoods(this.goodsIncome());
     this._goods[Good.Food] = Math.max(
@@ -2068,6 +2108,7 @@ export class PlayerImpl implements Player {
       markedDoomsdayClockTick: this.markedDoomsdayClockTick,
       rottedAtTick: this.rottedAtTick,
       betrayalCount: this._betrayalCount,
+      tradePacts: this._tradePacts.map((p) => w.player(p)),
       embargoes: [...this.embargoes.values()].map((e) => ({
         target: w.player(e.target),
         createdAt: e.createdAt,
@@ -2141,6 +2182,7 @@ export class PlayerImpl implements Player {
     this.markedDoomsdayClockTick = s.markedDoomsdayClockTick;
     this.rottedAtTick = s.rottedAtTick;
     this._betrayalCount = s.betrayalCount;
+    this._tradePacts = (s.tradePacts ?? []).map((p) => r.player(p));
     this.embargoes = new Map();
     for (const e of s.embargoes) {
       this.embargoes.set(r.playerID(e.target), {
@@ -2221,6 +2263,8 @@ export const PlayerSnapshot = snapshotType({
     goldEarned: z.bigint(),
     // Borderfall goods stockpile; absent in snapshots from before goods.
     goods: z.tuple([zNum(), zNum(), zNum()]).optional(),
+    // Borderfall trade pacts; absent in snapshots from before trading.
+    tradePacts: z.array(zPlayerRef()).optional(),
     markedTraitorTick: zInt(),
     markedDoomsdayClockTick: zInt(),
     rottedAtTick: zInt(),

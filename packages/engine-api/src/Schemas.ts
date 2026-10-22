@@ -46,7 +46,10 @@ export type Intent =
   | KickPlayerIntent
   | TogglePauseIntent
   | UpdateGameConfigIntent
-  | ToggleGameStartTimer;
+  | ToggleGameStartTimer
+  | TradeOfferIntent
+  | TradeReplyIntent
+  | EndTradePactIntent;
 
 export type AttackIntent = z.infer<typeof AttackIntentSchema>;
 export type CancelAttackIntent = z.infer<typeof CancelAttackIntentSchema>;
@@ -62,6 +65,11 @@ export type EmojiIntent = z.infer<typeof EmojiIntentSchema>;
 export type DonateGoldIntent = z.infer<typeof DonateGoldIntentSchema>;
 export type DonateTroopsIntent = z.infer<typeof DonateTroopIntentSchema>;
 export type EmbargoIntent = z.infer<typeof EmbargoIntentSchema>;
+export type TradeOfferIntent = z.infer<typeof TradeOfferIntentSchema>;
+export type TradeReplyIntent = z.infer<typeof TradeReplyIntentSchema>;
+export type EndTradePactIntent = z.infer<typeof EndTradePactIntentSchema>;
+export type TradeTerms = z.infer<typeof TradeTermsSchema>;
+export type TradeLandShape = z.infer<typeof TradeLandShapeSchema>;
 export type BuildUnitIntent = z.infer<typeof BuildUnitIntentSchema>;
 export type UpgradeStructureIntent = z.infer<
   typeof UpgradeStructureIntentSchema
@@ -475,6 +483,53 @@ export const DonateTroopIntentSchema = z.object({
   troops: zb.float({ min: 0 }).nullable(),
 });
 
+// Borderfall trading (engine-lib/game/Trade.ts). Land is painted as brush
+// circles; on accept the giving side's tiles inside them change hands.
+export const MAX_TRADE_LAND_SHAPES = 32;
+export const MAX_TRADE_LAND_RADIUS = 30;
+
+export const TradeLandShapeSchema = z.object({
+  tile: zb.uint(),
+  radius: zb.uint({ min: 1, max: MAX_TRADE_LAND_RADIUS }),
+});
+
+/** One side of a trade: what that side hands over. */
+export const TradeTermsSchema = z.object({
+  gold: zb.float({ min: 0 }),
+  troops: zb.float({ min: 0 }),
+  // Indexed by Good: Food, Oil, Metal.
+  goods: z.tuple([
+    zb.float({ min: 0 }),
+    zb.float({ min: 0 }),
+    zb.float({ min: 0 }),
+  ]),
+  land: z.array(TradeLandShapeSchema).max(MAX_TRADE_LAND_SHAPES),
+});
+
+export const TradeOfferIntentSchema = z.object({
+  type: z.literal("trade_offer"),
+  recipient: MappedID,
+  /** What the sender hands over. */
+  give: TradeTermsSchema,
+  /** What the sender wants from the recipient. */
+  ask: TradeTermsSchema,
+  /** A short alliance between the two once accepted. */
+  ceasefire: z.boolean(),
+  /** A standing trade pact once accepted. */
+  pact: z.boolean(),
+});
+
+export const TradeReplyIntentSchema = z.object({
+  type: z.literal("trade_reply"),
+  offerID: zb.uint(),
+  accept: z.boolean(),
+});
+
+export const EndTradePactIntentSchema = z.object({
+  type: z.literal("end_trade_pact"),
+  partner: MappedID,
+});
+
 export const BuildUnitIntentSchema = z.object({
   type: z.literal("build_unit"),
   unit: z.enum(UnitType),
@@ -578,6 +633,9 @@ export const IntentSchema = z.discriminatedUnion("type", [
   TogglePauseIntentSchema,
   UpdateGameConfigIntentSchema,
   ToggleGameStartTimerIntentSchema,
+  TradeOfferIntentSchema,
+  TradeReplyIntentSchema,
+  EndTradePactIntentSchema,
 ]);
 
 // StampedIntent = Intent with server-stamped clientID (used in turns and execution)

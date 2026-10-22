@@ -402,6 +402,8 @@ export const PLAYER_FIELDS: readonly FieldDef<PlayerFields>[] = [
   // Borderfall goods (appended; REPLAY_VERSION 2).
   field(["goods", GOODS]),
   field(["deposits", GOODS]),
+  // Borderfall trade pacts (appended; REPLAY_VERSION 3).
+  field(["tradePacts", list(U16)]),
 ];
 
 export const UNIT_FIELDS: readonly FieldDef<UnitFields>[] = [

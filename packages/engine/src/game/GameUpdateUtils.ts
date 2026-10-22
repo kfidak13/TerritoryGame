@@ -66,6 +66,7 @@ export function diffPlayerUpdate(
     numberArrayEqual(prev.goods, next.goods) &&
     numberArrayEqual(prev.deposits, next.deposits) &&
     numberArrayEqual(prev.allies, next.allies) &&
+    numberArrayEqual(prev.tradePacts, next.tradePacts) &&
     numberArrayEqual(prev.targets, next.targets) &&
     stringArrayEqual(
       prev.outgoingAllianceRequests,
@@ -135,6 +136,10 @@ export function diffPlayerUpdate(
   );
   setIfDifferent("isLobbyCreator", prev.isLobbyCreator === next.isLobbyCreator);
   setIfDifferent("allies", numberArrayEqual(prev.allies, next.allies));
+  setIfDifferent(
+    "tradePacts",
+    numberArrayEqual(prev.tradePacts, next.tradePacts),
+  );
   setIfDifferent("targets", numberArrayEqual(prev.targets, next.targets));
   setIfDifferent(
     "outgoingAllianceRequests",

@@ -24,6 +24,7 @@ import {
 } from "@openfront/engine-api/game/GameUpdates";
 import { PlayerLike } from "@openfront/engine-api/game/ReadViews";
 import { depositYield, goodsIncome } from "@openfront/engine-lib/game/Goods";
+import { tradePactMultiplier } from "@openfront/engine-lib/game/Trade";
 import { PatternDecoder } from "@openfront/shared/PatternDecoder";
 import { createRandomName } from "@openfront/shared/SharedUtil";
 import { PlayerCosmetics } from "@openfront/shared/WireSchemas";
@@ -485,7 +486,19 @@ export class PlayerView implements PlayerLike {
   }
 
   goodsIncome(): GoodsAmounts {
-    return goodsIncome(this.state.deposits, depositYield(this.game));
+    const pacts = tradePactMultiplier(this.state.tradePacts.length);
+    return goodsIncome(this.state.deposits, depositYield(this.game) * pacts);
+  }
+
+  /** Borderfall: trade pact partners. */
+  tradePacts(): PlayerView[] {
+    return this.state.tradePacts.map(
+      (id) => this.game.playerBySmallID(id) as PlayerView,
+    );
+  }
+
+  hasTradePactWith(other: PlayerView): boolean {
+    return this.state.tradePacts.includes(other.smallID());
   }
 
   troops(): number {

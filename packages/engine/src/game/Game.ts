@@ -483,6 +483,14 @@ export interface Player extends PlayerLike {
   hasManualEmbargoAgainst(other: Player): boolean;
   tradingPartners(): Player[];
   addEmbargo(other: Player, isTemporary: boolean): void;
+
+  // Borderfall trade pacts (engine-lib/game/Trade.ts): living partners, and
+  // making or ending a pact (both sides at once).
+  tradePacts(): Player[];
+  hasTradePactWith(other: Player): boolean;
+  canMakeTradePact(other: Player): boolean;
+  addTradePact(other: Player): void;
+  endTradePact(other: Player): void;
   getEmbargoes(): Embargo[];
   stopEmbargo(other: Player): void;
   endTemporaryEmbargo(other: Player): void;
@@ -556,6 +564,8 @@ export interface Game extends GameLike {
 
   // Alliances
   expireAlliance(alliance: Alliance): void;
+  /** Ally two players outright, e.g. a trade's ceasefire. */
+  createAlliance(requestor: Player, recipient: Player): void;
 
   // Immunity timer
   isSpawnImmunityActive(): boolean;
@@ -615,6 +625,8 @@ export interface Game extends GameLike {
   ): Array<{ unit: Unit; distSquared: number }>;
 
   addExecution(...exec: Execution[]): void;
+  /** Running executions, then ones not yet initialized. */
+  executions(): Execution[];
   displayMessage(
     message: string,
     type: MessageType,

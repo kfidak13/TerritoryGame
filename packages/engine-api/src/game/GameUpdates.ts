@@ -1,4 +1,4 @@
-import { AllPlayersStats, ClientID, Winner } from "../Schemas";
+import { AllPlayersStats, ClientID, TradeTerms, Winner } from "../Schemas";
 import { TileRef } from "./GameMap";
 import {
   EmojiMessage,
@@ -116,6 +116,8 @@ export enum GameUpdateType {
   SpawnPhaseEnd,
   GamePaused,
   DonateEvent,
+  TradeOffer,
+  TradeOfferReply,
 }
 
 export type GameUpdate =
@@ -141,7 +143,9 @@ export type GameUpdate =
   | EmbargoUpdate
   | SpawnPhaseEndUpdate
   | GamePausedUpdate
-  | DonateEventUpdate;
+  | DonateEventUpdate
+  | TradeOfferUpdate
+  | TradeOfferReplyUpdate;
 
 export interface BonusEventUpdate {
   type: GameUpdateType.BonusEvent;
@@ -267,6 +271,8 @@ export interface PlayerUpdate {
   /** Borderfall: owned deposit tiles per good. */
   deposits?: GoodsAmounts;
   allies?: number[];
+  /** Borderfall: trade pact partners' small IDs. */
+  tradePacts?: number[];
   embargoes?: Set<PlayerID>;
   isTraitor?: boolean;
   traitorRemainingTicks?: number;
@@ -299,6 +305,37 @@ export interface AllianceRequestUpdate {
   requestorID: number;
   recipientID: number;
   createdAt: Tick;
+}
+
+/** Borderfall: a trade offer was made (engine-lib/game/Trade.ts). */
+export interface TradeOfferUpdate {
+  type: GameUpdateType.TradeOffer;
+  offerID: number;
+  /** Small IDs. */
+  senderID: number;
+  recipientID: number;
+  give: TradeTerms;
+  ask: TradeTerms;
+  ceasefire: boolean;
+  pact: boolean;
+  createdAt: Tick;
+  expiresAt: Tick;
+}
+
+export type TradeOfferStatus =
+  | "accepted"
+  | "rejected"
+  | "expired"
+  | "cancelled"
+  | "failed";
+
+/** Borderfall: a trade offer was settled one way or another. */
+export interface TradeOfferReplyUpdate {
+  type: GameUpdateType.TradeOfferReply;
+  offerID: number;
+  senderID: number;
+  recipientID: number;
+  status: TradeOfferStatus;
 }
 
 export interface AllianceRequestReplyUpdate {

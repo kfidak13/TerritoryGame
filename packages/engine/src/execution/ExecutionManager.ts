@@ -29,6 +29,9 @@ import { QuickChatExecution } from "./QuickChatExecution";
 import { RetreatExecution } from "./RetreatExecution";
 import { SpawnExecution } from "./SpawnExecution";
 import { TargetPlayerExecution } from "./TargetPlayerExecution";
+import { EndTradePactExecution } from "./trade/EndTradePactExecution";
+import { TradeOfferExecution } from "./trade/TradeOfferExecution";
+import { TradeReplyExecution } from "./trade/TradeReplyExecution";
 import { TransportShipExecution } from "./TransportShipExecution";
 import { TribeSpawner } from "./TribeSpawner";
 import { UpgradeStructureExecution } from "./UpgradeStructureExecution";
@@ -144,6 +147,19 @@ export class Executor {
         return new MarkDisconnectedExecution(player, intent.isDisconnected);
       case "toggle_pause":
         return new PauseExecution(player, intent.paused);
+      case "trade_offer":
+        return new TradeOfferExecution(
+          player,
+          intent.recipient,
+          intent.give,
+          intent.ask,
+          intent.ceasefire,
+          intent.pact,
+        );
+      case "trade_reply":
+        return new TradeReplyExecution(player, intent.offerID, intent.accept);
+      case "end_trade_pact":
+        return new EndTradePactExecution(player, intent.partner);
       default:
         throw new Error(`intent type ${intent} not found`);
     }

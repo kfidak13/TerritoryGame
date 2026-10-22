@@ -477,7 +477,20 @@ export class GameImpl implements Game {
       );
     }
 
-    // Create and register the new alliance
+    this.createAlliance(requestor, recipient);
+    (request.requestor() as PlayerImpl).pastOutgoingAllianceRequests.push(
+      request,
+    );
+
+    this.addUpdate({
+      type: GameUpdateType.AllianceRequestReply,
+      request: request.toUpdate(),
+      accepted: true,
+    });
+  }
+
+  /** Create and register a new alliance (no request involved). */
+  createAlliance(requestor: Player, recipient: Player): void {
     const alliance = new AllianceImpl(
       this,
       requestor as PlayerImpl,
@@ -489,15 +502,6 @@ export class GameImpl implements Game {
     (alliance.recipient() as PlayerImpl)._alliances.push(alliance);
     this.stats().allianceFormed(requestor);
     this.stats().allianceFormed(recipient);
-    (request.requestor() as PlayerImpl).pastOutgoingAllianceRequests.push(
-      request,
-    );
-
-    this.addUpdate({
-      type: GameUpdateType.AllianceRequestReply,
-      request: request.toUpdate(),
-      accepted: true,
-    });
   }
 
   rejectAllianceRequest(request: AllianceRequestImpl) {

@@ -35,6 +35,9 @@ import { ShellExecutionSnapshot } from "../execution/ShellExecution";
 import { SpawnExecutionSnapshot } from "../execution/SpawnExecution";
 import { SpawnTimerExecutionSnapshot } from "../execution/SpawnTimerExecution";
 import { TargetPlayerExecutionSnapshot } from "../execution/TargetPlayerExecution";
+import { EndTradePactExecutionSnapshot } from "../execution/trade/EndTradePactExecution";
+import { TradeOfferExecutionSnapshot } from "../execution/trade/TradeOfferExecution";
+import { TradeReplyExecutionSnapshot } from "../execution/trade/TradeReplyExecution";
 import { TradeShipExecutionSnapshot } from "../execution/TradeShipExecution";
 import { TrainExecutionSnapshot } from "../execution/TrainExecution";
 import { TrainStationExecutionSnapshot } from "../execution/TrainStationExecution";
@@ -67,6 +70,7 @@ export const EXECUTION_SNAPSHOT_TYPES = [
   DonateTroopsExecutionSnapshot,
   DoomsdayClockExecutionSnapshot,
   EmbargoAllExecutionSnapshot,
+  EndTradePactExecutionSnapshot,
   EmbargoExecutionSnapshot,
   EmojiExecutionSnapshot,
   FactoryExecutionSnapshot,
@@ -89,6 +93,8 @@ export const EXECUTION_SNAPSHOT_TYPES = [
   SpawnExecutionSnapshot,
   SpawnTimerExecutionSnapshot,
   TargetPlayerExecutionSnapshot,
+  TradeOfferExecutionSnapshot,
+  TradeReplyExecutionSnapshot,
   TradeShipExecutionSnapshot,
   TrainExecutionSnapshot,
   TrainStationExecutionSnapshot,

@@ -231,6 +231,16 @@ function queuedIntent(game: Game, p: Player, tick: number): Intent | null {
     },
     { type: "mark_disconnected", isDisconnected: false },
     { type: "toggle_pause", paused: false },
+    {
+      type: "trade_offer",
+      recipient: other.id(),
+      give: { gold: 1, troops: 0, goods: [0, 0, 0], land: [] },
+      ask: { gold: 0, troops: 0, goods: [0, 0, 0], land: [] },
+      ceasefire: false,
+      pact: true,
+    },
+    { type: "trade_reply", offerID: 1, accept: false },
+    { type: "end_trade_pact", partner: other.id() },
   ];
   return queued[(tick - 20) / 2] ?? null;
 }

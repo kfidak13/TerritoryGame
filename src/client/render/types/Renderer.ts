@@ -91,6 +91,8 @@ export interface PlayerState {
   spawnTile?: number;
   lastDeleteUnitTick: number;
   allies: number[];
+  /** Borderfall: trade pact partners' small IDs. */
+  tradePacts: number[];
   embargoes: number[];
   targets: number[];
   outgoingAttacks: AttackData[];
