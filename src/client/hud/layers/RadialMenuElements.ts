@@ -19,6 +19,7 @@ import { assetUrl } from "@openfront/shared/AssetUrls";
 import { UIState } from "../../UIState";
 import { translateText } from "../../Utils";
 import { GameView, PlayerView } from "../../view";
+import { goodsCostText } from "../GoodsText";
 import { BuildItemDisplay, BuildMenu, flattenedBuildTable } from "./BuildMenu";
 import { ChatIntegration } from "./ChatIntegration";
 import { EmojiTable } from "./EmojiTable";
@@ -412,6 +413,23 @@ function getAllEnabledUnits(
   return units;
 }
 
+// Borderfall goods lines for a build tooltip.
+function goodsCostItem(
+  buildMenu: BuildMenu,
+  item: BuildItemDisplay,
+): TooltipItem | null {
+  const cost = buildMenu.goodsCost(item);
+  return cost ? { text: goodsCostText(cost), className: "cost" } : null;
+}
+
+function goodsShortItem(
+  buildMenu: BuildMenu,
+  item: BuildItemDisplay,
+): TooltipItem | null {
+  const reason = buildMenu.goodsShortReason(item);
+  return reason ? { text: reason, className: "shortage" } : null;
+}
+
 function createMenuElements(
   params: MenuElementParams,
   filterType: "attack" | "build",
@@ -455,6 +473,8 @@ function createMenuElements(
             text: `${renderNumber(params.buildMenu.cost(item))} ${translateText("player_panel.gold")}`,
             className: "cost",
           },
+          goodsCostItem(params.buildMenu, item),
+          goodsShortItem(params.buildMenu, item),
           item.countable
             ? { text: `${params.buildMenu.count(item)}x`, className: "count" }
             : null,

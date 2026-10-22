@@ -3,6 +3,7 @@ import {
   BuildableUnit,
   BuildMenus,
   Gold,
+  GoodsAmounts,
   PlayerBuildableUnitType,
   UnitType,
 } from "@openfront/engine-api/game/GameTypes";
@@ -26,6 +27,7 @@ import {
 } from "../../Transport";
 import { UIState } from "../../UIState";
 import { GameView } from "../../view";
+import { goodsCostText, goodsShortText } from "../GoodsText";
 const warshipIcon = assetUrl("images/BattleshipIconWhite.svg");
 const cityIcon = assetUrl("images/CityIconWhite.svg");
 const factoryIcon = assetUrl("images/FactoryIconWhite.svg");
@@ -373,6 +375,20 @@ export class BuildMenu extends LitElement implements Controller {
     return 0n;
   }
 
+  /** Borderfall: goods the build takes, if any. */
+  public goodsCost(item: BuildItemDisplay): Readonly<GoodsAmounts> | undefined {
+    return this.playerBuildables?.find((bu) => bu.type === item.unitType)
+      ?.goodsCost;
+  }
+
+  /** Borderfall: which goods the player lacks for the build, if any. */
+  public goodsShortReason(item: BuildItemDisplay): string | null {
+    const bu = this.playerBuildables?.find((u) => u.type === item.unitType);
+    const player = this.game?.myPlayer();
+    if (!bu?.goodsShort || !bu.goodsCost || !player) return null;
+    return goodsShortText(bu.goodsCost, player.goods());
+  }
+
   public count(item: BuildItemDisplay): string {
     const player = this.game?.myPlayer();
     if (!player) {
@@ -429,7 +445,8 @@ export class BuildMenu extends LitElement implements Controller {
                       this.sendBuildOrUpgrade(buildableUnit, this.clickedTile)}
                     ?disabled=${!enabled}
                     title=${!enabled
-                      ? translateText("build_menu.not_enough_money")
+                      ? (this.goodsShortReason(item) ??
+                        translateText("build_menu.not_enough_money"))
                       : ""}
                   >
                     <img
@@ -457,6 +474,11 @@ export class BuildMenu extends LitElement implements Controller {
                         class="align-middle"
                       />
                     </span>
+                    ${buildableUnit.goodsCost
+                      ? html`<span class="build-cost" translate="no"
+                          >${goodsCostText(buildableUnit.goodsCost)}</span
+                        >`
+                      : ""}
                     ${item.countable
                       ? html`<div class="build-count-chip">
                           <span class="build-count">${this.count(item)}</span>

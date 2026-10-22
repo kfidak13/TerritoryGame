@@ -117,6 +117,8 @@ describe("RadialMenuElements", () => {
       canBuildOrUpgrade: vi.fn(() => true),
       cost: vi.fn(() => 100),
       count: vi.fn(() => 5),
+      goodsCost: vi.fn(() => undefined),
+      goodsShortReason: vi.fn(() => null),
     };
 
     mockPlayerActions = {

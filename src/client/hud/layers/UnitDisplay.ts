@@ -15,6 +15,7 @@ import { UIState } from "../../UIState";
 import { UserSettings } from "../../UserSettings";
 import { translateText } from "../../Utils";
 import { GameView } from "../../view";
+import { goodsCostText, goodsShortText } from "../GoodsText";
 import {
   atomBombIcon,
   cityIcon,
@@ -90,8 +91,13 @@ export class UnitDisplay extends LitElement implements Controller {
     return 0n;
   }
 
+  private buildable(item: UnitType): BuildableUnit | undefined {
+    return this.playerBuildables?.find((bu) => bu.type === item);
+  }
+
   private canBuild(item: UnitType): boolean {
     if (this.game?.config().isUnitDisabled(item)) return false;
+    if (this.buildable(item)?.goodsShort) return false;
     const player = this.game?.myPlayer();
     switch (item) {
       case UnitType.AtomBomb:
@@ -219,6 +225,21 @@ export class UnitDisplay extends LitElement implements Controller {
     `;
   }
 
+  // Borderfall: goods the build takes, and which ones the player lacks.
+  private renderGoodsTooltip(unitType: UnitType) {
+    const bu = this.buildable(unitType);
+    const player = this.game?.myPlayer();
+    if (!bu?.goodsCost || !player) return null;
+    return html`
+      <div>${goodsCostText(bu.goodsCost)}</div>
+      ${bu.goodsShort
+        ? html`<div class="text-red-400">
+            ${goodsShortText(bu.goodsCost, player.goods())}
+          </div>`
+        : null}
+    `;
+  }
+
   private renderUnitItem(
     icon: string,
     number: number | null,
@@ -274,6 +295,7 @@ export class UnitDisplay extends LitElement implements Controller {
                     >${renderNumber(this.cost(unitType))}</span
                   >
                 </div>
+                ${this.renderGoodsTooltip(unitType)}
               </div>
             `
           : null}

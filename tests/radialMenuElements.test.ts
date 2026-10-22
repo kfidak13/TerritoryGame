@@ -57,6 +57,8 @@ const makeParams = (opts?: Partial<MenuElementParams>): MenuElementParams => {
       canBuildOrUpgrade: () => false,
       cost: () => 0,
       count: () => 0,
+      goodsCost: () => undefined,
+      goodsShortReason: () => null,
       sendBuildOrUpgrade: () => {},
     } as any,
     emojiTable: {} as any,

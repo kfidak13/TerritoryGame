@@ -28,14 +28,15 @@ import { USER_SETTINGS_CHANGED_EVENT, UserSettings } from "../../UserSettings";
 import { getGamesPlayed, translateText } from "../../Utils";
 import { GameView } from "../../view";
 import { PlayerView } from "../../view/PlayerView";
+import { GOOD_ICONS } from "../GoodsText";
 import { goldCoinIcon, soldierIcon } from "../HotbarIcons";
 import { TutorialHighlight, TutorialHighlightEvent } from "../Tutorial";
 const swordIcon = assetUrl("images/SwordIcon.svg");
 // Borderfall goods, indexed by Good.
-const GOOD_HUD = [
-  { icon: "🌾", label: "control_panel.food" },
-  { icon: "🛢️", label: "control_panel.oil" },
-  { icon: "⚙️", label: "control_panel.metal" },
+const GOOD_LABELS = [
+  "control_panel.food",
+  "control_panel.oil",
+  "control_panel.metal",
 ];
 
 @customElement("control-panel")
@@ -547,7 +548,7 @@ export class ControlPanel extends LitElement implements Controller {
           // Per tick to per second, rounded so tiny drifts read as 0.0.
           const perSecond = Math.round(rate[good] * 100) / 10;
           const label = translateText(
-            short ? "control_panel.food_shortage" : GOOD_HUD[good].label,
+            short ? "control_panel.food_shortage" : GOOD_LABELS[good],
           );
           return html`
             <div
@@ -557,7 +558,7 @@ export class ControlPanel extends LitElement implements Controller {
               title=${label}
               aria-label=${label}
             >
-              <span aria-hidden="true">${GOOD_HUD[good].icon}</span>
+              <span aria-hidden="true">${GOOD_ICONS[good]}</span>
               <span>${Math.floor(stock[good])}</span>
               <span
                 class=${perSecond < 0

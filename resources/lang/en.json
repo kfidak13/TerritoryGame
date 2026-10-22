@@ -199,6 +199,7 @@
       "sam_launcher": "Defends against incoming nukes",
       "warship": "Captures trade ships, destroys ships and boats"
     },
+    "not_enough_goods": "Not enough {goods}",
     "not_enough_money": "Not enough money",
     "upgrade_amount": "x{amount}",
     "warship_shift_hint": "Hold Shift and drag to select multiple warships at once"
@@ -1017,6 +1018,11 @@
   },
   "game_timer": {
     "one_minute_remaining": "One minute remaining!"
+  },
+  "goods": {
+    "food": "Food",
+    "metal": "Metal",
+    "oil": "Oil"
   },
   "graphics_setting": {
     "advanced_desc": "Fine-tune individual graphics options",

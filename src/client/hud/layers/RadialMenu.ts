@@ -246,6 +246,9 @@ export class RadialMenu implements Controller {
         font-size: 14px;
         margin-bottom: 4px;
       }
+      .radial-tooltip .shortage {
+        color: #ff6b6b;
+      }
 
       ${this.config.tooltipStyle}
     `;
