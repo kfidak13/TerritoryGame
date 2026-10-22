@@ -10,6 +10,7 @@ import { PlayerLike } from "@openfront/engine-api/game/ReadViews";
 import { GameConfig } from "@openfront/engine-api/Schemas";
 import { pow } from "../DetMath";
 import { DoomsdayClockSpeed } from "../game/DoomsdayClock";
+import { foodGrowthModifier } from "../game/Goods";
 import { assertNever } from "../Util";
 
 export interface NukeMagnitude {
@@ -181,6 +182,10 @@ export class Config {
   }
   instantBuild(): boolean {
     return this._gameConfig.instantBuild;
+  }
+  /** Borderfall: regional goods (engine-lib/game/Goods.ts). */
+  goodsEnabled(): boolean {
+    return this._gameConfig.goods === true;
   }
   disableAlliances(): boolean {
     // customAllianceDuration === 0 disables alliances (the "custom alliances"
@@ -396,6 +401,10 @@ export class Config {
         default:
           assertNever(this._gameConfig.difficulty);
       }
+    }
+
+    if (this.goodsEnabled()) {
+      toAdd *= foodGrowthModifier(player);
     }
 
     return Math.min(player.troops() + toAdd, max) - player.troops();

@@ -7,6 +7,7 @@
  * the live client.
  */
 import {
+  GoodsAmounts,
   PlayerID,
   PlayerType,
   TrainType,
@@ -168,6 +169,8 @@ export function playerStateFromUpdate(pu: PlayerUpdate): PlayerState {
     piracyGold: Number(pu.piracyGold ?? 0n),
     goldEarned: Number(pu.goldEarned ?? 0n),
     troops: pu.troops!,
+    goods: (pu.goods ?? [0, 0, 0]).slice() as GoodsAmounts,
+    deposits: (pu.deposits ?? [0, 0, 0]).slice() as GoodsAmounts,
     isTraitor: pu.isTraitor!,
     traitorRemainingTicks: Math.max(0, pu.traitorRemainingTicks ?? 0),
     inDoomsdayClock: pu.inDoomsdayClock ?? false,

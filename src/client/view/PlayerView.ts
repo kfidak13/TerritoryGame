@@ -5,6 +5,7 @@ import {
   Cell,
   EmojiMessage,
   Gold,
+  GoodsAmounts,
   NameViewData,
   PlayerActions,
   PlayerBorderTiles,
@@ -472,6 +473,14 @@ export class PlayerView implements PlayerLike {
   /** Cumulative gold received from all sources. */
   goldEarned(): number {
     return this.state.goldEarned;
+  }
+
+  goods(): Readonly<GoodsAmounts> {
+    return this.state.goods;
+  }
+
+  deposits(): Readonly<GoodsAmounts> {
+    return this.state.deposits;
   }
 
   troops(): number {

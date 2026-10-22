@@ -7,6 +7,8 @@ import {
   EmojiMessage,
   GameUpdates,
   Gold,
+  Good,
+  GoodsAmounts,
   MessageType,
   Nation,
   NukeState,
@@ -362,6 +364,15 @@ export interface Player extends PlayerLike {
   addGold(toAdd: Gold, tile?: TileRef): void;
   removeGold(toRemove: Gold): Gold;
 
+  // Borderfall goods (engine-lib/game/Goods.ts): the stockpile, the owned
+  // deposit tiles per good, and spending from the stockpile.
+  goods(): Readonly<GoodsAmounts>;
+  deposits(): Readonly<GoodsAmounts>;
+  addGoods(toAdd: Readonly<GoodsAmounts>): void;
+  removeGoods(toRemove: Readonly<GoodsAmounts>): void;
+  /** One tick of production and food upkeep. */
+  tickGoods(): void;
+
   // Cumulative trade revenue, surfaced on the live PlayerUpdate so clients can
   // compute per-source gold rates (leaderboard "Ship/Train Trade Gold/min").
   // Mirrors StatsSchemas GOLD_INDEX_TRADE / GOLD_INDEX_TRAIN_* semantics.
@@ -633,6 +644,8 @@ export interface Game extends GameLike {
   nations(): Nation[];
 
   numTilesWithFallout(): number;
+  /** Borderfall: the good whose deposit sits on a tile, if any. */
+  depositAt(tile: TileRef): Good | null;
   stats(): Stats;
 
   addUpdate(update: GameUpdate): void;

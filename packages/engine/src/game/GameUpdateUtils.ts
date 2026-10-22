@@ -63,6 +63,8 @@ export function diffPlayerUpdate(
     prev.betrayals === next.betrayals &&
     prev.lastDeleteUnitTick === next.lastDeleteUnitTick &&
     prev.isLobbyCreator === next.isLobbyCreator &&
+    numberArrayEqual(prev.goods, next.goods) &&
+    numberArrayEqual(prev.deposits, next.deposits) &&
     numberArrayEqual(prev.allies, next.allies) &&
     numberArrayEqual(prev.targets, next.targets) &&
     stringArrayEqual(
@@ -108,6 +110,8 @@ export function diffPlayerUpdate(
   setIfDifferent("piracyGold", prev.piracyGold === next.piracyGold);
   // tilesOwned / gold / troops / goldEarned intentionally absent — see
   // EXCEPTION above (goldEarned churns every tick via worker income).
+  setIfDifferent("goods", numberArrayEqual(prev.goods, next.goods));
+  setIfDifferent("deposits", numberArrayEqual(prev.deposits, next.deposits));
   setIfDifferent("isTraitor", prev.isTraitor === next.isTraitor);
   setIfDifferent(
     "traitorRemainingTicks",

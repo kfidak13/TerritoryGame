@@ -1,4 +1,5 @@
 import type { TileRef } from "@openfront/engine-api/game/GameMap";
+import type { GoodsAmounts } from "@openfront/engine-api/game/GameTypes";
 
 /** TrainType enum — numeric values matching UnitState.trainType. */
 export enum TrainType {
@@ -75,6 +76,10 @@ export interface PlayerState {
   /** Cumulative gold received from all sources (live). */
   goldEarned: number;
   troops: number;
+  /** Borderfall: stockpiled goods, whole units, indexed by Good. */
+  goods: GoodsAmounts;
+  /** Borderfall: owned deposit tiles per good. */
+  deposits: GoodsAmounts;
   isTraitor: boolean;
   traitorRemainingTicks: number;
   inDoomsdayClock: boolean;

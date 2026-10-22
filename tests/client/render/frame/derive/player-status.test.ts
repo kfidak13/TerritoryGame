@@ -35,6 +35,8 @@ function ps(overrides: Partial<PlayerState> = {}): PlayerState {
     trainGold: 0,
     piracyGold: 0,
     goldEarned: 0,
+    goods: [0, 0, 0],
+    deposits: [0, 0, 0],
     troops: 0,
     isTraitor: false,
     traitorRemainingTicks: 0,

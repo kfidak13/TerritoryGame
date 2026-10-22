@@ -301,6 +301,23 @@ export enum TerrainType {
   Impassable,
 }
 
+/**
+ * Borderfall regional goods. Deposits of each sit on specific terrain
+ * (engine-lib/game/Goods.ts); owning deposit tiles produces the good.
+ * Values index GoodsAmounts tuples.
+ */
+export enum Good {
+  Food = 0,
+  Oil = 1,
+  Metal = 2,
+}
+export const GOODS = [Good.Food, Good.Oil, Good.Metal] as const;
+/** Per-good amounts, indexed by Good. */
+export type GoodsAmounts = [number, number, number];
+export const ZERO_GOODS: Readonly<GoodsAmounts> = Object.freeze([
+  0, 0, 0,
+]) as GoodsAmounts;
+
 export enum PlayerType {
   Bot = "BOT",
   Human = "HUMAN",
@@ -358,6 +375,11 @@ export interface BuildableUnit {
   // escalate per level, so a bulk total is NOT cost * amount). Only set when
   // canUpgrade is not false.
   upgradeCosts?: Gold[];
+  // Borderfall: goods the build (or, when canUpgrade is set, the upgrade)
+  // consumes, and whether the player is short of them (then canBuild and
+  // canUpgrade are false). Absent when the build takes no goods.
+  goodsCost?: Readonly<GoodsAmounts>;
+  goodsShort?: boolean;
   overlappingRailroads: TileRef[];
   ghostRailPaths: TileRef[][];
 }

@@ -9,6 +9,8 @@ import {
   GameMode,
   GameType,
   Gold,
+  GOODS,
+  GoodsAmounts,
   MAX_UPGRADE_AMOUNT,
   PlayerBuildable,
   PlayerBuildableUnitType,
@@ -34,6 +36,13 @@ import {
 import { ReadonlyTileSet } from "@openfront/engine-api/game/ReadViews";
 import { ClientID } from "@openfront/engine-api/Schemas";
 import { andFN, manhattanDistFN } from "@openfront/engine-lib/game/GameMapImpl";
+import {
+  canAffordGoods,
+  FOOD_PER_TROOP,
+  GOODS_PRODUCTION_PER_TILE,
+  GOODS_STOCK_CAP,
+  goodsCost,
+} from "@openfront/engine-lib/game/Goods";
 import { TileSet } from "@openfront/engine-lib/game/TileSet";
 import { PseudoRandom } from "@openfront/engine-lib/PseudoRandom";
 import {
@@ -149,6 +158,10 @@ export class PlayerImpl implements Player {
   private _piracyGold: bigint = 0n;
   /** Cumulative gold received from all sources (incremented in addGold). */
   private _goldEarned: bigint = 0n;
+  /** Borderfall goods stockpile, indexed by Good (Goods.ts). */
+  private _goods: GoodsAmounts = [0, 0, 0];
+  /** Owned deposit tiles per good; GameImpl.conquer/relinquish keep it current. */
+  public _deposits: GoodsAmounts = [0, 0, 0];
 
   markedTraitorTick = -1;
   markedDoomsdayClockTick = -1;
@@ -398,6 +411,8 @@ export class PlayerImpl implements Player {
       piracyGold: this._piracyGold,
       goldEarned: this._goldEarned,
       troops: this.troops(),
+      goods: this.goodsUpdate(),
+      deposits: this._deposits.slice() as GoodsAmounts,
       allies: allies,
       embargoes: embargoes,
       isTraitor: this.isTraitor(),
@@ -1368,6 +1383,57 @@ export class PlayerImpl implements Player {
     return actualRemoved;
   }
 
+  goods(): Readonly<GoodsAmounts> {
+    return this._goods;
+  }
+
+  deposits(): Readonly<GoodsAmounts> {
+    return this._deposits;
+  }
+
+  addGoods(toAdd: Readonly<GoodsAmounts>): void {
+    for (const g of GOODS) {
+      this._goods[g] = Math.min(GOODS_STOCK_CAP, this._goods[g] + toAdd[g]);
+    }
+  }
+
+  removeGoods(toRemove: Readonly<GoodsAmounts>): void {
+    for (const g of GOODS) {
+      this._goods[g] = Math.max(0, this._goods[g] - toRemove[g]);
+    }
+  }
+
+  /** One tick of goods: deposits produce, troops eat (PlayerExecution). */
+  tickGoods(): void {
+    const income: GoodsAmounts = [0, 0, 0];
+    for (const g of GOODS) {
+      income[g] = this._deposits[g] * GOODS_PRODUCTION_PER_TILE;
+    }
+    this.addGoods(income);
+    this._goods[0] = Math.max(
+      0,
+      this._goods[0] - this.troops() * FOOD_PER_TROOP,
+    );
+  }
+
+  /** Whole units for the wire, so the update only changes as stock crosses an integer. */
+  private goodsUpdate(): GoodsAmounts {
+    return [
+      Math.floor(this._goods[0]),
+      Math.floor(this._goods[1]),
+      Math.floor(this._goods[2]),
+    ];
+  }
+
+  /** The goods a build of `unitType` takes from this player, if goods are on. */
+  private goodsCostFor(
+    unitType: UnitType,
+    upgrade: boolean,
+  ): Readonly<GoodsAmounts> | null {
+    if (!this.mg.config().goodsEnabled()) return null;
+    return goodsCost(unitType, upgrade);
+  }
+
   troops(): number {
     return Number(this._troops);
   }
@@ -1419,6 +1485,8 @@ export class PlayerImpl implements Player {
     this._myUnitsVersion++;
     this.recordUnitConstructed(type);
     this.removeGold(cost);
+    const goods = this.goodsCostFor(type, false);
+    if (goods !== null) this.removeGoods(goods);
     this.removeTroops("troops" in params ? (params.troops ?? 0) : 0);
     this.mg.addUpdate(b.toUpdate());
     this.mg.addUnit(b);
@@ -1455,12 +1523,16 @@ export class PlayerImpl implements Player {
   private canBuildUnitType(
     unitType: UnitType,
     knownCost: Gold | null = null,
+    upgrade: boolean = false,
   ): boolean {
     if (this.mg.config().isUnitDisabled(unitType)) {
       return false;
     }
     const cost = knownCost ?? this.mg.unitInfo(unitType).cost(this.mg, this);
     if (this._gold < cost) {
+      return false;
+    }
+    if (!canAffordGoods(this._goods, this.goodsCostFor(unitType, upgrade))) {
       return false;
     }
     if (unitType !== UnitType.MIRVWarhead && !this.isAlive()) {
@@ -1490,7 +1562,7 @@ export class PlayerImpl implements Player {
     if (!this.canUpgradeUnitType(unit.type())) {
       return false;
     }
-    if (!this.canBuildUnitType(unit.type())) {
+    if (!this.canBuildUnitType(unit.type(), null, true)) {
       return false;
     }
     if (!this.isUnitValidToUpgrade(unit)) {
@@ -1502,6 +1574,8 @@ export class PlayerImpl implements Player {
   upgradeUnit(unit: Unit) {
     const cost = this.mg.unitInfo(unit.type()).cost(this.mg, this);
     this.removeGold(cost);
+    const goods = this.goodsCostFor(unit.type(), true);
+    if (goods !== null) this.removeGoods(goods);
     unit.increaseLevel();
     this.recordUnitConstructed(unit.type());
   }
@@ -1535,13 +1609,16 @@ export class PlayerImpl implements Player {
           const existingUnit = this.findExistingUnitToUpgrade(u, tile);
           if (
             existingUnit !== false &&
-            this.isUnitValidToUpgrade(existingUnit)
+            this.isUnitValidToUpgrade(existingUnit) &&
+            this.canBuildUnitType(u, cost, true)
           ) {
             canUpgrade = existingUnit.id();
           }
         }
         canBuild = this.canSpawnUnitType(u, tile, validTiles);
       }
+      const goods = this.goodsCostFor(u, canUpgrade !== false);
+      const goodsShort = !canAffordGoods(this._goods, goods);
 
       const buildNew = canBuild !== false && canUpgrade === false;
 
@@ -1564,6 +1641,8 @@ export class PlayerImpl implements Player {
         canUpgrade,
         cost,
         upgradeCosts,
+        goodsCost: goods ?? undefined,
+        goodsShort,
         overlappingRailroads: buildNew
           ? rail.overlappingRailroads(u, canBuild as TileRef)
           : [],
@@ -1983,6 +2062,7 @@ export class PlayerImpl implements Player {
       trainGold: this._trainGold,
       piracyGold: this._piracyGold,
       goldEarned: this._goldEarned,
+      goods: this._goods.slice() as GoodsAmounts,
       markedTraitorTick: this.markedTraitorTick,
       markedDoomsdayClockTick: this.markedDoomsdayClockTick,
       rottedAtTick: this.rottedAtTick,
@@ -2055,6 +2135,7 @@ export class PlayerImpl implements Player {
     this._trainGold = s.trainGold;
     this._piracyGold = s.piracyGold;
     this._goldEarned = s.goldEarned;
+    this._goods = (s.goods ?? [0, 0, 0]) as GoodsAmounts;
     this.markedTraitorTick = s.markedTraitorTick;
     this.markedDoomsdayClockTick = s.markedDoomsdayClockTick;
     this.rottedAtTick = s.rottedAtTick;
@@ -2069,6 +2150,13 @@ export class PlayerImpl implements Player {
     }
     this._tiles = new TileSet(s.tiles);
     this._borderTiles = new TileSet(s.borderTiles);
+    // Deposit counts follow from the tiles (GameImpl.conquer keeps them
+    // current afterwards), so they are recounted rather than snapshotted.
+    this._deposits = [0, 0, 0];
+    for (const tile of this._tiles) {
+      const deposit = this.mg.depositAt(tile);
+      if (deposit !== null) this._deposits[deposit]++;
+    }
     this._units = s.units.map((u) => r.unit(u));
     this._myUnitsVersion = s.unitsVersion;
     this.myUnitsMemo = new Map();
@@ -2130,6 +2218,8 @@ export const PlayerSnapshot = snapshotType({
     trainGold: z.bigint(),
     piracyGold: z.bigint(),
     goldEarned: z.bigint(),
+    // Borderfall goods stockpile; absent in snapshots from before goods.
+    goods: z.tuple([zNum(), zNum(), zNum()]).optional(),
     markedTraitorTick: zInt(),
     markedDoomsdayClockTick: zInt(),
     rottedAtTick: zInt(),

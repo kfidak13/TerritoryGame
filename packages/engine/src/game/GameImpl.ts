@@ -6,6 +6,7 @@ import {
   EmojiMessage,
   GameMode,
   GameUpdates,
+  Good,
   HumansVsNations,
   MessageType,
   Nation,
@@ -34,6 +35,12 @@ import {
 } from "@openfront/engine-api/Schemas";
 import { ATTACK_INDEX_SENT } from "@openfront/engine-api/StatsSchemas";
 import { renderNumber } from "@openfront/engine-lib/Format";
+import {
+  computeDeposits,
+  depositGood,
+  depositSeed,
+  NO_DEPOSIT,
+} from "@openfront/engine-lib/game/Goods";
 import {
   MotionPlanRecord,
   packMotionPlans,
@@ -192,6 +199,10 @@ export class GameImpl implements Game {
       _config.disableNavMesh(),
     );
     this._sharedWaterCache = new SharedWaterCache(this);
+    // Borderfall goods: deposits are a function of the map, see Goods.ts.
+    this._deposits = _config.goodsEnabled()
+      ? computeDeposits(_map, depositSeed(_config.gameConfig().gameMap))
+      : null;
 
     if (!restoring) {
       if (_config.gameConfig().gameMode === GameMode.Team) {
@@ -828,6 +839,11 @@ export class GameImpl implements Game {
     this._territoryVersion++;
     this._map.setOwnerID(tile, owner.smallID());
     owner._tiles.add(tile);
+    const deposit = this.depositAt(tile);
+    if (deposit !== null) {
+      if (previousOwner.isPlayer()) previousOwner._deposits[deposit]--;
+      owner._deposits[deposit]++;
+    }
     owner._lastTileChange = this._ticks;
     owner._tileChangeVersion++;
     this.updateBorders(tile);
@@ -848,6 +864,8 @@ export class GameImpl implements Game {
     previousOwner._tileChangeVersion++;
     previousOwner._tiles.delete(tile);
     previousOwner._borderTiles.delete(tile);
+    const deposit = this.depositAt(tile);
+    if (deposit !== null) previousOwner._deposits[deposit]--;
 
     this._territoryVersion++;
     this._map.setOwnerID(tile, 0);
@@ -1181,6 +1199,8 @@ export class GameImpl implements Game {
   // anything Player.nearby() can observe — so per-player answers can be memoised
   // for as long as nothing on the map moved.
   private _territoryVersion = 0;
+  /** Per-tile deposit bytes (Goods.ts), or null when goods are off. */
+  private readonly _deposits: Uint8Array | null;
   territoryVersion(): number {
     return this._territoryVersion;
   }
@@ -1393,6 +1413,10 @@ export class GameImpl implements Game {
   }
   numTilesWithFallout(): number {
     return this._map.numTilesWithFallout();
+  }
+  depositAt(tile: TileRef): Good | null {
+    if (this._deposits === null) return null;
+    return depositGood(this._deposits[tile] ?? NO_DEPOSIT);
   }
   stats(): Stats {
     return this._stats;

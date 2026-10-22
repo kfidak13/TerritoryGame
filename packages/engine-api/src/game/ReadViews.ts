@@ -1,6 +1,7 @@
 import { GameMap, TileRef } from "./GameMap";
 import {
   Gold,
+  GoodsAmounts,
   PlayerID,
   PlayerType,
   TerraNullius,
@@ -27,6 +28,10 @@ export interface PlayerLike {
   troops(): number;
   gold(): Gold;
   units(type: UnitType): readonly UnitLike[];
+  /** Borderfall: stockpiled goods, indexed by Good. */
+  goods(): Readonly<GoodsAmounts>;
+  /** Borderfall: owned deposit tiles per good, indexed by Good. */
+  deposits(): Readonly<GoodsAmounts>;
 }
 
 export interface UnitLike {

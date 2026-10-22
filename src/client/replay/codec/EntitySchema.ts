@@ -11,6 +11,7 @@
  * value comes back exactly.
  */
 
+import type { GoodsAmounts } from "@openfront/engine-api/game/GameTypes";
 import type {
   AllianceData,
   AttackData,
@@ -156,6 +157,17 @@ function list<V>(inner: ValueCodec<V>): ValueCodec<V[]> {
     },
   };
 }
+
+/** Three u32s: a GoodsAmounts tuple (Borderfall goods). */
+const GOODS: ValueCodec<GoodsAmounts> = {
+  write(w, v) {
+    for (const n of v) w.writeU32(n);
+  },
+  read(r) {
+    return [r.readU32(), r.readU32(), r.readU32()];
+  },
+  eq: (a, b) => a === b || (a[0] === b[0] && a[1] === b[1] && a[2] === b[2]),
+};
 
 /** An object with fixed keys, written in declaration order. */
 function struct<S extends object>(parts: {
@@ -387,6 +399,9 @@ export const PLAYER_FIELDS: readonly FieldDef<PlayerFields>[] = [
   field(["outgoingAllianceRequests", list(STRING)]),
   field(["alliances", list(ALLIANCE)]),
   field(["outgoingEmojis", list(EMOJI)]),
+  // Borderfall goods (appended; REPLAY_VERSION 2).
+  field(["goods", GOODS]),
+  field(["deposits", GOODS]),
 ];
 
 export const UNIT_FIELDS: readonly FieldDef<UnitFields>[] = [

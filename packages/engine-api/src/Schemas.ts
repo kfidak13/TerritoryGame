@@ -281,6 +281,9 @@ export const GameConfigSchema = z.object({
   infiniteGold: z.boolean(),
   infiniteTroops: z.boolean(),
   instantBuild: z.boolean(),
+  // Borderfall: regional goods (Food, Oil, Metal) from deposit tiles. Off by
+  // default so OpenFront's rules and tests are unchanged; lobbies turn it on.
+  goods: z.boolean().optional(),
   disableNavMesh: z.boolean().optional(),
   disableAlliances: z.boolean().nullable().optional(),
   disableClanTags: z.boolean().optional(),

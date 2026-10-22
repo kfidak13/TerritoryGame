@@ -4,6 +4,7 @@ import {
   EmojiMessage,
   GameUpdates,
   Gold,
+  GoodsAmounts,
   MessageType,
   NameViewData,
   NukeState,
@@ -261,6 +262,10 @@ export interface PlayerUpdate {
   /** Cumulative gold received from all sources (workers, trade, ...). */
   goldEarned?: Gold;
   troops?: number;
+  /** Borderfall: stockpiled goods, whole units, indexed by Good. */
+  goods?: GoodsAmounts;
+  /** Borderfall: owned deposit tiles per good. */
+  deposits?: GoodsAmounts;
   allies?: number[];
   embargoes?: Set<PlayerID>;
   isTraitor?: boolean;
