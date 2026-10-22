@@ -26,7 +26,7 @@ import {
   NationEmojiBehavior,
   respondToMIRV,
 } from "./NationEmojiBehavior";
-import { randTerritoryTileArray } from "./NationUtils";
+import { goodsWithinReach, randTerritoryTileArray } from "./NationUtils";
 
 // 30 seconds at 10 ticks/second
 const MIRV_COOLDOWN_TICKS = 300;
@@ -115,6 +115,8 @@ export function mirvGetsThrough(
 
 /** Whether a MIRV would get through at the land or city leader, the players nations MIRV. */
 export function isMirvWorthSavingFor(game: Game, player: Player): boolean {
+  // Borderfall: gold saved for a MIRV is wasted without the Oil for it.
+  if (!goodsWithinReach(game, player, UnitType.MIRV)) return false;
   let landLeader: Player | null = null;
   let cityLeader: Player | null = null;
   for (const p of validMirvTargets(game, player)) {

@@ -4,10 +4,17 @@ import {
   Difficulty,
   GameMode,
   Gold,
+  Good,
+  GOODS,
   PlayerType,
   Structures,
   UnitType,
 } from "@openfront/engine-api/game/GameTypes";
+import {
+  canAffordGoods,
+  goodsCost,
+  hungryTroops,
+} from "@openfront/engine-lib/game/Goods";
 import { PseudoRandom } from "@openfront/engine-lib/PseudoRandom";
 import { assertNever, calculateBoundingBox } from "@openfront/engine-lib/Util";
 import { Game, Player } from "../../game/Game";
@@ -17,6 +24,58 @@ const HIGH_STARTING_GOLD = 3_000_000n;
 
 export function hasHighStartingGold(game: Game, player: Player): boolean {
   return game.config().startingGold(player.info()) >= HIGH_STARTING_GOLD;
+}
+
+/** Ticks of goods income a nation counts on when saving up for a build. */
+const GOODS_REACH_TICKS = 3000;
+
+/** Borderfall: whether the player holds the goods a build takes (true with goods off). */
+export function hasGoodsFor(
+  game: Game,
+  player: Player,
+  type: UnitType,
+  upgrade = false,
+): boolean {
+  if (!game.config().goodsEnabled()) return true;
+  return canAffordGoods(player.goods(), goodsCost(type, upgrade));
+}
+
+/**
+ * Whether the goods a build takes are in hand or will be within about five
+ * minutes of the player's goods income, so saving gold for it makes sense.
+ */
+export function goodsWithinReach(
+  game: Game,
+  player: Player,
+  type: UnitType,
+): boolean {
+  if (!game.config().goodsEnabled()) return true;
+  const cost = goodsCost(type, false);
+  if (cost === null) return true;
+  const income = player.goodsIncome();
+  return GOODS.every(
+    (g) => player.goods()[g] + income[g] * GOODS_REACH_TICKS >= cost[g],
+  );
+}
+
+/**
+ * Goods the player is short of, most pressing first: Food while troops go
+ * hungry, then goods it has no income of (Food only once troops eat),
+ * emptiest stock first. Empty with goods off.
+ */
+export function neededGoods(game: Game, player: Player): Good[] {
+  if (!game.config().goodsEnabled()) return [];
+  const needs: Good[] = [];
+  if (hungryTroops(player, game.config().foodLandFed(player)) > 0) {
+    needs.push(Good.Food);
+  }
+  const income = player.goodsIncome();
+  // Food only counts once troops eat at all.
+  const eats = game.config().foodUpkeep(player) > 0;
+  const unproduced = GOODS.filter(
+    (g) => income[g] <= 0 && !needs.includes(g) && (g !== Good.Food || eats),
+  ).sort((a, b) => player.goods()[a] - player.goods()[b]);
+  return [...needs, ...unproduced];
 }
 
 /** Most minutes of income a nation saves up for; a target further off isn't worth holding back for, keyed by difficulty */

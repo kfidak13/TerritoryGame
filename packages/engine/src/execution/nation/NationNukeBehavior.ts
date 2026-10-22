@@ -37,6 +37,7 @@ import { EMOJI_NUKE, NationEmojiBehavior } from "./NationEmojiBehavior";
 import { isMirvWorthSavingFor } from "./NationMIRVBehavior";
 import {
   findRunawayLeader,
+  hasGoodsFor,
   isSaveUpWithinReach,
   randTerritoryTileArray,
 } from "./NationUtils";
@@ -253,7 +254,8 @@ export class NationNukeBehavior {
     if (
       !atomOnly &&
       !config.isUnitDisabled(UnitType.HydrogenBomb) &&
-      this.player.gold() >= this.getPerceivedNukeCost(UnitType.HydrogenBomb)
+      this.player.gold() >= this.getPerceivedNukeCost(UnitType.HydrogenBomb) &&
+      hasGoodsFor(this.game, this.player, UnitType.HydrogenBomb)
     ) {
       types.push(UnitType.HydrogenBomb);
     }
@@ -262,7 +264,8 @@ export class NationNukeBehavior {
         difficulty === Difficulty.Hard ||
         difficulty === Difficulty.Impossible) &&
       !config.isUnitDisabled(UnitType.AtomBomb) &&
-      this.player.gold() >= this.getPerceivedNukeCost(UnitType.AtomBomb)
+      this.player.gold() >= this.getPerceivedNukeCost(UnitType.AtomBomb) &&
+      hasGoodsFor(this.game, this.player, UnitType.AtomBomb)
     ) {
       types.push(UnitType.AtomBomb);
     }

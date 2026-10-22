@@ -11,7 +11,7 @@ export const DIFFICULTY_TROOP_PERCENT: Record<Difficulty, number> = {
   [Difficulty.Easy]: 50,
   [Difficulty.Medium]: 75,
   [Difficulty.Hard]: 100,
-  [Difficulty.Impossible]: 125,
+  [Difficulty.Impossible]: 100,
 };
 
 /** Difficulties that public games are hosted on (see MapPlaylist). */

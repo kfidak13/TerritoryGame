@@ -244,7 +244,8 @@ describe("Attacking a runaway leader - end-to-end via maybeAttack", () => {
         await setupStripes(difficulty);
       setTroops(game, nation, runnerUp);
       leader.setTroops(1_500_000);
-      game.addExecution(new AttackExecution(1_100_000, leader, helper.id()));
+      // Sized for nations capped at human troops on every difficulty.
+      game.addExecution(new AttackExecution(1_200_000, leader, helper.id()));
       game.executeNextTick();
       // Still stronger at home than the nation, which normally rules it out
       expect(leader.troops()).toBeGreaterThan(nation.troops());

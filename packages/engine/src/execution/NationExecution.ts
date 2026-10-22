@@ -37,6 +37,7 @@ import { NationEmojiBehavior } from "./nation/NationEmojiBehavior";
 import { NationMIRVBehavior } from "./nation/NationMIRVBehavior";
 import { NationNukeBehavior } from "./nation/NationNukeBehavior";
 import { NationStructureBehavior } from "./nation/NationStructureBehavior";
+import { NationTradeBehavior } from "./nation/NationTradeBehavior";
 import { NationWarshipBehavior } from "./nation/NationWarshipBehavior";
 import { SpawnExecution } from "./SpawnExecution";
 import { AiAttackBehavior } from "./utils/AiAttackBehavior";
@@ -224,6 +225,9 @@ export class NationExecution implements Execution {
     this.structureBehavior.handleStructures();
     this.warshipBehavior.maybeSpawnWarship();
     this.handleEmbargoesToHostileNations();
+    new NationTradeBehavior(this.mg, this.player).maybeProposeTrade(() =>
+      this.attackBehavior.findIncomingAttackPlayer(),
+    );
     this.attackBehavior.maybeAttack();
     this.warshipBehavior.counterWarshipInfestation();
     this.nukeBehavior.maybeSendNuke();

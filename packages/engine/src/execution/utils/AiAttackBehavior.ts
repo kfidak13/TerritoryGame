@@ -53,6 +53,7 @@ import {
   findJuiciestTarget,
   findRunawayLeader,
   hasHighStartingGold,
+  neededGoods,
 } from "../nation/NationUtils";
 import type { NationWarshipBehavior } from "../nation/NationWarshipBehavior";
 import { TransportShipExecution } from "../TransportShipExecution";
@@ -541,6 +542,12 @@ export class AiAttackBehavior {
       return target !== null ? this.sendAttack(target) : false;
     };
 
+    // Borderfall goods: go after a neighbor sitting on deposits we lack.
+    const deposits = (): boolean => {
+      const target = pick((enemies) => this.findDepositHolder(enemies));
+      return target !== null ? this.sendAttack(target) : false;
+    };
+
     const hated = (): boolean => {
       for (const relation of this.player.allRelationsSorted()) {
         if (relation.relation !== Relation.Hostile) continue;
@@ -604,14 +611,14 @@ export class AiAttackBehavior {
         return [nuked, bots, retaliate, assist, betray, hated, weakest];
       case Difficulty.Medium:
         // prettier-ignore
-        return [bots, nuked, assist, betray, hated, afk, traitor, crown, weakest, island, donate];
+        return [bots, nuked, assist, betray, hated, afk, traitor, crown, deposits, weakest, island, donate];
       case Difficulty.Hard:
         // Strong veryWeak and juicy strats after the distracting hated strat, to make the nations weaker than impossible
         // prettier-ignore
-        return [bots, assist, betray, nuked, traitor, afk, hated, veryWeak, juicy, victim, crown, weakest, island, donate];
+        return [bots, assist, betray, nuked, traitor, afk, hated, veryWeak, deposits, juicy, victim, crown, weakest, island, donate];
       case Difficulty.Impossible:
         // prettier-ignore
-        return [bots, veryWeak, betray, assist, victim, crown, traitor, juicy, afk, nuked, hated, weakest, island, donate];
+        return [bots, veryWeak, deposits, betray, assist, victim, crown, traitor, juicy, afk, nuked, hated, weakest, island, donate];
       default:
         assertNever(difficulty);
     }
@@ -1007,6 +1014,25 @@ export class AiAttackBehavior {
 
     // enemies is already sorted by troops (ascending), so first match is weakest very weak enemy
     return veryWeakEnemies.length > 0 ? veryWeakEnemies[0] : null;
+  }
+
+  /**
+   * Borderfall goods: the enemy holding the most deposits of the good we
+   * need most, among ones we could plausibly beat (troops <= 80% of ours).
+   */
+  private findDepositHolder(enemies: Player[]): Player | null {
+    for (const good of neededGoods(this.game, this.player)) {
+      let best: Player | null = null;
+      for (const enemy of enemies) {
+        if (enemy.deposits()[good] <= 0) continue;
+        if (enemy.troops() > this.player.troops() * 0.8) continue;
+        if (best === null || enemy.deposits()[good] > best.deposits()[good]) {
+          best = enemy;
+        }
+      }
+      if (best !== null) return best;
+    }
+    return null;
   }
 
   // Juiciest enemy (Hard & Impossible only) we could plausibly beat (troops <= 75% of ours)

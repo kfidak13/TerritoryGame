@@ -380,7 +380,8 @@ export class Config {
       case Difficulty.Hard:
         return maxTroops * 1; // Like humans
       case Difficulty.Impossible:
-        return maxTroops * 1.25;
+        // Borderfall: difficulty is better decisions, never extra troops.
+        return maxTroops * 1;
       default:
         assertNever(this._gameConfig.difficulty);
     }
@@ -410,7 +411,7 @@ export class Config {
           toAdd *= 1; // Like humans
           break;
         case Difficulty.Impossible:
-          toAdd *= 1.05;
+          toAdd *= 1; // Borderfall: no troop bonus over humans
           break;
         default:
           assertNever(this._gameConfig.difficulty);
