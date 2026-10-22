@@ -323,7 +323,8 @@ describe("Hard/Impossible troop floor", () => {
     const { testGame, attacker, neighbor, behavior } =
       await setupTroopFloorTest(Difficulty.Impossible);
 
-    attacker.addTroops(100_000);
+    // Enough that the capped strike still clears 20% of the neighbor.
+    attacker.addTroops(110_000);
     neighbor.addTroops(90_000);
 
     const addExecSpy = vi.spyOn(testGame, "addExecution");

@@ -103,9 +103,9 @@ function termsValue(
 // nations never think of it.
 const PROPOSAL_ODDS: Record<Difficulty, number> = {
   [Difficulty.Easy]: 0,
-  [Difficulty.Medium]: 20,
-  [Difficulty.Hard]: 10,
-  [Difficulty.Impossible]: 6,
+  [Difficulty.Medium]: 40,
+  [Difficulty.Hard]: 25,
+  [Difficulty.Impossible]: 15,
 };
 /** Units of a needed good a nation asks for in a swap. */
 const SWAP_AMOUNT = 40;
@@ -120,7 +120,7 @@ const CEASEFIRE_GOLD_SHARE = 5n;
  * Borderfall: nations trade for what they lack. On attack ticks a nation
  * may drop pacts with players it has turned against, buy a ceasefire from
  * a much stronger attacker (Hard and up), swap a surplus good (or gold) for
- * one it needs, or offer a pact to a friend. Only with goods on. Stateless:
+ * one it needs, or offer a pact to a player it doesn't distrust. Only with goods on. Stateless:
  * its rolls come from a per-tick seed, so it leaves the nation's own random
  * sequence (and every other behavior) untouched.
  */
@@ -149,6 +149,8 @@ export class NationTradeBehavior {
     ) {
       return;
     }
+    // Needs are near constant, so give friendship a turn too.
+    if (random.chance(3) && this.offerPact(random)) return;
     if (this.swapForNeeds()) return;
     this.offerPact(random);
   }
@@ -218,15 +220,14 @@ export class NationTradeBehavior {
     return false;
   }
 
-  private offerPact(random: PseudoRandom): void {
-    const friends = this.partners().filter(
-      (p) =>
-        this.player.relation(p) >= Relation.Friendly &&
-        this.player.canMakeTradePact(p),
+  private offerPact(random: PseudoRandom): boolean {
+    const friends = this.partners().filter((p) =>
+      this.player.canMakeTradePact(p),
     );
-    if (friends.length === 0) return;
+    if (friends.length === 0) return false;
     const friend = random.randElement(friends);
     this.propose(friend, emptyTerms(), emptyTerms(), false, true);
+    return true;
   }
 
   /** Players worth dealing with: alive, not tribes, not distrusted. */

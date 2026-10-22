@@ -631,7 +631,7 @@ export class EngineConfig extends Config {
         case Difficulty.Hard:
           return 25_000; // Like humans
         case Difficulty.Impossible:
-          return 31_250;
+          return 25_000; // Borderfall: no troop bonus over humans
         default:
           assertNever(this._gameConfig.difficulty);
       }
