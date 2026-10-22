@@ -11,11 +11,7 @@ import { GameUpdateType } from "@openfront/engine-api/game/GameUpdates";
 import { ClientID } from "@openfront/engine-api/Schemas";
 import { Config } from "@openfront/engine-lib/configuration/Config";
 import { renderNumber, renderTroops } from "@openfront/engine-lib/Format";
-import {
-  foodState,
-  foodUpkeep,
-  goodsIncome,
-} from "@openfront/engine-lib/game/Goods";
+import { foodState } from "@openfront/engine-lib/game/Goods";
 import { assetUrl } from "@openfront/shared/AssetUrls";
 import { EventBus } from "@openfront/shared/EventBus";
 import { html, LitElement } from "lit";
@@ -164,12 +160,12 @@ export class ControlPanel extends LitElement implements Controller {
       .reduce((a, b) => a + b, 0);
     this.troopRate = config.troopIncreaseRate(player) * 10;
     if (config.goodsEnabled()) {
-      const rate = goodsIncome(player);
-      rate[Good.Food] -= foodUpkeep(player);
+      const rate = player.goodsIncome();
+      rate[Good.Food] -= config.foodUpkeep(player);
       this._goods = {
         stock: player.goods(),
         rate,
-        starving: foodState(player) === "shortage",
+        starving: foodState(player, config.foodLandFed(player)) === "shortage",
       };
     }
 

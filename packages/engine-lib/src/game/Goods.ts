@@ -13,29 +13,36 @@ import { simpleHash } from "../Util";
 /*
  * Borderfall regional goods.
  *
- * Every map is split into square regions. A region produces at most one good,
- * decided by its terrain and a roll seeded from the map name, so deposits are
- * the same in every game on a map (players learn the geography) and are
- * computed identically by the engine and the client:
+ * Every map is split into square regions. About half the regions hold one
+ * deposit field: a round patch of land around a tile of fitting terrain,
  *
- *   Metal  mountainous regions: deposits on their mountain and highland tiles
- *   Oil    coastal regions (shoreline deposits) or mountain-free plateaus
- *          (highland deposits)
- *   Food   lowland regions: deposits on their plains
+ *   Metal  around a mountain (or highland) tile, in hilly regions
+ *   Oil    around a shoreline tile in coastal regions, or on a highland
+ *          plateau
+ *   Food   around a plains tile, in lowland regions
  *
- * A region never has two goods and most regions have none, so no nation sits
- * on everything it needs. Rules of thumb: Food is a soft rule (a shortage
- * slows troop growth), Oil moves (warships, missiles) and Metal stands
- * (defense posts, SAMs, silos, structure upgrades).
+ * Each region takes, among the goods its terrain suits, the one the map has
+ * fewest fields of so far, so the three goods come out roughly even on any
+ * terrain. A good few regions suit (say, on a map without coast or hills)
+ * may go anywhere, so every map has plenty of all three. Deposits are seeded from the map
+ * name: the same in every game on a map, and computed identically by the
+ * engine and the client.
+ *
+ * Fields yield the same per second on every map scale. Food is a soft rule
+ * (land feeds half a player's city-free troop cap; troops beyond that eat,
+ * and hungry troops slow troop growth), Oil moves (warships, missiles) and
+ * Metal stands (defense posts, SAMs, silos, structure upgrades).
  */
 
-/** Goods a deposit tile yields per tick. */
-export const GOODS_PRODUCTION_PER_TILE = 0.0005;
-/** Food a troop eats per tick: one Food deposit feeds 2,000 troops. */
-export const FOOD_PER_TROOP = GOODS_PRODUCTION_PER_TILE / 2000;
+/** Goods a whole deposit field yields per tick (10 ticks per second). */
+export const FIELD_YIELD_PER_TICK = 0.1;
+/** Food one troop beyond the land-fed share eats per tick: a field feeds 300k. */
+export const FOOD_PER_TROOP = FIELD_YIELD_PER_TICK / 300_000;
+/** Share of the city-free troop cap that land feeds for free. */
+export const FOOD_LAND_FED_FRACTION = 0.5;
 /** Stockpiles stop growing here. */
 export const GOODS_STOCK_CAP = 2000;
-/** Troop growth multiplier while starving. */
+/** Troop growth multiplier at the worst of a food shortage. */
 export const FOOD_SHORTAGE_GROWTH = 0.6;
 /** Troop growth multiplier with a well-stocked granary. */
 export const FOOD_SURPLUS_GROWTH = 1.1;
@@ -62,19 +69,18 @@ const REGIONS_ALONG_LONG_EDGE = 24;
 const MIN_REGION_SIZE = 24;
 // Regions need some land to count at all.
 const MIN_LAND_FRACTION = 0.15;
-// Terrain shares (of a region's land) that make it a candidate.
-const METAL_MIN_HIGHGROUND = 0.35;
-const OIL_MIN_SHORELINE = 0.25;
+// Chance a region holds a field at all.
+const FIELD_CHANCE = 0.5;
+// Field radius, as a fraction of the region size.
+const FIELD_RADIUS = 0.3;
+// Terrain shares (of a region's land) that make a region suit a good.
+const METAL_MIN_HIGHGROUND = 0.25;
+const OIL_MIN_SHORELINE = 0.03;
 const OIL_PLATEAU_MIN_HIGHLAND = 0.5;
 const OIL_PLATEAU_MAX_MOUNTAIN = 0.1;
-const FOOD_MIN_PLAINS = 0.7;
-// A candidate region's chance of actually producing, per good. Checked in
-// order Metal, Oil, Food: the first good that lands claims the region.
-const ACTIVATION: Record<Good, number> = {
-  [Good.Metal]: 0.6,
-  [Good.Oil]: 0.45,
-  [Good.Food]: 0.45,
-};
+const FOOD_MIN_PLAINS = 0.4;
+// A good fewer than this share of regions suit may go anywhere.
+const MIN_SUITED_SHARE = 0.2;
 
 export function regionSize(map: GameMap): number {
   const longEdge = Math.max(map.width(), map.height());
@@ -84,9 +90,52 @@ export function regionSize(map: GameMap): number {
   );
 }
 
+function fieldRadius(map: GameMap): number {
+  return Math.max(2, Math.round(regionSize(map) * FIELD_RADIUS));
+}
+
+/**
+ * Goods one deposit tile yields per tick on this map: a full field yields
+ * FIELD_YIELD_PER_TICK whatever the map's scale.
+ */
+export function depositYield(map: GameMap): number {
+  const r = fieldRadius(map);
+  return FIELD_YIELD_PER_TICK / (Math.PI * r * r);
+}
+
 /** Deterministic seed for a map's deposits. */
 export function depositSeed(mapName: string): number {
   return simpleHash(`goods:${mapName}`);
+}
+
+interface Region {
+  x0: number;
+  y0: number;
+  x1: number;
+  y1: number;
+  /** Goods the region's terrain suits, indexed by Good. */
+  suits: boolean[];
+}
+
+/** Tiles a field of `good` centers on; `anywhere` for goods without terrain. */
+function centerFits(
+  map: GameMap,
+  ref: TileRef,
+  good: Good,
+  anywhere: boolean,
+): boolean {
+  if (anywhere) return true;
+  const terrain = map.terrainType(ref);
+  switch (good) {
+    case Good.Metal:
+      return (
+        terrain === TerrainType.Mountain || terrain === TerrainType.Highland
+      );
+    case Good.Oil:
+      return map.isShoreline(ref) || terrain === TerrainType.Highland;
+    case Good.Food:
+      return terrain === TerrainType.Plains;
+  }
 }
 
 /**
@@ -97,105 +146,123 @@ export function computeDeposits(map: GameMap, seed: number): Uint8Array {
   const width = map.width();
   const height = map.height();
   const size = regionSize(map);
+  const radius = fieldRadius(map);
   const deposits = new Uint8Array(width * height);
+  const usable = (ref: TileRef) => map.isLand(ref) && !map.isImpassable(ref);
 
-  for (let ry = 0; ry < height; ry += size) {
-    for (let rx = 0; rx < width; rx += size) {
-      const x1 = Math.min(width, rx + size);
-      const y1 = Math.min(height, ry + size);
+  // Survey: which goods each land region's terrain suits.
+  const regions: Region[] = [];
+  for (let y0 = 0; y0 < height; y0 += size) {
+    for (let x0 = 0; x0 < width; x0 += size) {
+      const x1 = Math.min(width, x0 + size);
+      const y1 = Math.min(height, y0 + size);
       let land = 0;
       let plains = 0;
       let highland = 0;
       let mountain = 0;
       let shoreline = 0;
-      for (let y = ry; y < y1; y++) {
-        for (let x = rx; x < x1; x++) {
+      for (let y = y0; y < y1; y++) {
+        for (let x = x0; x < x1; x++) {
           const ref = map.ref(x, y);
-          if (!map.isLand(ref) || map.isImpassable(ref)) continue;
+          if (!usable(ref)) continue;
           land++;
-          switch (map.terrainType(ref)) {
-            case TerrainType.Plains:
-              plains++;
-              break;
-            case TerrainType.Highland:
-              highland++;
-              break;
-            case TerrainType.Mountain:
-              mountain++;
-              break;
-          }
+          const terrain = map.terrainType(ref);
+          if (terrain === TerrainType.Plains) plains++;
+          else if (terrain === TerrainType.Highland) highland++;
+          else if (terrain === TerrainType.Mountain) mountain++;
           if (map.isShoreline(ref)) shoreline++;
         }
       }
-      if (land < MIN_LAND_FRACTION * (x1 - rx) * (y1 - ry)) continue;
+      if (land < MIN_LAND_FRACTION * (x1 - x0) * (y1 - y0)) continue;
+      const suits = [false, false, false];
+      suits[Good.Metal] = (highland + mountain) / land >= METAL_MIN_HIGHGROUND;
+      suits[Good.Oil] =
+        shoreline / land >= OIL_MIN_SHORELINE ||
+        (highland / land >= OIL_PLATEAU_MIN_HIGHLAND &&
+          mountain / land < OIL_PLATEAU_MAX_MOUNTAIN);
+      suits[Good.Food] = plains / land >= FOOD_MIN_PLAINS;
+      regions.push({ x0, y0, x1, y1, suits });
+    }
+  }
 
-      const good = pickRegionGood(
-        new PseudoRandom(simpleHash(`${seed}:${rx}:${ry}`)),
-        {
-          plains: plains / land,
-          highland: highland / land,
-          mountain: mountain / land,
-          shoreline: shoreline / land,
-        },
-      );
-      if (good === null) continue;
+  // Every map gets plenty of every good: one few regions suit may go
+  // anywhere.
+  const anywhere = GOODS.map(
+    (g) =>
+      regions.filter((r) => r.suits[g]).length <
+      MIN_SUITED_SHARE * regions.length,
+  );
+  for (const r of regions) {
+    for (const g of GOODS) if (anywhere[g]) r.suits[g] = true;
+  }
 
-      const byte = depositByte(good.good);
-      for (let y = ry; y < y1; y++) {
-        for (let x = rx; x < x1; x++) {
-          const ref = map.ref(x, y);
-          if (!map.isLand(ref) || map.isImpassable(ref)) continue;
-          if (good.on(map, ref)) deposits[ref] = byte;
-        }
+  // Visit regions in seeded order; a region with a field takes the suitable
+  // good the map has fewest fields of so far.
+  const random = new PseudoRandom(seed);
+  for (let i = regions.length - 1; i > 0; i--) {
+    const j = random.nextInt(0, i + 1);
+    [regions[i], regions[j]] = [regions[j], regions[i]];
+  }
+  const fields: GoodsAmounts = [0, 0, 0];
+  for (const region of regions) {
+    if (random.next() >= FIELD_CHANCE) continue;
+    const candidates = GOODS.filter((g) => region.suits[g]);
+    if (candidates.length === 0) continue;
+    const fewest = Math.min(...candidates.map((g) => fields[g]));
+    const tied = candidates.filter((g) => fields[g] === fewest);
+    const good = tied[random.nextInt(0, tied.length)];
+
+    const center = pickCenter(map, region, radius, random, (ref) =>
+      centerFits(map, ref, good, anywhere[good]),
+    );
+    if (center === null) continue;
+    fields[good]++;
+
+    // A disc around the center, kept inside the region so regions never mix.
+    const cx = map.x(center);
+    const cy = map.y(center);
+    const byte = depositByte(good);
+    for (let y = Math.max(region.y0, cy - radius); y <= cy + radius; y++) {
+      if (y >= region.y1) break;
+      for (let x = Math.max(region.x0, cx - radius); x <= cx + radius; x++) {
+        if (x >= region.x1) break;
+        const dx = x - cx;
+        const dy = y - cy;
+        if (dx * dx + dy * dy > radius * radius) continue;
+        const ref = map.ref(x, y);
+        if (usable(ref)) deposits[ref] = byte;
       }
     }
   }
   return deposits;
 }
 
-interface RegionShares {
-  plains: number;
-  highland: number;
-  mountain: number;
-  shoreline: number;
-}
-
-interface RegionGood {
-  good: Good;
-  on: (map: GameMap, ref: TileRef) => boolean;
-}
-
-const onHighGround = (map: GameMap, ref: TileRef) =>
-  map.terrainType(ref) !== TerrainType.Plains;
-const onShoreline = (map: GameMap, ref: TileRef) => map.isShoreline(ref);
-const onHighland = (map: GameMap, ref: TileRef) =>
-  map.terrainType(ref) === TerrainType.Highland;
-const onPlains = (map: GameMap, ref: TileRef) =>
-  map.terrainType(ref) === TerrainType.Plains;
-
-function pickRegionGood(
+/**
+ * A random fitting land tile, preferring ones a radius away from the region
+ * edges so the field is round; null when the region has none.
+ */
+function pickCenter(
+  map: GameMap,
+  region: Region,
+  radius: number,
   random: PseudoRandom,
-  s: RegionShares,
-): RegionGood | null {
-  // Every candidate rolls, in fixed order, so a region's outcome depends only
-  // on its own terrain and seed.
-  const metal = s.highland + s.mountain >= METAL_MIN_HIGHGROUND;
-  const coastalOil = s.shoreline >= OIL_MIN_SHORELINE;
-  const plateauOil =
-    s.highland >= OIL_PLATEAU_MIN_HIGHLAND &&
-    s.mountain < OIL_PLATEAU_MAX_MOUNTAIN;
-  const food = s.plains >= FOOD_MIN_PLAINS;
-
-  if (metal && random.next() < ACTIVATION[Good.Metal]) {
-    return { good: Good.Metal, on: onHighGround };
-  }
-  if ((coastalOil || plateauOil) && random.next() < ACTIVATION[Good.Oil]) {
-    return { good: Good.Oil, on: coastalOil ? onShoreline : onHighland };
-  }
-  if (food && random.next() < ACTIVATION[Good.Food]) {
-    return { good: Good.Food, on: onPlains };
-  }
-  return null;
+  fits: (ref: TileRef) => boolean,
+): TileRef | null {
+  const pick = (inset: number): TileRef | null => {
+    // Reservoir sampling: one pass, uniform over fitting tiles.
+    let chosen: TileRef | null = null;
+    let seen = 0;
+    for (let y = region.y0 + inset; y < region.y1 - inset; y++) {
+      for (let x = region.x0 + inset; x < region.x1 - inset; x++) {
+        const ref = map.ref(x, y);
+        if (!map.isLand(ref) || map.isImpassable(ref) || !fits(ref)) continue;
+        seen++;
+        if (random.nextInt(0, seen) === 0) chosen = ref;
+      }
+    }
+    return chosen;
+  };
+  return pick(radius) ?? pick(0);
 }
 
 /** Deposit tiles of each good on the whole map. */
@@ -211,7 +278,8 @@ export function countDeposits(deposits: Uint8Array): GoodsAmounts {
 /**
  * Goods a build consumes, on top of its gold. Oil moves (ships, missiles),
  * Metal stands (land defenses, silos, and every structure upgrade). Null
- * when the build is free of goods.
+ * when the build is free of goods. With one field (1 per second) of a good:
+ * a warship every 40s, a hydrogen bomb every 5 minutes, a MIRV every 15.
  */
 export function goodsCost(
   type: UnitType,
@@ -235,7 +303,7 @@ export function goodsCost(
       cost[Good.Metal] = 20;
       break;
     case UnitType.SAMLauncher:
-      cost[Good.Metal] = 120;
+      cost[Good.Metal] = 90;
       break;
     case UnitType.MissileSilo:
       cost[Good.Metal] = 100;
@@ -243,7 +311,7 @@ export function goodsCost(
     case UnitType.City:
     case UnitType.Port:
     case UnitType.Factory:
-      if (upgrade) cost[Good.Metal] = 60;
+      if (upgrade) cost[Good.Metal] = 40;
       break;
   }
   return cost.some((c) => c > 0) ? cost : null;
@@ -256,37 +324,56 @@ export function canAffordGoods(
   return cost === null || GOODS.every((g) => stock[g] >= cost[g]);
 }
 
-/** Goods a player produces per tick, indexed by Good. */
-export function goodsIncome(player: PlayerLike): GoodsAmounts {
-  const deposits = player.deposits();
+/** Goods `deposits` produce per tick, indexed by Good (PlayerLike.goodsIncome). */
+export function goodsIncome(
+  deposits: Readonly<GoodsAmounts>,
+  yieldPerTile: number,
+): GoodsAmounts {
   return [
-    deposits[Good.Food] * GOODS_PRODUCTION_PER_TILE,
-    deposits[Good.Oil] * GOODS_PRODUCTION_PER_TILE,
-    deposits[Good.Metal] * GOODS_PRODUCTION_PER_TILE,
+    deposits[Good.Food] * yieldPerTile,
+    deposits[Good.Oil] * yieldPerTile,
+    deposits[Good.Metal] * yieldPerTile,
   ];
 }
 
-/** Food a player's troops eat per tick. */
-export function foodUpkeep(player: PlayerLike): number {
-  return player.troops() * FOOD_PER_TROOP;
+/**
+ * Food a player's troops eat per tick: only troops beyond what their land
+ * feeds (`landFed`, see Config.foodLandFed) eat.
+ */
+export function foodUpkeep(player: PlayerLike, landFed: number): number {
+  return Math.max(0, player.troops() - landFed) * FOOD_PER_TROOP;
 }
 
-export function foodState(player: PlayerLike): FoodState {
-  const stock = player.goods()[Good.Food];
-  if (stock >= GOODS_STOCK_CAP * FOOD_SURPLUS_FRACTION) return "surplus";
-  if (stock <= 0 && foodUpkeep(player) > goodsIncome(player)[Good.Food]) {
-    return "shortage";
-  }
-  return "normal";
+/**
+ * Troops going hungry: with an empty granary, the eating troops that food
+ * income can't feed. A stocked granary feeds everyone.
+ */
+export function hungryTroops(player: PlayerLike, landFed: number): number {
+  if (player.goods()[Good.Food] > 0) return 0;
+  const eating = Math.max(0, player.troops() - landFed);
+  return Math.max(0, eating - player.goodsIncome()[Good.Food] / FOOD_PER_TROOP);
 }
 
-export function foodGrowthModifier(player: PlayerLike): number {
-  switch (foodState(player)) {
-    case "shortage":
-      return FOOD_SHORTAGE_GROWTH;
-    case "surplus":
-      return FOOD_SURPLUS_GROWTH;
-    default:
-      return 1;
+export function foodState(player: PlayerLike, landFed: number): FoodState {
+  if (player.goods()[Good.Food] >= GOODS_STOCK_CAP * FOOD_SURPLUS_FRACTION) {
+    return "surplus";
   }
+  return hungryTroops(player, landFed) > 0 ? "shortage" : "normal";
+}
+
+/**
+ * Troop growth multiplier from food: a full granary speeds growth; hungry
+ * troops slow it by their share of what the land feeds, down to
+ * FOOD_SHORTAGE_GROWTH (a city-free army at its cap with no food at all).
+ */
+export function foodGrowthModifier(
+  player: PlayerLike,
+  landFed: number,
+): number {
+  if (foodState(player, landFed) === "surplus") return FOOD_SURPLUS_GROWTH;
+  const hunger = Math.min(
+    1,
+    hungryTroops(player, landFed) / Math.max(1, landFed),
+  );
+  return 1 - (1 - FOOD_SHORTAGE_GROWTH) * hunger;
 }

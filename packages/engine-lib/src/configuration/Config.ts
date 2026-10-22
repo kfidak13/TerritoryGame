@@ -10,7 +10,11 @@ import { PlayerLike } from "@openfront/engine-api/game/ReadViews";
 import { GameConfig } from "@openfront/engine-api/Schemas";
 import { pow } from "../DetMath";
 import { DoomsdayClockSpeed } from "../game/DoomsdayClock";
-import { foodGrowthModifier } from "../game/Goods";
+import {
+  FOOD_LAND_FED_FRACTION,
+  foodGrowthModifier,
+  foodUpkeep,
+} from "../game/Goods";
 import { assertNever } from "../Util";
 
 export interface NukeMagnitude {
@@ -332,6 +336,16 @@ export class Config {
     return this.troopCap(player, true);
   }
 
+  /** Borderfall: troops the player's land feeds for free (Goods.ts). */
+  foodLandFed(player: PlayerLike): number {
+    return FOOD_LAND_FED_FRACTION * this.maxTroopsWithoutCities(player);
+  }
+
+  /** Borderfall: food the player's troops eat per tick. */
+  foodUpkeep(player: PlayerLike): number {
+    return foodUpkeep(player, this.foodLandFed(player));
+  }
+
   /** maxTroops without what cities add */
   maxTroopsWithoutCities(player: PlayerLike): number {
     return this.troopCap(player, false);
@@ -404,7 +418,7 @@ export class Config {
     }
 
     if (this.goodsEnabled()) {
-      toAdd *= foodGrowthModifier(player);
+      toAdd *= foodGrowthModifier(player, this.foodLandFed(player));
     }
 
     return Math.min(player.troops() + toAdd, max) - player.troops();

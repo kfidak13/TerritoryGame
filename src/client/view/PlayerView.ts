@@ -23,6 +23,7 @@ import {
   PlayerUpdate,
 } from "@openfront/engine-api/game/GameUpdates";
 import { PlayerLike } from "@openfront/engine-api/game/ReadViews";
+import { depositYield, goodsIncome } from "@openfront/engine-lib/game/Goods";
 import { PatternDecoder } from "@openfront/shared/PatternDecoder";
 import { createRandomName } from "@openfront/shared/SharedUtil";
 import { PlayerCosmetics } from "@openfront/shared/WireSchemas";
@@ -481,6 +482,10 @@ export class PlayerView implements PlayerLike {
 
   deposits(): Readonly<GoodsAmounts> {
     return this.state.deposits;
+  }
+
+  goodsIncome(): GoodsAmounts {
+    return goodsIncome(this.state.deposits, depositYield(this.game));
   }
 
   troops(): number {

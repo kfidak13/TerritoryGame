@@ -17,6 +17,8 @@ function viewOf(game: Game): GameView {
     width: () => map.width(),
     height: () => map.height(),
     ref: (x: number, y: number) => map.ref(x, y),
+    x: (t: number) => map.x(t),
+    y: (t: number) => map.y(t),
     isLand: (t: number) => map.isLand(t),
     isImpassable: (t: number) => map.isImpassable(t),
     isShoreline: (t: number) => map.isShoreline(t),

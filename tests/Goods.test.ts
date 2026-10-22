@@ -11,9 +11,10 @@ import {
   countDeposits,
   depositGood,
   depositSeed,
+  depositYield,
+  FOOD_PER_TROOP,
   FOOD_SHORTAGE_GROWTH,
   foodState,
-  GOODS_PRODUCTION_PER_TILE,
   goodsCost,
   regionSize,
 } from "@openfront/engine-lib/game/Goods";
@@ -75,6 +76,24 @@ describe("deposits", () => {
       });
       expect(onWater).toBe(0);
       expect(mixedRegions).toBe(0);
+
+      // Fields come out roughly even across goods, whatever the terrain.
+      const fields: number[] = [0, 0, 0];
+      for (const good of seen.values()) fields[good]++;
+      expect(Math.max(...fields)).toBeLessThanOrEqual(2 * Math.min(...fields));
+    },
+  );
+
+  test(
+    "include every good even where no terrain suits it",
+    { timeout: 60_000 },
+    async () => {
+      // All plains: no hills for Metal, no coast or plateau for Oil.
+      const game = await setup("big_plains", { goods: true });
+      const counts = countDeposits(
+        computeDeposits(game.map(), depositSeed("big_plains")),
+      );
+      for (const g of GOODS) expect(counts[g]).toBeGreaterThan(0);
     },
   );
 
@@ -100,25 +119,57 @@ describe("goods economy", () => {
     const before = player.goods()[Good.Metal];
     game.executeNextTick();
     expect(player.goods()[Good.Metal] - before).toBeCloseTo(
-      10 * GOODS_PRODUCTION_PER_TILE,
+      10 * depositYield(game.map()),
     );
 
     player.relinquish(metal[0]);
     expect(player.deposits()[Good.Metal]).toBe(9);
   });
 
-  test("starving troops grow slower", async () => {
+  test("hungry troops slow growth in proportion", async () => {
     const { game, player } = await goodsGame();
     player.conquer(depositTiles(game, Good.Oil, 1)[0]);
-    player.setTroops(100_000);
-    expect(foodState(player)).toBe("shortage");
+    const landFed = game.config().foodLandFed(player);
+    // A quarter of what the land feeds goes hungry: a quarter of the penalty.
+    player.setTroops(landFed * 1.25);
+    expect(foodState(player, landFed)).toBe("shortage");
     const starving = game.config().troopIncreaseRate(player);
 
     // Same land, same troops: only the granary differs.
     player.addGoods([10, 0, 0]);
-    expect(foodState(player)).toBe("normal");
+    expect(foodState(player, landFed)).toBe("normal");
     const fed = game.config().troopIncreaseRate(player);
-    expect(starving / fed).toBeCloseTo(FOOD_SHORTAGE_GROWTH, 2);
+    expect(starving / fed).toBeCloseTo(1 - (1 - FOOD_SHORTAGE_GROWTH) / 4, 3);
+  });
+
+  // Land feeds half the city-free troop cap, so a fresh spawn with no food
+  // deposit (and an empty granary) is not starving.
+  test("troops the land feeds eat nothing", async () => {
+    const { game, player } = await goodsGame();
+    player.conquer(depositTiles(game, Good.Oil, 1)[0]);
+    const landFed = game.config().foodLandFed(player);
+    expect(landFed).toBeCloseTo(
+      game.config().maxTroopsWithoutCities(player) / 2,
+    );
+    player.setTroops(landFed - 1);
+    expect(game.config().foodUpkeep(player)).toBe(0);
+    expect(foodState(player, landFed)).toBe("normal");
+
+    player.setTroops(landFed + 300_000);
+    expect(game.config().foodUpkeep(player)).toBeCloseTo(0.1);
+  });
+
+  test("food income feeds troops even with an empty granary", async () => {
+    const { game, player } = await goodsGame();
+    for (const t of depositTiles(game, Good.Food, 400)) player.conquer(t);
+    const landFed = game.config().foodLandFed(player);
+    const income = player.goodsIncome()[Good.Food];
+    expect(income).toBeGreaterThan(0);
+    // Exactly as many eating troops as the income feeds.
+    player.setTroops(landFed + income / FOOD_PER_TROOP);
+    expect(foodState(player, landFed)).toBe("normal");
+    player.setTroops(landFed + (2 * income) / FOOD_PER_TROOP);
+    expect(foodState(player, landFed)).toBe("shortage");
   });
 
   test("metal gates and pays for a defense post", async () => {

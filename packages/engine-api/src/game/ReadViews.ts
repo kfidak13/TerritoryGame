@@ -32,6 +32,8 @@ export interface PlayerLike {
   goods(): Readonly<GoodsAmounts>;
   /** Borderfall: owned deposit tiles per good, indexed by Good. */
   deposits(): Readonly<GoodsAmounts>;
+  /** Borderfall: goods the owned deposits produce per tick, by Good. */
+  goodsIncome(): GoodsAmounts;
 }
 
 export interface UnitLike {

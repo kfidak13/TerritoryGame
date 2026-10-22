@@ -9,6 +9,7 @@ import {
   GameMode,
   GameType,
   Gold,
+  Good,
   GOODS,
   GoodsAmounts,
   MAX_UPGRADE_AMOUNT,
@@ -38,10 +39,10 @@ import { ClientID } from "@openfront/engine-api/Schemas";
 import { andFN, manhattanDistFN } from "@openfront/engine-lib/game/GameMapImpl";
 import {
   canAffordGoods,
-  FOOD_PER_TROOP,
-  GOODS_PRODUCTION_PER_TILE,
+  depositYield,
   GOODS_STOCK_CAP,
   goodsCost,
+  goodsIncome,
 } from "@openfront/engine-lib/game/Goods";
 import { TileSet } from "@openfront/engine-lib/game/TileSet";
 import { PseudoRandom } from "@openfront/engine-lib/PseudoRandom";
@@ -1404,15 +1405,15 @@ export class PlayerImpl implements Player {
   }
 
   /** One tick of goods: deposits produce, troops eat (PlayerExecution). */
+  goodsIncome(): GoodsAmounts {
+    return goodsIncome(this._deposits, depositYield(this.mg.map()));
+  }
+
   tickGoods(): void {
-    const income: GoodsAmounts = [0, 0, 0];
-    for (const g of GOODS) {
-      income[g] = this._deposits[g] * GOODS_PRODUCTION_PER_TILE;
-    }
-    this.addGoods(income);
-    this._goods[0] = Math.max(
+    this.addGoods(this.goodsIncome());
+    this._goods[Good.Food] = Math.max(
       0,
-      this._goods[0] - this.troops() * FOOD_PER_TROOP,
+      this._goods[Good.Food] - this.mg.config().foodUpkeep(this),
     );
   }
 
