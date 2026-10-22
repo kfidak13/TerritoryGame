@@ -126,6 +126,35 @@ This will:
 - Launch the game server with development settings
 - Open the game in your default browser (to disable this behavior, set `SKIP_BROWSER_OPEN=true` in your environment)
 
+### Play with friends
+
+Borderfall needs no hosting service to play with friends: your computer runs the game server, and
+the simulation runs in each player's browser.
+
+**Same Wi-Fi / home network**
+
+1. Start the game reachable from your network:
+
+   ```bash
+   npm run dev:host
+   ```
+
+   (If port 3000 is taken on your machine, prefix it with `MASTER_PORT=3100`.) The output prints a
+   `Network:` address such as `http://192.168.1.20:9000`.
+
+2. Open **that Network address yourself** (not `localhost`), click **Create Lobby**, and copy the
+   lobby link: it then points at your machine, so friends can open it.
+3. Friends open the link on their own devices, and you press **Start Game**.
+
+Each player needs their own device or browser profile: two tabs in one browser count as the same
+player.
+
+**Friends somewhere else** (untested): a free [Cloudflare quick
+tunnel](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/do-more-with-tunnels/trycloudflare/)
+gives your machine a temporary public address without an account. With `npm run dev:host` running,
+run `cloudflared tunnel --url http://localhost:9000`, open the printed `https://….trycloudflare.com`
+address yourself, create the lobby there, and share its link. `dev:host` accepts those hostnames.
+
 ### Client Only
 
 To run just the client with hot reloading:

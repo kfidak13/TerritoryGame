@@ -23,6 +23,16 @@ the leader's land share over time (`tests/sim/PacingSim.ts`). Target: 25-35 minu
 most. With overtime the win bar starts at 90% and falls 4% a minute from minute 20
 (`Config.percentageTilesOwnedToWin`); without overtime it is a flat 80%.
 
+## Hosting
+
+There is no paid hosting yet. To play with friends, `npm run dev:host` serves the game on the LAN
+(and accepts `*.trycloudflare.com` quick-tunnel hostnames); see "Play with friends" in the README.
+A real deploy (planned: game server on Fly.io, built assets on Vercel as the `CDN_BASE` CDN) needs
+server work first: with `GAME_ENV=prod` the server rejects anonymous persistent IDs
+(`src/server/jwt.ts`) and verifies joins and paid lobby features against OpenFront's closed API
+(`src/server/Worker.ts`, `JoinVerify.ts`), and the client requires a Cloudflare Turnstile token
+(`Main.ts`). Gate those on a server-side standalone flag before deploying.
+
 ## Verification
 
 `npm run typecheck && npm run lint && npx prettier --check . && npm test`, plus
