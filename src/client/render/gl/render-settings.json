@@ -167,6 +167,22 @@
       "Missile Silo": {
         "scale": 1.55,
         "iconFill": 0.85
+      },
+      "Farm": {
+        "scale": 1,
+        "iconFill": 0.85
+      },
+      "Mineshaft": {
+        "scale": 1,
+        "iconFill": 0.85
+      },
+      "Oil Extractor": {
+        "scale": 1.08,
+        "iconFill": 0.85
+      },
+      "Oil Rig": {
+        "scale": 1.08,
+        "iconFill": 0.85
       }
     },
     "highlightOutlineWidth": 0.04,

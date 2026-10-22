@@ -1365,6 +1365,36 @@ export class UserSettingModal extends BaseModal {
         @change=${this.handleKeybindChange}
       ></setting-keybind>
 
+      <setting-keybind
+        action="buildFarm"
+        label=${translateText("user_setting.build_farm")}
+        description=${translateText("user_setting.build_farm_desc")}
+        defaultKey=${this.defaultKeybinds.buildFarm}
+        .value=${this.getKeyValue("buildFarm")}
+        .display=${this.getKeyChar("buildFarm")}
+        @change=${this.handleKeybindChange}
+      ></setting-keybind>
+
+      <setting-keybind
+        action="buildMineshaft"
+        label=${translateText("user_setting.build_mineshaft")}
+        description=${translateText("user_setting.build_mineshaft_desc")}
+        defaultKey=${this.defaultKeybinds.buildMineshaft}
+        .value=${this.getKeyValue("buildMineshaft")}
+        .display=${this.getKeyChar("buildMineshaft")}
+        @change=${this.handleKeybindChange}
+      ></setting-keybind>
+
+      <setting-keybind
+        action="buildOilExtractor"
+        label=${translateText("user_setting.build_oil_extractor")}
+        description=${translateText("user_setting.build_oil_extractor_desc")}
+        defaultKey=${this.defaultKeybinds.buildOilExtractor}
+        .value=${this.getKeyValue("buildOilExtractor")}
+        .display=${this.getKeyChar("buildOilExtractor")}
+        @change=${this.handleKeybindChange}
+      ></setting-keybind>
+
       <h2
         class="text-blue-200 text-xl font-bold mt-8 mb-3 border-b border-white/10 pb-2"
       >

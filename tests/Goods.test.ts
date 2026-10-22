@@ -12,6 +12,7 @@ import {
   depositGood,
   depositSeed,
   depositYield,
+  fieldArea,
   FOOD_PER_TROOP,
   FOOD_SHORTAGE_GROWTH,
   foodState,
@@ -19,7 +20,9 @@ import {
   regionSize,
   UNWORKED_SHARE,
 } from "@openfront/engine-lib/game/Goods";
+import { PseudoRandom } from "@openfront/engine-lib/PseudoRandom";
 import { ConstructionExecution } from "@openfront/engine/execution/ConstructionExecution";
+import { NationStructureBehavior } from "@openfront/engine/execution/nation/NationStructureBehavior";
 import { PlayerExecution } from "@openfront/engine/execution/PlayerExecution";
 import { Game, Player } from "@openfront/engine/game/Game";
 import { describe, expect, test } from "vitest";
@@ -162,6 +165,24 @@ describe("goods economy", () => {
       depositYield(game.map()) * UNWORKED_SHARE,
       10,
     );
+  });
+
+  test("nations build on deposits they leave unworked", async () => {
+    const game = await setup(MAP, { goods: true, instantBuild: true }, [
+      new PlayerInfo("rome", PlayerType.Nation, null, "rome"),
+    ]);
+    const rome = game.player("rome");
+    const metal = depositTiles(game, Good.Metal, fieldArea(game.map()));
+    for (const t of metal) rome.conquer(t);
+    rome.addGold(10_000_000n);
+    const ai = new NationStructureBehavior(new PseudoRandom(0), game, rome);
+
+    expect((ai as any).maybeWorkDeposits()).toBe(true);
+    for (let i = 0; i < 5; i++) game.executeNextTick();
+    const [mine] = rome.units(UnitType.Mineshaft);
+    expect(metal).toContain(mine.tile());
+    // The field is now worked: nothing left to build for.
+    expect((ai as any).maybeWorkDeposits()).toBe(false);
   });
 
   test("goods buildings need goods on", async () => {

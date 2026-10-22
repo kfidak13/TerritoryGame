@@ -39,6 +39,9 @@ const atomBombIcon = assetUrl("images/NukeIconWhite.svg");
 const portIcon = assetUrl("images/PortIcon.svg");
 const samlauncherIcon = assetUrl("images/SamLauncherIconWhite.svg");
 const shieldIcon = assetUrl("images/ShieldIconWhite.svg");
+const farmIcon = assetUrl("images/FarmIconWhite.svg");
+const mineshaftIcon = assetUrl("images/MineshaftIconWhite.svg");
+const oilExtractorIcon = assetUrl("images/OilExtractorIconWhite.svg");
 
 export interface BuildItemDisplay {
   unitType: PlayerBuildableUnitType;
@@ -118,6 +121,30 @@ export const buildTable: BuildItemDisplay[][] = [
       icon: factoryIcon,
       description: "build_menu.desc.factory",
       key: "unit_type.factory",
+      countable: true,
+    },
+  ],
+  // Borderfall goods buildings
+  [
+    {
+      unitType: UnitType.Farm,
+      icon: farmIcon,
+      description: "build_menu.desc.farm",
+      key: "unit_type.farm",
+      countable: true,
+    },
+    {
+      unitType: UnitType.Mineshaft,
+      icon: mineshaftIcon,
+      description: "build_menu.desc.mineshaft",
+      key: "unit_type.mineshaft",
+      countable: true,
+    },
+    {
+      unitType: UnitType.OilExtractor,
+      icon: oilExtractorIcon,
+      description: "build_menu.desc.oil_extractor",
+      key: "unit_type.oil_extractor",
       countable: true,
     },
   ],

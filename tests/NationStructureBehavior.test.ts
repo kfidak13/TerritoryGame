@@ -1109,6 +1109,7 @@ describe("NationStructureBehavior.doHandleStructures — crowded-map exception",
           difficulty: opts.difficulty ?? Difficulty.Medium,
         }),
         startingGold: () => 0n,
+        goodsEnabled: () => false,
       }),
       sharedWaterComponents: () => null, // landlocked -> Factory preferred
       nations: () => Array(400).fill({}),

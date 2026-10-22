@@ -15,6 +15,7 @@ import {
 import { Emoji, flattenedEmojiTable } from "@openfront/engine-api/Schemas";
 import { Config } from "@openfront/engine-lib/configuration/Config";
 import { renderNumber } from "@openfront/engine-lib/Format";
+import { buildingGood } from "@openfront/engine-lib/game/Goods";
 import { findClosestBy } from "@openfront/engine-lib/Util";
 import { assetUrl } from "@openfront/shared/AssetUrls";
 import { UIState } from "../../UIState";
@@ -46,6 +47,7 @@ const swordIcon = assetUrl("images/SwordIconWhite.svg");
 const targetIcon = assetUrl("images/TargetIconWhite.svg");
 const traitorIcon = assetUrl("images/TraitorIconWhite.svg");
 const tradeIcon = assetUrl("images/TradingIconWhite.svg");
+const goodsIcon = assetUrl("images/FarmIconWhite.svg");
 const xIcon = assetUrl("images/XIcon.svg");
 
 export interface MenuElementParams {
@@ -451,9 +453,15 @@ function goodsShortItem(
   return reason ? { text: reason, className: "shortage" } : null;
 }
 
+/** Which radial build ring a unit belongs to (goods buildings get their own). */
+function menuFor(type: UnitType): "attack" | "build" | "goods" {
+  if (BuildableAttacks.has(type)) return "attack";
+  return buildingGood(type) !== null ? "goods" : "build";
+}
+
 function createMenuElements(
   params: MenuElementParams,
-  filterType: "attack" | "build",
+  filterType: "attack" | "build" | "goods",
   elementIdPrefix: string,
 ): MenuElement[] {
   const unitTypes: Set<PlayerBuildableUnitType> = getAllEnabledUnits(
@@ -464,10 +472,7 @@ function createMenuElements(
   return flattenedBuildTable
     .filter(
       (item) =>
-        unitTypes.has(item.unitType) &&
-        (filterType === "attack"
-          ? BuildableAttacks.has(item.unitType)
-          : !BuildableAttacks.has(item.unitType)),
+        unitTypes.has(item.unitType) && menuFor(item.unitType) === filterType,
     )
     .map((item: BuildItemDisplay) => {
       return {
@@ -746,8 +751,24 @@ export const buildMenuElement: MenuElement = {
 
   subMenu: (params: MenuElementParams) => {
     if (params === undefined) return [];
-    return createMenuElements(params, "build", "build");
+    const goods = createMenuElements(params, "goods", "goods");
+    return [
+      ...createMenuElements(params, "build", "build"),
+      ...(goods.length > 0 ? [goodsMenuElement] : []),
+    ];
   },
+};
+
+// Borderfall: Farm, Mineshaft and Oil Extractor in a ring of their own.
+const goodsMenuElement: MenuElement = {
+  id: "build_goods",
+  name: "goods",
+  disabled: () => false,
+  icon: goodsIcon,
+  color: COLORS.building,
+  tooltipKeys: [{ key: "build_menu.goods", className: "title" }],
+  subMenu: (params: MenuElementParams) =>
+    createMenuElements(params, "goods", "goods"),
 };
 
 export const boatMenuElement: MenuElement = {

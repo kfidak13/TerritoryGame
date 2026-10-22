@@ -3,11 +3,14 @@ import {
   Difficulty,
   GameMode,
   Gold,
+  Good,
+  GOODS,
   PlayerType,
   Relation,
   Structures,
   UnitType,
 } from "@openfront/engine-api/game/GameTypes";
+import { fieldArea, GOOD_BUILDINGS } from "@openfront/engine-lib/game/Goods";
 import { PseudoRandom } from "@openfront/engine-lib/PseudoRandom";
 import {
   readVersioned,
@@ -28,6 +31,7 @@ import { UpgradeStructureExecution } from "../UpgradeStructureExecution";
 import { nearestTileDist, nearestTileDistCapped } from "../Util";
 import { isMirvWorthSavingFor } from "./NationMIRVBehavior";
 import {
+  hasGoodsFor,
   hasHighStartingGold,
   isSaveUpWithinReach,
   randTerritoryTileArray,
@@ -667,6 +671,10 @@ export class NationStructureBehavior {
       return true;
     }
 
+    if (this.maybeWorkDeposits()) {
+      return true;
+    }
+
     // Build order for non-city structures (priority order)
     const buildOrder: UnitType[] = [
       UnitType.Port,
@@ -947,6 +955,53 @@ export class NationStructureBehavior {
       };
     }
     return this.mirvWorthSavingMemo.worth;
+  }
+
+  /**
+   * Borderfall goods: owned deposits only trickle until a Farm, Mineshaft or
+   * Oil Extractor works them. Once half a field's worth of a good's tiles sits
+   * unworked, build its building on one of them (or upgrade one if no site
+   * is free). Most unworked good first.
+   */
+  private maybeWorkDeposits(): boolean {
+    const game = this.game;
+    if (!game.config().goodsEnabled()) return false;
+    const player = this.player;
+    const area = fieldArea(game);
+    const unworked = GOODS.map(
+      (g) => player.deposits()[g] - player.unitsOwned(GOOD_BUILDINGS[g]) * area,
+    );
+    const order = [...GOODS].sort((a, b) => unworked[b] - unworked[a]);
+    for (const good of order) {
+      const type = GOOD_BUILDINGS[good];
+      if (unworked[good] < area / 2 || game.config().isUnitDisabled(type)) {
+        continue;
+      }
+      if (player.gold() < this.cost(type)) continue;
+      const site = this.depositSite(good);
+      if (site !== null && hasGoodsFor(game, player, type)) {
+        game.addExecution(new ConstructionExecution(player, type, site));
+        return true;
+      }
+      const existing = player
+        .units(type)
+        .find((u) => !u.isUnderConstruction() && player.canUpgradeUnit(u));
+      if (existing !== undefined && hasGoodsFor(game, player, type, true)) {
+        return this.upgradeStructure(existing);
+      }
+    }
+    return false;
+  }
+
+  /** An owned deposit tile of `good` a new building can stand on, if any. */
+  private depositSite(good: Good): TileRef | null {
+    const type = GOOD_BUILDINGS[good];
+    for (const tile of this.player.tiles().values()) {
+      if (this.game.depositAt(tile) !== good) continue;
+      const spot = this.player.canBuild(type, tile);
+      if (spot !== false) return spot;
+    }
+    return null;
   }
 
   /** Upgrades the best of the given structures; false if none can be upgraded. */

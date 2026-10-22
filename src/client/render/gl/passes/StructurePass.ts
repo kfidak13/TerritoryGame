@@ -2,7 +2,8 @@
  * StructurePass — GPU-rendered structures with icon sprites.
  *
  * Renders a filled circle in player color with a white icon overlay,
- * sampled from a pre-built 6-column sprite atlas (generate-sprite-atlases.mjs).
+ * sampled from a pre-built sprite atlas, one 64px column per STRUCTURE_ORDER
+ * entry (resources/atlases/icon-atlas.png).
  *
  * Two LODs based on zoom:
  *   - zoom > 0.5: full icon with circle background
@@ -19,7 +20,11 @@ import {
   UT_CITY,
   UT_DEFENSE_POST,
   UT_FACTORY,
+  UT_FARM,
+  UT_MINESHAFT,
   UT_MISSILE_SILO,
+  UT_OIL_EXTRACTOR,
+  UT_OIL_RIG,
   UT_PORT,
   UT_SAM_LAUNCHER,
 } from "../../types";
@@ -53,6 +58,11 @@ const STRUCTURE_ORDER = [
   UT_DEFENSE_POST,
   UT_SAM_LAUNCHER,
   UT_MISSILE_SILO,
+  // Borderfall goods buildings (icons from resources/images/*IconWhite.svg)
+  UT_FARM,
+  UT_MINESHAFT,
+  UT_OIL_EXTRACTOR,
+  UT_OIL_RIG,
 ] as const;
 
 const ATLAS_COLS = STRUCTURE_ORDER.length;

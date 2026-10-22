@@ -23,7 +23,7 @@ import {
   PlayerUpdate,
 } from "@openfront/engine-api/game/GameUpdates";
 import { PlayerLike } from "@openfront/engine-api/game/ReadViews";
-import { depositYield, goodsIncome } from "@openfront/engine-lib/game/Goods";
+import { goodsIncome } from "@openfront/engine-lib/game/Goods";
 import { tradePactMultiplier } from "@openfront/engine-lib/game/Trade";
 import { PatternDecoder } from "@openfront/shared/PatternDecoder";
 import { createRandomName } from "@openfront/shared/SharedUtil";
@@ -487,7 +487,7 @@ export class PlayerView implements PlayerLike {
 
   goodsIncome(): GoodsAmounts {
     const pacts = tradePactMultiplier(this.state.tradePacts.length);
-    return goodsIncome(this.state.deposits, depositYield(this.game) * pacts);
+    return goodsIncome(this, this.game, pacts);
   }
 
   /** Borderfall: trade pact partners. */
