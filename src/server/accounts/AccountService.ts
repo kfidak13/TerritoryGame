@@ -30,9 +30,10 @@ import {
  * the game servers check against /.well-known/jwks.json. Finished games feed
  * per-account stats.
  *
- * The admin is whoever signs in with ADMIN_EMAIL (verified by the
- * provider): only that account gets the "admin" role, and admin powers still
- * need the admin password on top (adminPasswordMatches).
+ * The admin is the one account whose provider-verified email hashes to
+ * ADMIN_EMAIL_SHA256 (the owner's address, kept out of the public source):
+ * only it gets the "admin" role, and admin powers still need the admin
+ * password on top (adminPasswordMatches).
  */
 
 export interface AccountServiceConfig {
@@ -42,12 +43,17 @@ export interface AccountServiceConfig {
   audience: string;
   discord?: { clientId: string; clientSecret: string };
   google?: { clientId: string; clientSecret: string };
-  adminEmail?: string;
+  /** For tests: SHA-256 (hex) of the admin's email, instead of the owner's. */
+  adminEmailSha256?: string;
   /** Server-to-server key the game servers send (API_KEY). */
   apiKey: string;
   /** For tests: stands in for the providers' token and profile endpoints. */
   fetch?: typeof fetch;
 }
+
+/** SHA-256 of the one admin account's email, lowercased. */
+export const ADMIN_EMAIL_SHA256 =
+  "c4fcbd355b9c1a16c049e87463a00cf2a8164bf3f043ce94cffc326938a948af";
 
 const TOKEN_SECONDS = 15 * 60;
 const SESSION_COOKIE = "bf_session";
@@ -146,13 +152,11 @@ export class AccountService {
   }
 
   isAdmin(account: Account): boolean {
-    const admin = this.config.adminEmail?.trim().toLowerCase();
-    return (
-      admin !== undefined &&
-      admin !== "" &&
-      account.emailVerified &&
-      account.email?.toLowerCase() === admin
-    );
+    if (!account.emailVerified || account.email === null) return false;
+    const digest = createHash("sha256")
+      .update(account.email.trim().toLowerCase())
+      .digest("hex");
+    return digest === (this.config.adminEmailSha256 ?? ADMIN_EMAIL_SHA256);
   }
 
   /** A short-lived token for the account, as /auth/refresh hands out. */

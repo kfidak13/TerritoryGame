@@ -156,8 +156,8 @@ run `cloudflared tunnel --url http://localhost:9000`, open the printed `https://
 address yourself, create the lobby there, and share its link. `dev:host` accepts those hostnames.
 
 **Accounts and the admin tab.** Players can sign in with Discord or Google (see "Put it online"
-for setting those up) to keep their name and stats. One account is the admin: the one whose email
-matches `BORDERFALL_ADMIN_EMAIL`. Only it sees an **Admin** button in games (or presses the
+for setting those up) to keep their name and stats. One account is the admin: the owner's (its email's fingerprint is `ADMIN_EMAIL_SHA256` in
+`src/server/accounts/AccountService.ts`). Only it sees an **Admin** button in games (or presses the
 backquote key), and the tools open only after it enters `BORDERFALL_ADMIN_PASSWORD`. Game servers
 check both again before obeying.
 

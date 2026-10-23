@@ -8,11 +8,15 @@ import {
   TokenPayloadSchema,
   UserMeResponseSchema,
 } from "@openfront/shared/ApiSchemas";
+import { createHash } from "crypto";
 import express from "express";
 import { decodeJwt } from "jose";
 import { AddressInfo } from "net";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
-import { AccountService } from "../../src/server/accounts/AccountService";
+import {
+  ADMIN_EMAIL_SHA256,
+  AccountService,
+} from "../../src/server/accounts/AccountService";
 import { AccountStore } from "../../src/server/accounts/AccountStore";
 
 const ADMIN_EMAIL = "owner@example.com";
@@ -57,7 +61,7 @@ async function start(email: string) {
     base,
     audience: "borderfall.test",
     discord: { clientId: "client", clientSecret: "secret" },
-    adminEmail: ADMIN_EMAIL,
+    adminEmailSha256: createHash("sha256").update(ADMIN_EMAIL).digest("hex"),
     apiKey: API_KEY,
     fetch: fakeDiscord(email),
   });
@@ -93,6 +97,13 @@ async function refresh(cookie: string) {
     headers: { cookie },
   });
 }
+
+test("only the owner's email is admin by default", () => {
+  const owner = createHash("sha256")
+    .update("kaydon0415@gmail.com")
+    .digest("hex");
+  expect(ADMIN_EMAIL_SHA256).toBe(owner);
+});
 
 describe("Borderfall accounts", () => {
   afterEach(() => {

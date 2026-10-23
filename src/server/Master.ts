@@ -57,7 +57,6 @@ if (ServerEnv.accountsEnabled()) {
       audience: ServerEnv.jwtAudience(),
       discord: oauthApp("DISCORD"),
       google: oauthApp("GOOGLE"),
-      adminEmail: process.env.BORDERFALL_ADMIN_EMAIL,
       apiKey: ServerEnv.apiKey(),
     },
   );
