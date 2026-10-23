@@ -508,6 +508,8 @@ export enum MessageType {
   TRADE_REJECTED,
   // Borderfall disasters and disease.
   DISASTER,
+  // Borderfall admin powers, worded as acts of the gods.
+  DIVINE,
 }
 
 /** Borderfall: what struck, for messages and map effects. */
@@ -517,6 +519,8 @@ export enum DisasterKind {
   Drought = "drought",
   Tornado = "tornado",
   Outbreak = "outbreak",
+  // Admin zombie apocalypse: a horde rises inside a nation.
+  Zombies = "zombies",
 }
 
 // Message categories used for filtering events in the EventsDisplay
@@ -557,6 +561,7 @@ export const MESSAGE_TYPE_CATEGORIES: Record<MessageType, MessageCategory> = {
   [MessageType.TRADE_REJECTED]: MessageCategory.TRADE,
   [MessageType.CHAT]: MessageCategory.CHAT,
   [MessageType.DISASTER]: MessageCategory.DISASTER,
+  [MessageType.DIVINE]: MessageCategory.DISASTER,
 } as const;
 
 /**

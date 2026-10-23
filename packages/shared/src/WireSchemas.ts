@@ -39,7 +39,8 @@ export type ClientMessage =
   | ClientLogMessage
   | ClientHashMessage
   | ClientSpectateMessage
-  | ClientReportMessage;
+  | ClientReportMessage
+  | ClientAdminAuthMessage;
 
 export type ServerMessage =
   | ServerTurnMessage
@@ -84,6 +85,9 @@ export type ClientSendLiveStatsMessage = z.infer<
 >;
 
 export type ClientReportMessage = z.infer<typeof ClientReportMessageSchema>;
+export type ClientAdminAuthMessage = z.infer<
+  typeof ClientAdminAuthMessageSchema
+>;
 
 export type ReportReason = z.infer<typeof ReportReasonSchema>;
 
@@ -659,6 +663,13 @@ export const PlayerReportSchema = z.object({
 });
 
 // Note: reportedBy is NOT sent - the server stamps it from the connection.
+// Borderfall admin tab: proves the admin key once per connection. Never
+// relayed: only the server compares it (GameServer).
+export const ClientAdminAuthMessageSchema = z.object({
+  type: z.literal("admin_auth"),
+  key: z.string().max(256),
+});
+
 export const ClientReportMessageSchema = z.object({
   type: z.literal("report"),
   reported: ID,
@@ -755,6 +766,7 @@ export const ClientMessageSchema = zb.discriminatedUnion("type", [
   ClientHashSchema,
   ClientSpectateMessageSchema,
   ClientReportMessageSchema,
+  ClientAdminAuthMessageSchema,
 ]);
 
 //

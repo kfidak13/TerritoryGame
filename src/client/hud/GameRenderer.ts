@@ -23,6 +23,7 @@ import { UserSettings } from "../UserSettings";
 import { GameView } from "../view";
 import { FrameProfiler } from "./FrameProfiler";
 import { ActionableEvents } from "./layers/ActionableEvents";
+import { AdminPanel } from "./layers/AdminPanel";
 import { AlertFrame } from "./layers/AlertFrame";
 import { AttacksDisplay } from "./layers/AttacksDisplay";
 import { BuildMenu } from "./layers/BuildMenu";
@@ -245,6 +246,15 @@ export function createRenderer(
   tradePanel.transformHandler = transformHandler;
   tradePanel.view = view;
 
+  const adminPanel = document.querySelector("admin-panel") as AdminPanel;
+  if (!(adminPanel instanceof AdminPanel)) {
+    console.error("AdminPanel element not found in the DOM");
+  }
+  adminPanel.game = game;
+  adminPanel.eventBus = eventBus;
+  adminPanel.uiState = uiState;
+  adminPanel.transformHandler = transformHandler;
+
   const playerPanel = document.querySelector("player-panel") as PlayerPanel;
   if (!(playerPanel instanceof PlayerPanel)) {
     console.error("player panel not found");
@@ -374,6 +384,7 @@ export function createRenderer(
     settingsModal,
     playerPanel,
     tradePanel,
+    adminPanel,
     headsUpMessage,
     multiTabModal,
     inGamePromo,

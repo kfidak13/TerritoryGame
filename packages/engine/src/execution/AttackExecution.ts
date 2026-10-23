@@ -296,6 +296,12 @@ export class AttackExecution implements Execution {
       return;
     }
 
+    // Borderfall admin god mode: a god's land can't be taken.
+    if (targetPlayer?.isGod()) {
+      this.retreat();
+      return;
+    }
+
     if (targetPlayer && this._owner.isFriendly(targetPlayer)) {
       // In this case a new alliance was created AFTER the attack started.
       this.retreat();

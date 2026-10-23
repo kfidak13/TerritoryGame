@@ -242,6 +242,7 @@ function queuedIntent(game: Game, p: Player, tick: number): Intent | null {
     },
     { type: "trade_reply", offerID: 1, accept: false },
     { type: "end_trade_pact", partner: other.id() },
+    { type: "admin", action: { kind: "zombies", target: other.id() } },
   ];
   return queued[(tick - 20) / 2] ?? null;
 }

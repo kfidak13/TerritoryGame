@@ -502,6 +502,10 @@ export interface Player extends PlayerLike {
   canMakeTradePact(other: Player): boolean;
   addTradePact(other: Player): void;
   endTradePact(other: Player): void;
+  // Borderfall admin god mode: nobody can conquer this player's land (nukes
+  // and other losses still clear it).
+  isGod(): boolean;
+  setGod(god: boolean): void;
   getEmbargoes(): Embargo[];
   stopEmbargo(other: Player): void;
   endTemporaryEmbargo(other: Player): void;

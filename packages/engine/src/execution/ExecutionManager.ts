@@ -7,6 +7,7 @@ import {
 import { PseudoRandom } from "@openfront/engine-lib/PseudoRandom";
 import { simpleHash } from "@openfront/engine-lib/Util";
 import { Execution, Game } from "../game/Game";
+import { AdminExecution } from "./admin/AdminExecution";
 import { AllianceExtensionExecution } from "./alliance/AllianceExtensionExecution";
 import { AllianceRejectExecution } from "./alliance/AllianceRejectExecution";
 import { AllianceRequestExecution } from "./alliance/AllianceRequestExecution";
@@ -160,6 +161,8 @@ export class Executor {
         return new TradeReplyExecution(player, intent.offerID, intent.accept);
       case "end_trade_pact":
         return new EndTradePactExecution(player, intent.partner);
+      case "admin":
+        return new AdminExecution(player, intent.action);
       default:
         throw new Error(`intent type ${intent} not found`);
     }

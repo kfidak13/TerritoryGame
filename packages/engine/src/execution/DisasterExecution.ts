@@ -90,9 +90,24 @@ export class DisasterExecution implements Execution {
   private disrupted = new Map<Unit, number>();
   private outbreaks: Outbreak[] = [];
   private tornadoes: Tornado[] = [];
+  /** Admin-summoned strikes waiting for the next tick. */
+  private queued: { kind: DisasterKind; tile: TileRef }[] = [];
 
-  constructor(seed: number) {
+  /**
+   * `scheduled`: strike at random and check for disease (the lobby option).
+   * Off for an admin's summons: it strikes only what is queued, and stops
+   * once nothing it started is still running.
+   */
+  constructor(
+    seed: number,
+    private scheduled = true,
+  ) {
     this.random = new PseudoRandom(seed);
+  }
+
+  /** Sets a disaster (or an outbreak among the tile owner's cities) off next tick. */
+  queue(kind: DisasterKind, tile: TileRef): void {
+    this.queued.push({ kind, tile });
   }
 
   init(mg: Game, ticks: number): void {
@@ -133,6 +148,26 @@ export class DisasterExecution implements Execution {
       this.reportTornado(t);
       return false;
     });
+
+    for (const { kind, tile } of this.queued.splice(0)) {
+      const owner = mg.owner(tile);
+      if (kind === DisasterKind.Outbreak) {
+        if (owner.isPlayer()) this.outbreak(owner as Player, tile, ticks);
+      } else if ((DISASTERS as readonly DisasterKind[]).includes(kind)) {
+        this.strike(kind as Disaster, tile);
+      }
+    }
+
+    if (!this.scheduled) {
+      if (
+        this.disrupted.size === 0 &&
+        this.outbreaks.length === 0 &&
+        this.tornadoes.length === 0
+      ) {
+        this.active = false;
+      }
+      return;
+    }
 
     if (ticks % OUTBREAK_CHECK_TICKS === 0) {
       for (const player of mg.players()) this.checkOutbreak(player, ticks);
@@ -463,6 +498,8 @@ export class DisasterExecution implements Execution {
       active: this.active,
       initialized: this.mg !== null,
       random: w.random(this.random),
+      scheduled: this.scheduled,
+      queued: this.queued.map((q) => ({ kind: q.kind, tile: q.tile })),
       quietUntil: this.quietUntil,
       disruptedUnits: live.map(([u]) => w.unit(u)),
       disruptedUntil: live.map(([, until]) => until),
@@ -492,6 +529,11 @@ export class DisasterExecution implements Execution {
     this.active = s.active;
     this.mg = s.initialized ? r.game : null;
     this.random = r.random(s.random);
+    this.scheduled = s.scheduled ?? true;
+    this.queued = (s.queued ?? []).map((q) => ({
+      kind: q.kind as DisasterKind,
+      tile: q.tile,
+    }));
     this.quietUntil = s.quietUntil;
     this.disrupted = new Map(
       s.disruptedUnits.map((u, i) => [r.unit(u), s.disruptedUntil[i]]),
@@ -523,6 +565,8 @@ const DisasterStateSchema = z.object({
   active: z.boolean(),
   initialized: z.boolean(),
   random: zRandom(),
+  scheduled: z.boolean().optional(),
+  queued: z.array(z.object({ kind: z.string(), tile: zInt() })).optional(),
   quietUntil: zInt().nullable(),
   disruptedUnits: z.array(zRef()),
   disruptedUntil: z.array(zInt()),

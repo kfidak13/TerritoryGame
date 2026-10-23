@@ -7,6 +7,8 @@ export interface IntentActor {
   isLobbyCreator: boolean;
   isAdmin: boolean; // role-based admin/root (also true for the admin bot)
   isAdminBot: boolean; // the trusted admin-bot HTTP API
+  // Borderfall admin tab: proved the server's admin key (GameServer).
+  isBorderfallAdmin?: boolean;
 }
 
 // Outcome of dispatching an intent. `status` is an HTTP-style code: 200 on
@@ -43,6 +45,12 @@ export function authorizeIntent(
   switch (intent.type) {
     case "mark_disconnected":
       return { status: 400, error: "mark_disconnected is server-internal" };
+
+    case "admin":
+      if (actor.isBorderfallAdmin !== true) {
+        return { status: 403, error: "admin powers need the admin key" };
+      }
+      return null;
 
     case "kick_player":
       if (!actor.isLobbyCreator && !actor.isAdmin) {

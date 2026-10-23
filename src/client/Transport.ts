@@ -8,6 +8,7 @@ import {
   UnitType,
 } from "@openfront/engine-api/game/GameTypes";
 import {
+  AdminAction,
   AllPlayersStats,
   ClientID,
   Intent,
@@ -26,6 +27,7 @@ import {
   GameEvent,
 } from "@openfront/shared/EventBus";
 import {
+  ClientAdminAuthMessage,
   ClientHashMessage,
   ClientIntentMessage,
   ClientJoinMessage,
@@ -190,6 +192,15 @@ export class SendTradeOfferIntentEvent implements GameEvent {
     public readonly ceasefire: boolean,
     public readonly pact: boolean,
   ) {}
+}
+
+// Borderfall admin tab.
+export class SendAdminIntentEvent implements GameEvent {
+  constructor(public readonly action: AdminAction) {}
+}
+
+export class SendAdminAuthEvent implements GameEvent {
+  constructor(public readonly key: string) {}
 }
 
 export class SendTradeReplyIntentEvent implements GameEvent {
@@ -364,6 +375,17 @@ export class Transport {
         pact: e.pact,
       }),
     );
+    this.subscribe(SendAdminIntentEvent, (e) =>
+      this.sendIntent({ type: "admin", action: e.action }),
+    );
+    this.subscribe(SendAdminAuthEvent, (e) => {
+      // Solo games have no server to convince.
+      if (this.isLocal) return;
+      this.sendMsg({
+        type: "admin_auth",
+        key: e.key,
+      } satisfies ClientAdminAuthMessage);
+    });
     this.subscribe(SendTradeReplyIntentEvent, (e) =>
       this.sendIntent({
         type: "trade_reply",

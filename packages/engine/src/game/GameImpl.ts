@@ -834,6 +834,14 @@ export class GameImpl implements Game {
       throw Error(`cannot conquer impassable terrain`);
     }
     const previousOwner = this.owner(tile) as TerraNullius | PlayerImpl;
+    // Borderfall admin god mode: a god's land can't be taken.
+    if (
+      previousOwner.isPlayer() &&
+      previousOwner.isGod() &&
+      owner !== previousOwner
+    ) {
+      return;
+    }
     if (previousOwner.isPlayer()) {
       previousOwner._lastTileChange = this._ticks;
       previousOwner._tileChangeVersion++;

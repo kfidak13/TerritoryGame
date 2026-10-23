@@ -20,6 +20,9 @@ export class Client {
   // once here rather than for every entry of every per-recipient broadcast.
   public readonly wireLevelBadge: number | undefined;
 
+  // Borderfall admin tab: set once the client proves the admin key.
+  public borderfallAdmin = false;
+
   constructor(
     public readonly clientID: ClientID,
     public readonly persistentID: string,

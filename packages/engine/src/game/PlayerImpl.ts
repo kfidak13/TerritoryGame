@@ -179,6 +179,8 @@ export class PlayerImpl implements Player {
   private embargoes = new Map<PlayerID, Embargo>();
   /** Borderfall trade pact partners (engine-lib/game/Trade.ts). */
   private _tradePacts: Player[] = [];
+  // Borderfall admin god mode: land can't be taken (AdminExecution).
+  private _god = false;
 
   public _borderTiles = new TileSet();
 
@@ -1311,6 +1313,14 @@ export class PlayerImpl implements Player {
     return this._tradePacts.includes(other);
   }
 
+  isGod(): boolean {
+    return this._god;
+  }
+
+  setGod(god: boolean): void {
+    this._god = god;
+  }
+
   canMakeTradePact(other: Player): boolean {
     return (
       this.canTrade(other) &&
@@ -2187,6 +2197,7 @@ export class PlayerImpl implements Player {
       rottedAtTick: this.rottedAtTick,
       betrayalCount: this._betrayalCount,
       tradePacts: this._tradePacts.map((p) => w.player(p)),
+      god: this._god || undefined,
       embargoes: [...this.embargoes.values()].map((e) => ({
         target: w.player(e.target),
         createdAt: e.createdAt,
@@ -2261,6 +2272,7 @@ export class PlayerImpl implements Player {
     this.rottedAtTick = s.rottedAtTick;
     this._betrayalCount = s.betrayalCount;
     this._tradePacts = (s.tradePacts ?? []).map((p) => r.player(p));
+    this._god = s.god ?? false;
     this.embargoes = new Map();
     for (const e of s.embargoes) {
       this.embargoes.set(r.playerID(e.target), {
@@ -2343,6 +2355,7 @@ export const PlayerSnapshot = snapshotType({
     goods: z.tuple([zNum(), zNum(), zNum()]).optional(),
     // Borderfall trade pacts; absent in snapshots from before trading.
     tradePacts: z.array(zPlayerRef()).optional(),
+    god: z.boolean().optional(),
     markedTraitorTick: zInt(),
     markedDoomsdayClockTick: zInt(),
     rottedAtTick: zInt(),

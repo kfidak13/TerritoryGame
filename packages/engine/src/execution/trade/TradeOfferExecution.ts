@@ -16,6 +16,7 @@ import {
   TRADE_OFFER_DURATION,
   tradeOfferID,
 } from "@openfront/engine-lib/game/Trade";
+import { isZombieHorde } from "@openfront/engine-lib/game/Zombies";
 import {
   zInt,
   zNum,
@@ -134,7 +135,7 @@ export class TradeOfferExecution implements Execution {
       this.settle("cancelled");
       return;
     }
-    if (recipient.type() === PlayerType.Bot) {
+    if (recipient.type() === PlayerType.Bot || isZombieHorde(recipient)) {
       this.reply = "reject";
     } else if (recipient.type() === PlayerType.Nation) {
       const offer = {

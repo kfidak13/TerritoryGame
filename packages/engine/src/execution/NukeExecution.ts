@@ -52,6 +52,9 @@ export class NukeExecution implements Execution {
     private speed: number = -1,
     private waitTicks = 0,
     private rocketDirectionUp: boolean = true,
+    // Borderfall admin smite: falls straight on the target, from no silo,
+    // with no warning, no name and no broken alliances.
+    private divine = false,
   ) {}
 
   init(mg: Game, ticks: number): void {
@@ -200,6 +203,15 @@ export class NukeExecution implements Execution {
 
   tick(ticks: number): void {
     if (this.nuke === null) {
+      if (this.divine) {
+        this.src = this.dst;
+        this.nuke = this.player.buildUnit(this.nukeType, this.dst, {
+          targetTile: this.dst,
+          trajectory: this.getTrajectory(this.dst),
+        });
+        this.recordMotionPlan(ticks);
+        return;
+      }
       const spawn = this.player.canBuild(this.nukeType, this.dst);
       if (spawn === false) {
         console.warn(`cannot build Nuke`);
@@ -490,8 +502,9 @@ export class NukeExecution implements Execution {
     this.nuke.delete(false);
 
     if (
-      this.nukeType === UnitType.AtomBomb ||
-      this.nukeType === UnitType.HydrogenBomb
+      !this.divine &&
+      (this.nukeType === UnitType.AtomBomb ||
+        this.nukeType === UnitType.HydrogenBomb)
     ) {
       const messageKey =
         this.nukeType === UnitType.AtomBomb
@@ -563,6 +576,7 @@ export class NukeExecution implements Execution {
       speed: this.speed,
       waitTicks: this.waitTicks,
       rocketDirectionUp: this.rocketDirectionUp,
+      divine: this.divine || undefined,
     });
   }
 
@@ -580,6 +594,7 @@ export class NukeExecution implements Execution {
     this.speed = s.speed;
     this.waitTicks = s.waitTicks;
     this.rocketDirectionUp = s.rocketDirectionUp;
+    this.divine = s.divine ?? false;
   }
 }
 
@@ -595,6 +610,7 @@ const NukeStateSchema = z.object({
   speed: zNum(),
   waitTicks: zInt(),
   rocketDirectionUp: z.boolean(),
+  divine: z.boolean().optional(),
 });
 type NukeState = z.infer<typeof NukeStateSchema>;
 

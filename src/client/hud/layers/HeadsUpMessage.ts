@@ -1,4 +1,5 @@
 import {
+  DisasterKind,
   GameMode,
   GameType,
   RankedType,
@@ -35,6 +36,12 @@ export class HeadsUpMessage extends LitElement implements Controller {
 
   @state()
   private isOvertimeNotice = false;
+
+  // Borderfall admin zombie apocalypse: who it hit, and until when to shout.
+  @state()
+  private zombieVictim: string | null = null;
+  private zombieUntil = 0;
+  private static readonly ZOMBIE_BANNER_MS = 7000;
 
   private static readonly CATCHING_UP_SHOW_THRESHOLD = 10;
   // How long the overtime announcement banner stays up after the start minute.
@@ -148,6 +155,15 @@ export class HeadsUpMessage extends LitElement implements Controller {
 
   tick() {
     const updates = this.game.updatesSinceLastTick();
+    for (const d of updates?.[GameUpdateType.Disaster] ?? []) {
+      if (d.kind !== DisasterKind.Zombies || d.victim === undefined) continue;
+      const victim = this.game.player(d.victim);
+      this.zombieVictim = victim.displayName();
+      this.zombieUntil = Date.now() + HeadsUpMessage.ZOMBIE_BANNER_MS;
+    }
+    if (this.zombieVictim !== null && Date.now() > this.zombieUntil) {
+      this.zombieVictim = null;
+    }
     const pauseUpdates = updates?.[GameUpdateType.GamePaused];
     if (pauseUpdates && pauseUpdates.length > 0) {
       this.isPaused = pauseUpdates[pauseUpdates.length - 1].paused;
@@ -238,6 +254,23 @@ export class HeadsUpMessage extends LitElement implements Controller {
   render() {
     return html`
       <div style="pointer-events: none;">
+        ${this.zombieVictim !== null
+          ? html`<div
+              class="fixed top-[28%] left-1/2 -translate-x-1/2 z-[1003]
+                     w-max max-w-[90vw] px-8 py-5 rounded-xl text-center
+                     bg-black/80 border-2 border-lime-500 animate-pulse"
+              style="box-shadow: 0 0 40px rgba(132,204,22,0.6);"
+            >
+              <div class="text-4xl lg:text-6xl font-black text-lime-400">
+                ${translateText("zombies.title")}
+              </div>
+              <div class="text-lg lg:text-2xl text-white mt-2">
+                ${translateText("zombies.subtitle", {
+                  name: this.zombieVictim,
+                })}
+              </div>
+            </div>`
+          : null}
         ${this.toastMessage
           ? html`
               <div

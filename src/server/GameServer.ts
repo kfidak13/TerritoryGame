@@ -58,7 +58,7 @@ import {
   encodeServerMessage,
 } from "@openfront/shared/ZbinWire";
 import { ZbContext } from "@openfront/zbin";
-import { createHash, randomBytes } from "crypto";
+import { createHash, randomBytes, timingSafeEqual } from "crypto";
 import ipAnonymize from "ip-anonymize";
 import { Logger } from "winston";
 import WebSocket from "ws";
@@ -197,6 +197,17 @@ export function defaultGameServerDeps(): GameServerDeps {
     telemetryBuildHash: "DEV",
     mintGroupToken,
   };
+}
+
+/**
+ * Borderfall admin tab: whether `key` is the server's BORDERFALL_ADMIN_KEY.
+ * Unset or empty disables admin powers in multiplayer games.
+ */
+export function adminKeyMatches(key: string): boolean {
+  const expected = process.env.BORDERFALL_ADMIN_KEY ?? "";
+  if (expected === "" || key === "") return false;
+  const hash = (s: string) => createHash("sha256").update(s).digest();
+  return timingSafeEqual(hash(key), hash(expected));
 }
 
 export class GameServer {
@@ -801,6 +812,7 @@ export class GameServer {
           isLobbyCreator: client.clientID === this.lobbyCreatorID,
           isAdmin: isAdminRole(client.role),
           isAdminBot: false,
+          isBorderfallAdmin: client.borderfallAdmin,
         });
         if (outcome.status !== 200) {
           this.log.warn(`intent rejected`, {
@@ -846,6 +858,15 @@ export class GameServer {
       }
       case "report": {
         this.handleReport(client, clientMsg);
+        break;
+      }
+      case "admin_auth": {
+        client.borderfallAdmin = adminKeyMatches(clientMsg.key);
+        this.log.info("admin auth", {
+          clientID: client.clientID,
+          accepted: client.borderfallAdmin,
+          gameID: this.id,
+        });
         break;
       }
       default: {

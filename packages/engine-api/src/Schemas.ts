@@ -4,6 +4,7 @@ import { z } from "zod";
 import {
   AllPlayers,
   Difficulty,
+  DisasterKind,
   Duos,
   GameMapSize,
   GameMapType,
@@ -49,7 +50,8 @@ export type Intent =
   | ToggleGameStartTimer
   | TradeOfferIntent
   | TradeReplyIntent
-  | EndTradePactIntent;
+  | EndTradePactIntent
+  | AdminIntent;
 
 export type AttackIntent = z.infer<typeof AttackIntentSchema>;
 export type CancelAttackIntent = z.infer<typeof CancelAttackIntentSchema>;
@@ -68,6 +70,8 @@ export type EmbargoIntent = z.infer<typeof EmbargoIntentSchema>;
 export type TradeOfferIntent = z.infer<typeof TradeOfferIntentSchema>;
 export type TradeReplyIntent = z.infer<typeof TradeReplyIntentSchema>;
 export type EndTradePactIntent = z.infer<typeof EndTradePactIntentSchema>;
+export type AdminIntent = z.infer<typeof AdminIntentSchema>;
+export type AdminAction = z.infer<typeof AdminActionSchema>;
 export type TradeTerms = z.infer<typeof TradeTermsSchema>;
 export type TradeLandShape = z.infer<typeof TradeLandShapeSchema>;
 export type BuildUnitIntent = z.infer<typeof BuildUnitIntentSchema>;
@@ -533,6 +537,61 @@ export const EndTradePactIntentSchema = z.object({
   partner: MappedID,
 });
 
+// Borderfall admin tab (engine/execution/admin). The server only relays
+// these from a client that proved the admin key (GameServer "admin_auth").
+export const MAX_ADMIN_BRUSH = 60;
+
+export const AdminActionSchema = z.discriminatedUnion("kind", [
+  // Signed amounts: negative takes.
+  z.object({
+    kind: z.literal("resources"),
+    target: MappedID,
+    gold: zb.float(),
+    troops: zb.float(),
+    goods: z.tuple([zb.float(), zb.float(), zb.float()]),
+  }),
+  z.object({ kind: z.literal("god"), enabled: z.boolean() }),
+  z.object({
+    kind: z.literal("spawn"),
+    unit: z.enum(UnitType),
+    tile: zb.uint(),
+    owner: MappedID,
+    level: zb.uint({ min: 1, max: 20 }),
+  }),
+  // Owner null: back to neutral.
+  z.object({
+    kind: z.literal("paint"),
+    tile: zb.uint(),
+    radius: zb.uint({ min: 1, max: MAX_ADMIN_BRUSH }),
+    owner: MappedID.nullable(),
+  }),
+  z.object({
+    kind: z.literal("smite"),
+    nuke: z.enum([UnitType.AtomBomb, UnitType.HydrogenBomb]),
+    tile: zb.uint(),
+  }),
+  z.object({
+    kind: z.literal("disaster"),
+    disaster: z.enum(DisasterKind),
+    tile: zb.uint(),
+  }),
+  z.object({ kind: z.literal("puppet"), nation: MappedID, target: MappedID }),
+  z.object({
+    kind: z.literal("diplomacy"),
+    a: MappedID,
+    b: MappedID,
+    op: z.enum(["ally", "break", "embargo", "unembargo", "pact", "end_pact"]),
+  }),
+  z.object({ kind: z.literal("eliminate"), target: MappedID }),
+  z.object({ kind: z.literal("revive"), target: MappedID, tile: zb.uint() }),
+  z.object({ kind: z.literal("zombies"), target: MappedID }),
+]);
+
+export const AdminIntentSchema = z.object({
+  type: z.literal("admin"),
+  action: AdminActionSchema,
+});
+
 export const BuildUnitIntentSchema = z.object({
   type: z.literal("build_unit"),
   unit: z.enum(UnitType),
@@ -639,6 +698,7 @@ export const IntentSchema = z.discriminatedUnion("type", [
   TradeOfferIntentSchema,
   TradeReplyIntentSchema,
   EndTradePactIntentSchema,
+  AdminIntentSchema,
 ]);
 
 // StampedIntent = Intent with server-stamped clientID (used in turns and execution)

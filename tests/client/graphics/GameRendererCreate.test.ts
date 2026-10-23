@@ -34,6 +34,7 @@ const HUD_TAGS = [
   "unit-display",
   "player-panel",
   "trade-panel",
+  "admin-panel",
   "chat-modal",
   "multi-tab-modal",
   "heads-up-message",

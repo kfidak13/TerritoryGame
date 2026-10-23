@@ -340,6 +340,8 @@ export interface DisasterUpdate {
   kind: DisasterKind;
   tile: TileRef;
   radius: number;
+  /** For zombies: the nation they rose inside. */
+  victim?: PlayerID;
 }
 
 export interface TradeOfferReplyUpdate {

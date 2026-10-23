@@ -1225,7 +1225,8 @@ export class ClientGameRunner {
     if (
       !this.isActive ||
       this.renderer.uiState.ghostStructure !== null ||
-      this.renderer.uiState.tradePainting === true
+      this.renderer.uiState.tradePainting === true ||
+      this.renderer.uiState.adminTool === true
     ) {
       return;
     }

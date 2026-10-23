@@ -155,6 +155,16 @@ gives your machine a temporary public address without an account. With `npm run 
 run `cloudflared tunnel --url http://localhost:9000`, open the printed `https://….trycloudflare.com`
 address yourself, create the lobby there, and share its link. `dev:host` accepts those hostnames.
 
+**Admin tab.** Start the server with a secret admin key of your choosing:
+
+```bash
+BORDERFALL_ADMIN_KEY=your-secret npm run dev:host
+```
+
+In a game, press the backquote key (`` ` ``) and enter the same key once; this browser remembers it.
+The server accepts admin powers only from a player who gave the right key, so friends can't use them
+even if they open the tab. In solo games any key unlocks it.
+
 ### Client Only
 
 To run just the client with hot reloading:

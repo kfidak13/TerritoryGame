@@ -1,11 +1,15 @@
 import { GameMap, TileRef } from "@openfront/engine-api/game/GameMap";
 import {
   Cell,
+  GoodsAmounts,
   PlayerType,
   Structures,
   UnitType,
 } from "@openfront/engine-api/game/GameTypes";
-import { OIL_RIG_REPAIR_PER_TICK } from "@openfront/engine-lib/game/Goods";
+import {
+  GOODS_STOCK_CAP,
+  OIL_RIG_REPAIR_PER_TICK,
+} from "@openfront/engine-lib/game/Goods";
 import { zInt, zPlayerRef } from "@openfront/engine-lib/snapshot/SnapshotType";
 import { getMode, simpleHash } from "@openfront/engine-lib/Util";
 import { z } from "zod";
@@ -129,6 +133,22 @@ export class PlayerExecution implements Execution {
       this.mg.stats().recordDeathPosition(this.player, stillStanding + 1);
       this.mg.stats().playerKilled(this.player, ticks);
       return;
+    }
+
+    // Borderfall admin god mode: never runs out of anything.
+    if (this.player.isGod()) {
+      this.player.setTroops(
+        Math.max(this.player.troops(), this.config.maxTroops(this.player)),
+      );
+      const gold = 1_000_000_000n;
+      if (this.player.gold() < gold) {
+        this.player.addGold(gold - this.player.gold());
+      }
+      this.player.addGoods(
+        this.player
+          .goods()
+          .map((g) => Math.max(0, GOODS_STOCK_CAP - g)) as GoodsAmounts,
+      );
     }
 
     const troopInc = this.config.troopIncreaseRate(this.player);
