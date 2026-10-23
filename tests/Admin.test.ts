@@ -11,6 +11,8 @@ import {
   ZOMBIE_ROT_AFTER_TICKS,
 } from "@openfront/engine-lib/game/Zombies";
 import { AdminExecution } from "@openfront/engine/execution/admin/AdminExecution";
+import { HEAVENLY_TICKS } from "@openfront/engine/execution/admin/HeavenlyNukeExecution";
+import { ConstructionExecution } from "@openfront/engine/execution/ConstructionExecution";
 import { PlayerExecution } from "@openfront/engine/execution/PlayerExecution";
 import { Game, Player } from "@openfront/engine/game/Game";
 import { adminPasswordMatches } from "../src/server/accounts/AccountService";
@@ -182,6 +184,58 @@ describe("Admin powers", () => {
 
     executeTicks(game, ZOMBIE_ROT_AFTER_TICKS + 1200);
     expect(horde.isAlive()).toBe(false);
+  });
+
+  test("huge gifts stay past the usual caps", () => {
+    admin({
+      kind: "resources",
+      target: "carthage",
+      gold: 10_000_000_000,
+      troops: 1_000_000_000,
+      goods: [0, 0, 1_000_000],
+    });
+    game.addExecution(new PlayerExecution(carthage));
+    executeTicks(game, 20);
+    expect(carthage.gold()).toBeGreaterThanOrEqual(10_000_000_000n);
+    expect(carthage.troops()).toBeGreaterThanOrEqual(1_000_000_000);
+    expect(carthage.goods()[Good.Metal]).toBe(1_000_000);
+
+    admin({
+      kind: "resources",
+      target: "carthage",
+      gold: 0,
+      troops: -1_000_000_000,
+      goods: [0, 0, 0],
+    });
+    expect(carthage.troopBonus()).toBe(0);
+  });
+
+  test("a new building can go up at a level", () => {
+    rome.addGold(100_000_000n);
+    rome.grantGoods([10_000, 10_000, 10_000]);
+    game.addExecution(
+      new ConstructionExecution(
+        rome,
+        UnitType.City,
+        game.ref(2, 2),
+        undefined,
+        5,
+      ),
+    );
+    executeTicks(game, 5);
+    const [city] = rome.units(UnitType.City);
+    expect(city.level()).toBe(5);
+  });
+
+  test("the heavenly nuke wipes the whole map", async () => {
+    rome.buildUnit(UnitType.City, game.ref(2, 2), {});
+    admin({ kind: "heavenly" });
+    await expectSnapshotRoundTrip(game, MAP, 3);
+    executeTicks(game, HEAVENLY_TICKS);
+    expect(rome.numTilesOwned()).toBe(0);
+    expect(carthage.numTilesOwned()).toBe(0);
+    expect(game.units().filter((u) => u.isActive())).toHaveLength(0);
+    expect(game.hasFallout(game.ref(2, 2))).toBe(true);
   });
 
   test("leave goods alone that a player doesn't have", () => {

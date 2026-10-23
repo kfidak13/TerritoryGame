@@ -184,6 +184,7 @@
     "done_give": "Gave resources to {name}",
     "done_god_off": "God mode off",
     "done_god_on": "God mode on",
+    "done_heavenly": "The heavenly nuke is falling",
     "done_op_ally": "{name} and {other} are now allied",
     "done_op_break": "{name} and {other} are no longer allied",
     "done_op_embargo": "{name} and {other} now embargo each other",
@@ -203,6 +204,10 @@
     "give_to": "Give to {name}",
     "god_mode": "God mode",
     "god_mode_desc": "You never run out, and nobody can take your land",
+    "heavenly": "Heavenly nuke",
+    "heavenly_confirm": "Click again to wipe the map",
+    "heavenly_desc": "Wipes the whole map: every territory, building, ship and army.",
+    "heavenly_fire": "Drop the heavenly nuke",
     "hint": "Map clicks select countries while this is open",
     "intel_line": "{troops} troops · {gold} gold · F {food} · O {oil} · M {metal}",
     "level": "Level",
@@ -981,6 +986,7 @@
     "divine_eliminated": "{name} has been struck from the world by the gods",
     "divine_embargo": "The gods forbid you to trade with {name}",
     "divine_end_pact": "The gods have ended your trade pact with {name}",
+    "divine_heavenly": "The heavens have wiped the world clean",
     "divine_pact": "The gods have bound you in a trade pact with {name}",
     "divine_puppet": "The gods have turned {name} against you",
     "divine_revived": "{name} has been raised from the dead by the gods",
@@ -1277,6 +1283,10 @@
     "random_spawn": "Random spawn is enabled. Selecting starting location for you...",
     "random_spawn_spectator": "Random spawn is enabled",
     "singleplayer_game_paused": "Game paused"
+  },
+  "heavenly": {
+    "subtitle": "The heavens have wiped the world clean",
+    "title": "HEAVENLY NUKE"
   },
   "help_modal": {
     "action_attack_altclick": "Attack (when left click is set to open menu)",

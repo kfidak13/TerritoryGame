@@ -364,7 +364,7 @@ export class Config {
   }
 
   maxTroops(player: PlayerLike): number {
-    return this.troopCap(player, true);
+    return this.troopCap(player, true) + (player.troopBonus?.() ?? 0);
   }
 
   /** Borderfall: troops the player's land feeds for free (Goods.ts). */

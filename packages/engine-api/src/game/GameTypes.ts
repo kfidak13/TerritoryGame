@@ -521,6 +521,8 @@ export enum DisasterKind {
   Outbreak = "outbreak",
   // Admin zombie apocalypse: a horde rises inside a nation.
   Zombies = "zombies",
+  // Admin heavenly nuke: the whole map is wiped.
+  Heavenly = "heavenly",
 }
 
 // Message categories used for filtering events in the EventsDisplay

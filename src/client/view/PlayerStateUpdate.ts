@@ -23,6 +23,7 @@ export function applyStateUpdate(target: PlayerState, pu: PlayerUpdate): void {
   if (pu.piracyGold !== undefined) target.piracyGold = Number(pu.piracyGold);
   if (pu.goldEarned !== undefined) target.goldEarned = Number(pu.goldEarned);
   if (pu.troops !== undefined) target.troops = pu.troops;
+  if (pu.troopBonus !== undefined) target.troopBonus = pu.troopBonus;
   if (pu.goods !== undefined) target.goods = pu.goods.slice() as GoodsAmounts;
   if (pu.deposits !== undefined) {
     target.deposits = pu.deposits.slice() as GoodsAmounts;

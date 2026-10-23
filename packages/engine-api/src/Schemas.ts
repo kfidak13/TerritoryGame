@@ -585,6 +585,8 @@ export const AdminActionSchema = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("eliminate"), target: MappedID }),
   z.object({ kind: z.literal("revive"), target: MappedID, tile: zb.uint() }),
   z.object({ kind: z.literal("zombies"), target: MappedID }),
+  // Wipes the whole map: every territory and unit (HeavenlyNukeExecution).
+  z.object({ kind: z.literal("heavenly") }),
 ]);
 
 export const AdminIntentSchema = z.object({

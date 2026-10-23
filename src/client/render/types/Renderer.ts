@@ -78,6 +78,8 @@ export interface PlayerState {
   troops: number;
   /** Borderfall: stockpiled goods, whole units, indexed by Good. */
   goods: GoodsAmounts;
+  /** Borderfall: troop cap raised by admin gifts. */
+  troopBonus?: number;
   /** Borderfall: owned deposit tiles per good. */
   deposits: GoodsAmounts;
   isTraitor: boolean;

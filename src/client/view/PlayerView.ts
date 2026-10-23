@@ -505,6 +505,10 @@ export class PlayerView implements PlayerLike {
     return this.state.troops;
   }
 
+  troopBonus(): number {
+    return this.state.troopBonus ?? 0;
+  }
+
   totalUnitLevels(type: UnitType): number {
     return this.units(type)
       .filter((unit) => !unit.isUnderConstruction())

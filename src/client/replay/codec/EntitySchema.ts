@@ -381,7 +381,9 @@ export const PLAYER_FIELDS: readonly FieldDef<PlayerFields>[] = [
   field(["trainGold", COUNTER]),
   field(["piracyGold", COUNTER]),
   field(["goldEarned", COUNTER]),
-  field(["troops", COUNTER]),
+  // Borderfall admin troop bonus rides with troops (REPLAY_VERSION 5): the
+  // u32 change mask has no bit to spare.
+  field(["troops", COUNTER], ["troopBonus", maybe(F64, undefined)]),
   field(["isTraitor", BOOL]),
   field(["traitorRemainingTicks", U32]),
   field(["inDoomsdayClock", BOOL]),

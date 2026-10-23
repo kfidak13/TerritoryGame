@@ -38,6 +38,7 @@ import { DisasterExecution } from "../DisasterExecution";
 import { NukeExecution } from "../NukeExecution";
 import { PlayerExecution } from "../PlayerExecution";
 import { WarshipExecution } from "../WarshipExecution";
+import { HeavenlyNukeExecution } from "./HeavenlyNukeExecution";
 import { ZombieExecution } from "./ZombieExecution";
 
 const DIPLOMACY_MESSAGES = {
@@ -106,6 +107,8 @@ export class AdminExecution implements Execution {
         return this.revive(a.target, a.tile);
       case "zombies":
         return this.zombies(a.target, ticks);
+      case "heavenly":
+        return this.heavenly();
     }
   }
 
@@ -138,13 +141,20 @@ export class AdminExecution implements Execution {
     if (p === null) return;
     if (gold > 0) p.addGold(BigInt(Math.round(gold)));
     if (gold < 0) p.removeGold(BigInt(Math.round(-gold)));
-    if (troops > 0) p.addTroops(troops);
-    if (troops < 0) p.removeTroops(-troops);
+    // Granted troops raise the cap too, or the next tick would trim them.
+    if (troops > 0) {
+      p.setTroopBonus(p.troopBonus() + troops);
+      p.addTroops(troops);
+    }
+    if (troops < 0) {
+      const taken = p.removeTroops(-troops);
+      p.setTroopBonus(p.troopBonus() - taken);
+    }
     const add = goods.map((g) => Math.max(0, g)) as GoodsAmounts;
     const take = GOODS.map((g) =>
       Math.min(p.goods()[g], Math.max(0, -goods[g])),
     ) as GoodsAmounts;
-    p.addGoods(add);
+    p.grantGoods(add);
     p.removeGoods(take);
     const taking = gold < 0 || troops < 0 || goods.some((g) => g < 0);
     this.tell(
@@ -216,6 +226,7 @@ export class AdminExecution implements Execution {
   private disaster(kind: DisasterKind, tile: TileRef, ticks: number): void {
     const mg = this.mg!;
     if (!mg.isValidRef(tile)) return;
+    if (kind === DisasterKind.Heavenly) return this.heavenly();
     if (kind === DisasterKind.Zombies) {
       const owner = mg.owner(tile);
       if (owner.isPlayer()) this.zombies((owner as Player).id(), ticks);
@@ -304,6 +315,19 @@ export class AdminExecution implements Execution {
         name: p.displayName(),
       });
     }
+  }
+
+  /** The whole map is wiped (HeavenlyNukeExecution). */
+  private heavenly(): void {
+    const mg = this.mg!;
+    mg.addExecution(new HeavenlyNukeExecution());
+    mg.addUpdate({
+      type: GameUpdateType.Disaster,
+      kind: DisasterKind.Heavenly,
+      tile: mg.ref(Math.floor(mg.width() / 2), Math.floor(mg.height() / 2)),
+      radius: Math.max(mg.width(), mg.height()),
+    });
+    this.tell(null, "events_display.divine_heavenly");
   }
 
   /** A zombie horde rises in the middle of the victim's land. */

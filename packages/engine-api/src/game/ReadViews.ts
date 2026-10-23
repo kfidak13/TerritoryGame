@@ -19,6 +19,8 @@ import {
  */
 
 export interface PlayerLike {
+  /** Borderfall admin: troops granted on top of the usual cap (Config.maxTroops). */
+  troopBonus?(): number;
   id(): PlayerID;
   smallID(): number;
   isPlayer(): boolean;

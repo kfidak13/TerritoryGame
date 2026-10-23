@@ -29,6 +29,7 @@ export type { AttackRingInput } from "../../../types";
 export { calculateExplosionDurationMs };
 
 const DISASTER_COLORS: Record<string, [number, number, number]> = {
+  heavenly: [1, 0.9, 0.55],
   earthquake: [0.6, 0.38, 0.16],
   hurricane: [0.3, 0.6, 1],
   drought: [0.95, 0.75, 0.2],

@@ -506,6 +506,11 @@ export interface Player extends PlayerLike {
   // and other losses still clear it).
   isGod(): boolean;
   setGod(god: boolean): void;
+  // Borderfall admin: troops granted above the usual cap, and goods granted
+  // past the stock cap.
+  troopBonus(): number;
+  setTroopBonus(bonus: number): void;
+  grantGoods(toAdd: Readonly<GoodsAmounts>): void;
   getEmbargoes(): Embargo[];
   stopEmbargo(other: Player): void;
   endTemporaryEmbargo(other: Player): void;

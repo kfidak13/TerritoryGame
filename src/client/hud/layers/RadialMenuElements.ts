@@ -519,8 +519,15 @@ function createMenuElements(
           const isStackableNuke =
             item.unitType === UnitType.AtomBomb &&
             buildableUnit.canBuild !== false;
+          // Borderfall: a new upgradable structure can be built at a level.
+          const isNewStructure =
+            buildableUnit.canUpgrade === false &&
+            buildableUnit.canBuild !== false &&
+            buildableUnit.upgradeCosts !== undefined;
           if (
-            (buildableUnit.canUpgrade === false && !isStackableNuke) ||
+            (buildableUnit.canUpgrade === false &&
+              !isStackableNuke &&
+              !isNewStructure) ||
             !params.buildMenu.canBuildOrUpgrade(item)
           ) {
             return [];
@@ -580,7 +587,7 @@ function createMenuElements(
               disabled: (p: MenuElementParams) =>
                 !executable || (p.game.myPlayer()?.gold() ?? 0n) < cost,
               action: (p: MenuElementParams) => {
-                if (isStackableNuke) {
+                if (isStackableNuke || isNewStructure) {
                   p.eventBus.emit(
                     new BuildUnitIntentEvent(
                       buildableUnit.type,

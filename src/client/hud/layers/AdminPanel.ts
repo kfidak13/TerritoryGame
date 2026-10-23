@@ -44,11 +44,11 @@ const RESOURCES: readonly Resource[] = [
 ];
 /** Quick amounts per resource, in displayed units. */
 const PRESETS: Record<Resource, readonly number[]> = {
-  gold: [10_000, 100_000, 1_000_000],
-  troops: [10_000, 100_000, 1_000_000],
-  food: [100, 500, 2000],
-  oil: [100, 500, 2000],
-  metal: [100, 500, 2000],
+  gold: [1_000_000, 100_000_000, 1_000_000_000, 10_000_000_000],
+  troops: [100_000, 1_000_000, 10_000_000, 100_000_000],
+  food: [1_000, 10_000, 100_000, 1_000_000],
+  oil: [1_000, 10_000, 100_000, 1_000_000],
+  metal: [1_000, 10_000, 100_000, 1_000_000],
 };
 const RESOURCE_COLORS: Record<Resource, string> = {
   gold: "bg-yellow-400",
@@ -148,6 +148,8 @@ export class AdminPanel extends LitElement implements Controller {
   @state() private spawnUnit: (typeof SPAWNABLE)[number] = UnitType.City;
   @state() private spawnLevel = 5;
   @state() private reviveTarget = "";
+  /** The heavenly nuke asks for a second click before wiping the map. */
+  @state() private heavenlyArmed = false;
 
   createRenderRoot() {
     return this;
@@ -670,8 +672,38 @@ export class AdminPanel extends LitElement implements Controller {
     </label>`;
   }
 
+  private renderHeavenly() {
+    return this.section(
+      translateText("admin_panel.heavenly"),
+      html`<div class="text-xs text-slate-400">
+          ${translateText("admin_panel.heavenly_desc")}
+        </div>
+        <div class="flex gap-2">
+          ${this.action(
+            translateText(
+              this.heavenlyArmed
+                ? "admin_panel.heavenly_confirm"
+                : "admin_panel.heavenly_fire",
+            ),
+            () => {
+              if (!this.heavenlyArmed) {
+                this.heavenlyArmed = true;
+                return;
+              }
+              this.heavenlyArmed = false;
+              this.send(
+                { kind: "heavenly" },
+                translateText("admin_panel.done_heavenly"),
+              );
+            },
+            "stop",
+          )}
+        </div>`,
+    );
+  }
+
   private renderMap() {
-    return html`${this.renderTools()}
+    return html`${this.renderTools()} ${this.renderHeavenly()}
     ${this.tool !== null
       ? html`<div
           class="flex flex-col gap-2 rounded-lg bg-white/5 ring-1 ring-white/10 p-3"

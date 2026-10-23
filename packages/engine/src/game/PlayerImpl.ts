@@ -181,6 +181,8 @@ export class PlayerImpl implements Player {
   private _tradePacts: Player[] = [];
   // Borderfall admin god mode: land can't be taken (AdminExecution).
   private _god = false;
+  // Borderfall admin: troops granted above the usual cap (Config.maxTroops).
+  private _troopBonus = 0;
 
   public _borderTiles = new TileSet();
 
@@ -426,6 +428,7 @@ export class PlayerImpl implements Player {
       deposits: this._deposits.slice() as GoodsAmounts,
       allies: allies,
       tradePacts: this.tradePacts().map((p) => p.smallID()),
+      troopBonus: this._troopBonus,
       embargoes: embargoes,
       isTraitor: this.isTraitor(),
       traitorRemainingTicks: this.getTraitorRemainingTicks(),
@@ -1321,6 +1324,14 @@ export class PlayerImpl implements Player {
     this._god = god;
   }
 
+  troopBonus(): number {
+    return this._troopBonus;
+  }
+
+  setTroopBonus(bonus: number): void {
+    this._troopBonus = Math.max(0, bonus);
+  }
+
   canMakeTradePact(other: Player): boolean {
     return (
       this.canTrade(other) &&
@@ -1445,8 +1456,16 @@ export class PlayerImpl implements Player {
 
   addGoods(toAdd: Readonly<GoodsAmounts>): void {
     for (const g of GOODS) {
-      this._goods[g] = Math.min(GOODS_STOCK_CAP, this._goods[g] + toAdd[g]);
+      // Never below the current stock: an admin grant may sit above the cap.
+      this._goods[g] = Math.max(
+        this._goods[g],
+        Math.min(GOODS_STOCK_CAP, this._goods[g] + toAdd[g]),
+      );
     }
+  }
+
+  grantGoods(toAdd: Readonly<GoodsAmounts>): void {
+    for (const g of GOODS) this._goods[g] += toAdd[g];
   }
 
   removeGoods(toRemove: Readonly<GoodsAmounts>): void {
@@ -1678,8 +1697,12 @@ export class PlayerImpl implements Player {
       // Cumulative bulk-upgrade totals. Each upgrade raises the unit's level
       // and the constructed count, so step n costs the same as if the player
       // already had n extra units — cost(mg, this, n).
+      // A new upgradable structure prices the same way: its build is step 0.
       let upgradeCosts: Gold[] | undefined;
-      if (canUpgrade !== false) {
+      if (
+        canUpgrade !== false ||
+        (buildNew && Structures.has(u) && this.canUpgradeUnitType(u))
+      ) {
         upgradeCosts = new Array<Gold>(MAX_UPGRADE_AMOUNT);
         let total = 0n;
         for (let n = 0; n < MAX_UPGRADE_AMOUNT; n++) {
@@ -2198,6 +2221,7 @@ export class PlayerImpl implements Player {
       betrayalCount: this._betrayalCount,
       tradePacts: this._tradePacts.map((p) => w.player(p)),
       god: this._god || undefined,
+      troopBonus: this._troopBonus || undefined,
       embargoes: [...this.embargoes.values()].map((e) => ({
         target: w.player(e.target),
         createdAt: e.createdAt,
@@ -2273,6 +2297,7 @@ export class PlayerImpl implements Player {
     this._betrayalCount = s.betrayalCount;
     this._tradePacts = (s.tradePacts ?? []).map((p) => r.player(p));
     this._god = s.god ?? false;
+    this._troopBonus = s.troopBonus ?? 0;
     this.embargoes = new Map();
     for (const e of s.embargoes) {
       this.embargoes.set(r.playerID(e.target), {
@@ -2356,6 +2381,7 @@ export const PlayerSnapshot = snapshotType({
     // Borderfall trade pacts; absent in snapshots from before trading.
     tradePacts: z.array(zPlayerRef()).optional(),
     god: z.boolean().optional(),
+    troopBonus: zNum().optional(),
     markedTraitorTick: zInt(),
     markedDoomsdayClockTick: zInt(),
     rottedAtTick: zInt(),

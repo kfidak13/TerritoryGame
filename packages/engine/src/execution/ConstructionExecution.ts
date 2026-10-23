@@ -22,6 +22,7 @@ import { MissileSiloExecution } from "./MissileSiloExecution";
 import { NukeExecution } from "./NukeExecution";
 import { PortExecution } from "./PortExecution";
 import { SAMLauncherExecution } from "./SAMLauncherExecution";
+import { UpgradeStructureExecution } from "./UpgradeStructureExecution";
 import { WarshipExecution } from "./WarshipExecution";
 
 /**
@@ -183,6 +184,16 @@ export class ConstructionExecution implements Execution {
       case UnitType.OilRig: {
         const exec = structureExecution(this.structure!, player);
         if (exec !== null) this.mg.addExecution(exec);
+        // Borderfall "Max": build it, then raise it the remaining levels.
+        if ((this.amount ?? 1) > 1) {
+          this.mg.addExecution(
+            new UpgradeStructureExecution(
+              player,
+              this.structure!.id(),
+              this.amount! - 1,
+            ),
+          );
+        }
         break;
       }
       default:

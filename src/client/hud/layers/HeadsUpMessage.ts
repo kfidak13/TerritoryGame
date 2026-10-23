@@ -41,6 +41,8 @@ export class HeadsUpMessage extends LitElement implements Controller {
   @state()
   private zombieVictim: string | null = null;
   private zombieUntil = 0;
+  // Borderfall admin heavenly nuke: when to stop showing its banner.
+  private heavenlyUntil = 0;
   private static readonly ZOMBIE_BANNER_MS = 7000;
 
   private static readonly CATCHING_UP_SHOW_THRESHOLD = 10;
@@ -156,6 +158,9 @@ export class HeadsUpMessage extends LitElement implements Controller {
   tick() {
     const updates = this.game.updatesSinceLastTick();
     for (const d of updates?.[GameUpdateType.Disaster] ?? []) {
+      if (d.kind === DisasterKind.Heavenly) {
+        this.heavenlyUntil = Date.now() + HeadsUpMessage.ZOMBIE_BANNER_MS;
+      }
       if (d.kind !== DisasterKind.Zombies || d.victim === undefined) continue;
       const victim = this.game.player(d.victim);
       this.zombieVictim = victim.displayName();
@@ -254,6 +259,21 @@ export class HeadsUpMessage extends LitElement implements Controller {
   render() {
     return html`
       <div style="pointer-events: none;">
+        ${Date.now() < this.heavenlyUntil
+          ? html`<div
+              class="fixed top-[28%] left-1/2 -translate-x-1/2 z-[1003]
+                     w-max max-w-[90vw] px-8 py-5 rounded-xl text-center
+                     bg-black/80 border-2 border-amber-300 animate-pulse"
+              style="box-shadow: 0 0 60px rgba(252,211,77,0.7);"
+            >
+              <div class="text-4xl lg:text-6xl font-black text-amber-200">
+                ${translateText("heavenly.title")}
+              </div>
+              <div class="text-lg lg:text-2xl text-white mt-2">
+                ${translateText("heavenly.subtitle")}
+              </div>
+            </div>`
+          : null}
         ${this.zombieVictim !== null
           ? html`<div
               class="fixed top-[28%] left-1/2 -translate-x-1/2 z-[1003]

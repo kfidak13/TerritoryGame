@@ -277,6 +277,8 @@ export interface PlayerUpdate {
   allies?: number[];
   /** Borderfall: trade pact partners' small IDs. */
   tradePacts?: number[];
+  // Borderfall admin: troops granted on top of the usual cap.
+  troopBonus?: number;
   embargoes?: Set<PlayerID>;
   isTraitor?: boolean;
   traitorRemainingTicks?: number;
