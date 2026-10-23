@@ -23,7 +23,9 @@ export async function verifyClientToken(
   token: string,
 ): Promise<TokenVerificationResult> {
   if (PersistentIdSchema.safeParse(token).success) {
-    if (ServerEnv.env() === GameEnv.Dev) {
+    // Borderfall: a standalone server (no API_KEY) has no login service to
+    // sign tokens, so a browser's own persistent ID is the only identity.
+    if (ServerEnv.env() === GameEnv.Dev || ServerEnv.apiKey() === "") {
       return { type: "success", persistentId: token, claims: null };
     } else {
       return {
