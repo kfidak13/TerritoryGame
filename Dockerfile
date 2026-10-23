@@ -106,6 +106,10 @@ RUN <<'EOF' tee /usr/local/bin/start.sh
 # Generate the create-game nginx upstream from NUM_WORKERS before nginx starts.
 /usr/local/bin/generate-nginx-upstream.sh
 
+# Borderfall accounts: a mounted volume (Fly's /data) arrives owned by root,
+# but the server runs as node and keeps its database there.
+if [ -d /data ]; then chown node:node /data; fi
+
 if [ "$DOMAIN" = openfront.dev ] && [ "$SUBDOMAIN" != main ]; then
     exec timeout 25h /usr/bin/supervisord -c /etc/supervisor/conf.d/supervisord.conf
 else
