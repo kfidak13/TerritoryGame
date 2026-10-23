@@ -1,1 +1,4 @@
 legacy/
+
+# Google Search Console ownership file: served exactly as Google issued it.
+resources/public/google*.html
