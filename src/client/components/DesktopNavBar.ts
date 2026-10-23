@@ -1,6 +1,8 @@
 import { assetUrl } from "@openfront/shared/AssetUrls";
 import { LitElement, html } from "lit";
 import { customElement } from "lit/decorators.js";
+import { hasAccounts } from "../Standalone";
+import "./NavAccountMenu";
 import "./NavUtilityIcons";
 
 @customElement("desktop-nav-bar")
@@ -77,6 +79,9 @@ export class DesktopNavBar extends LitElement {
              instead of in the nav item list. -->
         <div class="flex items-center gap-1 pl-5 ml-1 border-l border-white/10">
           <nav-utility-icons size="desktop"></nav-utility-icons>
+          ${hasAccounts()
+            ? html`<nav-account-menu variant="desktop"></nav-account-menu>`
+            : ""}
         </div>
       </nav>
     `;

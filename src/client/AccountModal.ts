@@ -52,6 +52,7 @@ import { consumeLinkResult } from "./LinkResult";
 import { consumeLoginResult, LoginResult } from "./LoginResult";
 import "./PlayerProfileModal";
 import { loadPlayerProgress } from "./PlayerProgress";
+import { hasAccounts } from "./Standalone";
 import { steamSDK } from "./SteamSDK";
 import { playerProfileUrl } from "./utilities/PlayerProfileUrl";
 import { currentPagePath, translateText } from "./Utils";
@@ -947,6 +948,7 @@ export class AccountModal extends BaseModal {
     // update prompt instead), so the web caption would be wrong on every one
     // of them.
     const viaBrowser = isDesktopShell();
+    const ownAccounts = hasAccounts();
     return html`
       <div class="flex items-center justify-center p-6 min-h-full">
         <div
@@ -1025,7 +1027,7 @@ export class AccountModal extends BaseModal {
                  player is already signed in there through the native Steam
                  ticket, so the button would be a no-op that looks like an
                  option. -->
-            ${viaBrowser
+            ${viaBrowser || ownAccounts
               ? nothing
               : html`<button
                   @click="${this.handleSteamLogin}"
@@ -1037,19 +1039,23 @@ export class AccountModal extends BaseModal {
                   >
                 </button>`}
 
-            <!-- Divider -->
-            <div class="flex items-center gap-4 py-2">
-              <div class="h-px bg-white/10 flex-1"></div>
-              <span
-                class="text-[10px] uppercase tracking-widest text-white/30 font-bold"
-              >
-                ${translateText("account_modal.or")}
-              </span>
-              <div class="h-px bg-white/10 flex-1"></div>
-            </div>
+            <!-- Borderfall's own accounts sign in with Discord or Google only:
+                 no email links, no Steam. -->
+            ${ownAccounts
+              ? nothing
+              : html` <!-- Divider -->
+                  <div class="flex items-center gap-4 py-2">
+                    <div class="h-px bg-white/10 flex-1"></div>
+                    <span
+                      class="text-[10px] uppercase tracking-widest text-white/30 font-bold"
+                    >
+                      ${translateText("account_modal.or")}
+                    </span>
+                    <div class="h-px bg-white/10 flex-1"></div>
+                  </div>
 
-            <!-- Email Recovery -->
-            <div class="space-y-3">${this.renderEmailField()}</div>
+                  <!-- Email Recovery -->
+                  <div class="space-y-3">${this.renderEmailField()}</div>`}
           </div>
 
           <!-- Not on Steam: the Steam ticket re-creates the session on reload. -->

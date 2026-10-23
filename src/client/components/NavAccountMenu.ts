@@ -19,6 +19,7 @@ import {
 } from "../NavAccountButton";
 import { closeMobileSidebar } from "../Navigation";
 import { levelFraction } from "../Progression";
+import { hasAccounts } from "../Standalone";
 import { steamSDK } from "../SteamSDK";
 import { playerProfileUrl } from "../utilities/PlayerProfileUrl";
 import { copyToClipboard, showToast, translateText } from "../Utils";
@@ -366,7 +367,11 @@ export class NavAccountMenu extends LitElement {
 
     // Nothing to share without a publicId (older backend, or a session whose
     // player record hasn't resolved).
-    if (publicId) {
+    // Borderfall's own accounts have no public profile pages, username
+    // changes or account settings yet (src/server/accounts).
+    const ownAccounts = hasAccounts();
+
+    if (publicId && !ownAccounts) {
       items.push({
         key: "copy-profile-url",
         labelKey: "nav_account_menu.copy_profile_url",
@@ -375,28 +380,30 @@ export class NavAccountMenu extends LitElement {
       });
     }
 
-    items.push(
-      {
-        key: "view-account",
-        labelKey: "nav_account_menu.view_account",
-        icon: iconUser,
-        onSelect: () => {
-          window.showPage?.("page-account");
+    items.push({
+      key: "view-account",
+      labelKey: "nav_account_menu.view_account",
+      icon: iconUser,
+      onSelect: () => {
+        window.showPage?.("page-account");
+      },
+    });
+    if (!ownAccounts) {
+      items.push(
+        {
+          key: "account-settings",
+          labelKey: "nav_account_menu.account_settings",
+          icon: iconGear,
+          onSelect: () => this.openModal("account-settings"),
         },
-      },
-      {
-        key: "account-settings",
-        labelKey: "nav_account_menu.account_settings",
-        icon: iconGear,
-        onSelect: () => this.openModal("account-settings"),
-      },
-      {
-        key: "change-username",
-        labelKey: "nav_account_menu.change_username",
-        icon: iconTag,
-        onSelect: () => this.openModal("change-username"),
-      },
-    );
+        {
+          key: "change-username",
+          labelKey: "nav_account_menu.change_username",
+          icon: iconTag,
+          onSelect: () => this.openModal("change-username"),
+        },
+      );
+    }
 
     if (subscribed) {
       items.push({
