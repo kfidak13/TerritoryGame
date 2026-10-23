@@ -353,7 +353,10 @@ export class AdminExecution implements Execution {
     // It rises shielded; ZombieExecution lifts the shield.
     horde.setGod(true);
     victim.removeTroops(victim.troops() * ZOMBIE_VICTIM_LOSS);
+    // Upkeep only (PlayerExecution skips the horde's economy): it hands
+    // over buildings on land it loses, and its cut-off pieces fall.
     mg.addExecution(
+      new PlayerExecution(horde),
       new ZombieExecution(
         horde,
         victim,

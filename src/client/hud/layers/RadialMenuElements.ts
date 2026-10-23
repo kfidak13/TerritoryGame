@@ -3,6 +3,9 @@ import {
   AllPlayers,
   BuildableAttacks,
   bulkCost,
+  GOODS,
+  GoodsAmounts,
+  MAX_UPGRADE_AMOUNT,
   maxBulkAmount,
   NUKE_BULK_STEPS,
   PlayerActions,
@@ -15,7 +18,11 @@ import {
 import { Emoji, flattenedEmojiTable } from "@openfront/engine-api/Schemas";
 import { Config } from "@openfront/engine-lib/configuration/Config";
 import { renderNumber } from "@openfront/engine-lib/Format";
-import { buildingGood } from "@openfront/engine-lib/game/Goods";
+import {
+  buildingGood,
+  canAffordGoods,
+  goodsCost,
+} from "@openfront/engine-lib/game/Goods";
 import { findClosestBy } from "@openfront/engine-lib/Util";
 import { assetUrl } from "@openfront/shared/AssetUrls";
 import { UIState } from "../../UIState";
@@ -437,6 +444,25 @@ function getAllEnabledUnits(
 }
 
 // Borderfall goods lines for a build tooltip.
+/**
+ * Borderfall: how many of a bulk buy the player's goods pay for. The first
+ * is a build or an upgrade (firstIsBuild), and so is each after it.
+ */
+function goodsAllow(
+  type: UnitType,
+  stock: Readonly<GoodsAmounts>,
+  firstIsBuild: boolean,
+  restAreBuilds: boolean,
+): number {
+  const left = stock.slice() as GoodsAmounts;
+  for (let n = 0; n < MAX_UPGRADE_AMOUNT; n++) {
+    const cost = goodsCost(type, !(n === 0 ? firstIsBuild : restAreBuilds));
+    if (!canAffordGoods(left, cost)) return n;
+    for (const g of GOODS) left[g] -= cost?.[g] ?? 0;
+  }
+  return MAX_UPGRADE_AMOUNT;
+}
+
 function goodsCostItem(
   buildMenu: BuildMenu,
   item: BuildItemDisplay,
@@ -544,6 +570,18 @@ function createMenuElements(
           let maxAmount = maxBulkAmount(buildableUnit, myPlayer?.gold() ?? 0n);
           if (isStackableNuke) {
             maxAmount = Math.min(maxAmount, myPlayer?.readyMissileCount() ?? 0);
+          }
+          // Borderfall: every bomb, build and upgrade costs goods too.
+          if (myPlayer && params.game.config().goodsEnabled()) {
+            maxAmount = Math.min(
+              maxAmount,
+              goodsAllow(
+                item.unitType,
+                myPlayer.goods(),
+                isStackableNuke || isNewStructure,
+                isStackableNuke,
+              ),
+            );
           }
           if (maxAmount <= 1) {
             return [];

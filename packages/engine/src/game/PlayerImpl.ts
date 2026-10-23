@@ -1777,11 +1777,17 @@ export class PlayerImpl implements Player {
       case UnitType.SAMLauncher:
       case UnitType.City:
       case UnitType.Factory:
-        return this.landBasedStructureSpawn(targetTile, validTiles);
+        return this.unsnapped(
+          this.landBasedStructureSpawn(targetTile, validTiles),
+          targetTile,
+        );
       case UnitType.Farm:
       case UnitType.Mineshaft:
       case UnitType.OilExtractor:
-        return this.depositStructureSpawn(unitType, targetTile, validTiles);
+        return this.unsnapped(
+          this.depositStructureSpawn(unitType, targetTile, validTiles),
+          targetTile,
+        );
       case UnitType.OilRig:
         return this.oilRigSpawn(targetTile);
       default:
@@ -1955,6 +1961,15 @@ export class PlayerImpl implements Player {
       }
     }
     return false;
+  }
+
+  /**
+   * Borderfall: a person's building goes on the tile they picked or not at
+   * all, never snapped to a free one nearby. Nations still snap (their AI
+   * picks rough spots), and so do ports and oil rigs, which need the water.
+   */
+  private unsnapped(spawn: TileRef | false, tile: TileRef): TileRef | false {
+    return this.type() === PlayerType.Human && spawn !== tile ? false : spawn;
   }
 
   landBasedStructureSpawn(

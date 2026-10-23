@@ -10,6 +10,7 @@ import {
   GOODS_STOCK_CAP,
   OIL_RIG_REPAIR_PER_TICK,
 } from "@openfront/engine-lib/game/Goods";
+import { isZombieHorde } from "@openfront/engine-lib/game/Zombies";
 import { zInt, zPlayerRef } from "@openfront/engine-lib/snapshot/SnapshotType";
 import { getMode, simpleHash } from "@openfront/engine-lib/Util";
 import { z } from "zod";
@@ -135,32 +136,8 @@ export class PlayerExecution implements Execution {
       return;
     }
 
-    // Borderfall admin god mode: never runs out of anything.
-    if (this.player.isGod()) {
-      this.player.setTroops(
-        Math.max(this.player.troops(), this.config.maxTroops(this.player)),
-      );
-      const gold = 1_000_000_000n;
-      if (this.player.gold() < gold) {
-        this.player.addGold(gold - this.player.gold());
-      }
-      this.player.addGoods(
-        this.player
-          .goods()
-          .map((g) => Math.max(0, GOODS_STOCK_CAP - g)) as GoodsAmounts,
-      );
-    }
-
-    const troopInc = this.config.troopIncreaseRate(this.player);
-    this.player.addTroops(troopInc);
-    const goldFromWorkers = this.config.goldAdditionRate(this.player);
-    this.player.addGold(goldFromWorkers);
-    if (this.config.goodsEnabled()) {
-      this.player.tickGoods();
-    }
-
-    // Record stats
-    this.mg.stats().goldWork(this.player, goldFromWorkers);
+    // The zombie horde has no economy: its troops grow in ZombieExecution.
+    if (!isZombieHorde(this.player)) this.tickEconomy();
 
     for (const alliance of this.player.alliances()) {
       if (alliance.expiresAt() <= this.mg.ticks()) {
@@ -194,6 +171,44 @@ export class PlayerExecution implements Execution {
     }
   }
 
+  private tickEconomy(): void {
+    // Borderfall admin god mode: never runs out of anything.
+    if (this.player.isGod()) {
+      this.player.setTroops(
+        Math.max(this.player.troops(), this.config.maxTroops(this.player)),
+      );
+      const gold = 1_000_000_000n;
+      if (this.player.gold() < gold) {
+        this.player.addGold(gold - this.player.gold());
+      }
+      this.player.addGoods(
+        this.player
+          .goods()
+          .map((g) => Math.max(0, GOODS_STOCK_CAP - g)) as GoodsAmounts,
+      );
+    }
+
+    const troopInc = this.config.troopIncreaseRate(this.player);
+    this.player.addTroops(troopInc);
+    const goldFromWorkers = this.config.goldAdditionRate(this.player);
+    this.player.addGold(goldFromWorkers);
+    if (this.config.goodsEnabled()) {
+      this.player.tickGoods();
+    }
+
+    // Record stats
+    this.mg.stats().goldWork(this.player, goldFromWorkers);
+  }
+
+  /**
+   * Whether land wholly surrounded by `by` falls to it. The zombie horde's
+   * main body never does: it rises inside its victim. Its cut-off pieces
+   * still do.
+   */
+  private swallowable(by: Player): boolean {
+    return !by.isFriendly(this.player) && !isZombieHorde(this.player);
+  }
+
   private removeClusters() {
     // Perf: We fuse bounds calculations into the initial DFS flood, returning packed Int32Array bounds
     // instead of scanning every TileRef and allocating hundreds of Object {min, max} Cells.
@@ -217,7 +232,7 @@ export class PlayerExecution implements Execution {
         boxes[3],
       );
       const severedLand = this.severedLand(clusters[0], boxes, 0, null, null);
-      if (surroundedBy && !surroundedBy.isFriendly(this.player)) {
+      if (surroundedBy && this.swallowable(surroundedBy)) {
         this.removeCluster(clusters[0]);
       }
       if (severedLand !== null) {
@@ -410,7 +425,7 @@ export class PlayerExecution implements Execution {
       open,
     );
 
-    if (surroundedBy && !surroundedBy.isFriendly(this.player)) {
+    if (surroundedBy && this.swallowable(surroundedBy)) {
       this.removeCluster(largestCluster);
     }
     for (let i = 0; i < clusters.length; i++) {

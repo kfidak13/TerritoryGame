@@ -5,6 +5,7 @@ import {
   UnitType,
 } from "@openfront/engine-api/game/GameTypes";
 import { Game, Player } from "@openfront/engine/game/Game";
+import { PlayerImpl } from "@openfront/engine/game/PlayerImpl";
 import {
   WaterPathFinder,
   WaterPathMemo,
@@ -240,7 +241,8 @@ describe("structure spawn tile selection", () => {
     const y = 20;
     for (let x = 0; x <= 28; x++) p.conquer(g.ref(x, y));
     p.buildUnit(UnitType.City, g.ref(5, y), {});
-    const spawn = p.canBuild(UnitType.City, g.ref(14, y));
+    // Nations snap (a person's canBuild doesn't): test the selection.
+    const spawn = (p as PlayerImpl).landBasedStructureSpawn(g.ref(14, y));
     // x 15..19 are inside minDist of the city; (5 + minDist, y) is the first
     // tile at exactly minDist (the check is strict <) and the closest valid
     expect(spawn).toBe(g.ref(5 + minDist, y));
@@ -257,7 +259,8 @@ describe("structure spawn tile selection", () => {
     }
     p.buildUnit(UnitType.City, g.ref(5, y), {});
     p.buildUnit(UnitType.City, g.ref(23, y), {});
-    const spawn = p.canBuild(UnitType.City, g.ref(14, y));
+    // Nations snap (a person's canBuild doesn't): test the selection.
+    const spawn = (p as PlayerImpl).landBasedStructureSpawn(g.ref(14, y));
     // valid ⇔ ≥ minDist from both cities: on the arms that is |dy| ≥ 12
     // ((14-5)² + 12² = 225); north and south tie at distance 12
     expect([g.ref(14, y - 12), g.ref(14, y + 12)]).toContain(spawn);

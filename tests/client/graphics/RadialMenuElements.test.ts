@@ -110,6 +110,7 @@ describe("RadialMenuElements", () => {
           }),
         }),
         isUnitDisabled: vi.fn(() => false),
+        goodsEnabled: vi.fn(() => false),
       })),
     } as unknown as GameView;
 
@@ -543,6 +544,39 @@ describe("RadialMenuElements", () => {
         expect(mockParams.eventBus.emit).not.toHaveBeenCalled();
         expect(mockParams.closeMenu).not.toHaveBeenCalled();
       }
+    });
+
+    it("builds a new building at the most levels gold and goods allow", () => {
+      mockPlayerActions.buildableUnits = [
+        {
+          type: UnitType.City,
+          canBuild: 77,
+          canUpgrade: false,
+          cost: 100n,
+          upgradeCosts: [100n, 200n, 300n, 400n, 500n],
+        },
+      ];
+      (mockGame as any).config = vi.fn(() => ({
+        isUnitDisabled: () => false,
+        goodsEnabled: () => true,
+      }));
+      // The build itself takes no goods; each upgrade after it takes 40 metal.
+      (mockGame as any).myPlayer = vi.fn(() => ({
+        gold: () => 10_000n,
+        goods: () => [0, 0, 85],
+      }));
+      const cityElement = buildMenuElement.subMenu!(mockParams).find(
+        (item) => item.id === "build_City",
+      );
+      const options = cityElement!.subMenu!(mockParams);
+      options[options.length - 1].action!(mockParams);
+      expect(mockParams.eventBus.emit).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          unit: UnitType.City,
+          tile: mockParams.tile,
+          amount: 3,
+        }),
+      );
     });
 
     it("offers x1 plus the largest affordable bulk amount", () => {

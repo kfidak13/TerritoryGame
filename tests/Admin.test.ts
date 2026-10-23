@@ -238,6 +238,26 @@ describe("Admin powers", () => {
     expect(game.hasFallout(game.ref(2, 2))).toBe(true);
   });
 
+  test("land taken back from zombies brings its buildings back", () => {
+    for (let y = 8; y < 16; y++) {
+      for (let x = 0; x <= coastX; x++) rome.conquer(game.ref(x, y));
+    }
+    carthage.conquer(game.ref(0, 15));
+    game.addExecution(new PlayerExecution(rome));
+    const city = rome.buildUnit(UnitType.City, game.ref(3, 8), {});
+    admin({ kind: "zombies", target: "rome" });
+    executeTicks(game, 2);
+    const horde = game.players().find((p) => p.name() === "Zombie Horde")!;
+    expect(city.owner()).toBe(horde);
+
+    horde.setGod(false);
+    rome.conquer(game.ref(3, 8));
+    executeTicks(game, 2);
+    expect(city.owner()).toBe(rome);
+    // Rising inside rome doesn't get it swallowed whole.
+    expect(horde.isAlive()).toBe(true);
+  });
+
   test("leave goods alone that a player doesn't have", () => {
     carthage.addGoods([5, 0, 0]);
     admin({

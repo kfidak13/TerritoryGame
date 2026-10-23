@@ -279,18 +279,7 @@ export class BuildPreviewController implements Controller {
           return;
         }
 
-        // Borderfall: no snapping. A new building goes on the tile under the
-        // cursor or nowhere; ports and oil rigs still find the water.
-        const snapped =
-          unit.canUpgrade === false &&
-          unit.canBuild !== false &&
-          unit.canBuild !== tileRef &&
-          Structures.has(unit.type) &&
-          unit.type !== UnitType.Port &&
-          unit.type !== UnitType.OilRig;
-        this.ghostUnit.buildableUnit = snapped
-          ? { ...unit, canBuild: false }
-          : unit;
+        this.ghostUnit.buildableUnit = unit;
 
         if (this.pendingConfirm !== null) {
           const ev = this.pendingConfirm;

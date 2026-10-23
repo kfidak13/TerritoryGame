@@ -26,8 +26,8 @@ import { AttackExecution } from "../AttackExecution";
 /**
  * Drives a zombie horde (engine-lib/game/Zombies.ts): attacks its victim,
  * then its other neighbors, gains troops for the land it takes, and rots.
- * The horde has no PlayerExecution: its troops grow here, by feeding and
- * regrowing like a nation, until it rots.
+ * Its PlayerExecution does upkeep only: its troops grow here, by feeding
+ * and regrowing like a nation, until it rots.
  */
 export class ZombieExecution implements Execution {
   private active = true;
