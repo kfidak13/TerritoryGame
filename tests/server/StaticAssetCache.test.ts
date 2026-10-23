@@ -14,6 +14,13 @@ describe("StaticAssetCache", () => {
     ).toBe("public, max-age=31536000, immutable");
   });
 
+  test("makes browsers revalidate pages served under fixed names", () => {
+    expect(getStaticAssetCacheControl("/privacy-policy.html")).toBe("no-cache");
+    expect(getStaticAssetCacheControl("/terms-of-service.html?x=1")).toBe(
+      "no-cache",
+    );
+  });
+
   test("does not mark other paths as immutable", () => {
     expect(getStaticAssetCacheControl("/manifest.json")).toBeUndefined();
     expect(getStaticAssetCacheControl("/api/health")).toBeUndefined();

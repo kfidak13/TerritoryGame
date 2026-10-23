@@ -19,6 +19,13 @@ export function getStaticAssetCacheControl(
     return IMMUTABLE_CACHE_CONTROL;
   }
 
+  // Pages served under fixed names (the privacy policy, the terms) change in
+  // place, so browsers must check back instead of keeping express.static's
+  // year-long default.
+  if (normalizedPath.endsWith(".html")) {
+    return "no-cache";
+  }
+
   return undefined;
 }
 
