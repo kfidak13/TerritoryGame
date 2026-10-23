@@ -27,6 +27,7 @@
     "perf": "npx tsx tests/perf/run-all.ts",
     "perf:game": "npx tsx tests/perf/fullgame/FullGamePerf.ts",
     "sim:pacing": "npx tsx tests/sim/PacingSim.ts",
+    "deploy:fly": "fly deploy --build-arg GIT_COMMIT=$(git rev-parse --short HEAD)",
     "replay:game": "npx tsx tests/replay/ReplayGame.ts",
     "perf:client": "npx tsx tests/perf/client/ClientUpdatePerf.ts",
     "perf:client-mem": "npx tsx tests/perf/client/ClientMemoryPerf.ts",

@@ -94,21 +94,25 @@ export async function startWorker() {
   const lobbyService = new WorkerLobbyService(server, wss, gm, log);
   const singleplayerPresence = new SingleplayerPresence();
 
-  setTimeout(
-    () => {
-      // The ranked loop follows the deployment-active flag the master pushes
-      // to this worker (OPE-469): a draining, standby or fenced server keeps
-      // the games it has but stops offering new matches.
-      startRankedCheckinLoops({
-        gm,
-        playlist,
-        workerId,
-        log,
-        isActive: () => lobbyService.isDeploymentActive(),
-      });
-    },
-    1000 + Math.random() * 2000,
-  );
+  // Borderfall: ranked matchmaking lives in OpenFront's API; a standalone
+  // server (no API_KEY) has nothing to poll.
+  if (ServerEnv.apiKey() !== "") {
+    setTimeout(
+      () => {
+        // The ranked loop follows the deployment-active flag the master pushes
+        // to this worker (OPE-469): a draining, standby or fenced server keeps
+        // the games it has but stops offering new matches.
+        startRankedCheckinLoops({
+          gm,
+          playlist,
+          workerId,
+          log,
+          isActive: () => lobbyService.isDeploymentActive(),
+        });
+      },
+      1000 + Math.random() * 2000,
+    );
+  }
 
   if (ServerEnv.otelEnabled()) {
     initWorkerMetrics(gm, lobbyService, singleplayerPresence);

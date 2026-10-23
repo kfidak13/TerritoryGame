@@ -1,0 +1,40 @@
+# Borderfall on Fly.io: one always-on machine running the Docker image
+# (nginx in front of the game server and its workers, see Dockerfile). Fly
+# terminates HTTPS and forwards to nginx on port 80; WebSockets pass through.
+#
+# Deploy with `npm run deploy:fly` (it stamps the build with the git commit,
+# which clients must match to join). Secrets, set once with `fly secrets set`:
+#   BORDERFALL_ADMIN_KEY  the admin tab's key
+
+app = "borderfall"
+primary_region = "sjc"
+
+[env]
+  GAME_ENV = "prod"
+  NUM_WORKERS = "2"
+  # First letter of every game id this server mints; any letter works with a
+  # single server.
+  INSTANCE_LETTER = "a"
+  # Cloudflare's always-pass test key until a real Turnstile key is set up.
+  TURNSTILE_SITE_KEY = "1x00000000000000000000AA"
+  # The address players use; switch to your own domain once it points here.
+  DOMAIN = "borderfall.fly.dev"
+
+[http_service]
+  internal_port = 80
+  force_https = true
+  # Public lobbies run around the clock, so the machine never sleeps.
+  auto_stop_machines = "off"
+  auto_start_machines = true
+  min_machines_running = 1
+
+  [[http_service.checks]]
+    grace_period = "60s"
+    interval = "30s"
+    method = "GET"
+    path = "/"
+    timeout = "5s"
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "1gb"

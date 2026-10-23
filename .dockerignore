@@ -16,3 +16,8 @@ coverage*
 tests/
 scripts/replay/
 scripts/split-packages/
+# Borderfall: local build output and tools the image never copies.
+static/
+out/
+map-generator/
+legacy/

@@ -165,6 +165,25 @@ In a game, press the backquote key (`` ` ``) and enter the same key once; this b
 The server accepts admin powers only from a player who gave the right key, so friends can't use them
 even if they open the tab. In solo games any key unlocks it.
 
+### Put it online (Fly.io)
+
+`fly.toml` runs the production Docker image on one always-on Fly machine (about $5 a month), with
+HTTPS from Fly. Once:
+
+1. Install the Fly CLI (`brew install flyctl`) and sign up or log in (`fly auth login`).
+2. Create the app from the config: `fly launch --copy-config --no-deploy` (pick another app name
+   if `borderfall` is taken, and update `DOMAIN` in `fly.toml` to match).
+3. Set the admin key: `fly secrets set BORDERFALL_ADMIN_KEY=your-secret`.
+
+Then deploy (and redeploy after changes) with:
+
+```bash
+npm run deploy:fly
+```
+
+To use your own domain, run `fly certs add yourdomain.com`, add the DNS records it prints at your
+registrar, and set `DOMAIN` in `fly.toml` to it.
+
 ### Client Only
 
 To run just the client with hot reloading:
