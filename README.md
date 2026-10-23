@@ -155,15 +155,11 @@ gives your machine a temporary public address without an account. With `npm run 
 run `cloudflared tunnel --url http://localhost:9000`, open the printed `https://….trycloudflare.com`
 address yourself, create the lobby there, and share its link. `dev:host` accepts those hostnames.
 
-**Admin tab.** Start the server with a secret admin key of your choosing:
-
-```bash
-BORDERFALL_ADMIN_KEY=your-secret npm run dev:host
-```
-
-In a game, press the backquote key (`` ` ``) and enter the same key once; this browser remembers it.
-The server accepts admin powers only from a player who gave the right key, so friends can't use them
-even if they open the tab. In solo games any key unlocks it.
+**Accounts and the admin tab.** Players can sign in with Discord or Google (see "Put it online"
+for setting those up) to keep their name and stats. One account is the admin: the one whose email
+matches `BORDERFALL_ADMIN_EMAIL`. Only it sees an **Admin** button in games (or presses the
+backquote key), and the tools open only after it enters `BORDERFALL_ADMIN_PASSWORD`. Game servers
+check both again before obeying.
 
 ### Put it online (Fly.io)
 
@@ -173,7 +169,10 @@ HTTPS from Fly. Once:
 1. Install the Fly CLI (`brew install flyctl`) and sign up or log in (`fly auth login`).
 2. Create the app from the config: `fly launch --copy-config --no-deploy` (pick another app name
    if `borderfall` is taken, and update `DOMAIN` in `fly.toml` to match).
-3. Set the admin key: `fly secrets set BORDERFALL_ADMIN_KEY=your-secret`.
+3. Create the disk for accounts: `fly volumes create borderfall_data --size 1 --region sjc`.
+4. Register sign-in apps with Discord and Google, using the redirect URLs
+   `https://<your address>/account/auth/callback/discord` and `.../google`, and set the secrets
+   listed at the top of `fly.toml` with `fly secrets set NAME=value`.
 
 Then deploy (and redeploy after changes) with:
 

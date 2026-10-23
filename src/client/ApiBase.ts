@@ -5,6 +5,12 @@ import { ClientEnv } from "./ClientEnv";
 // import cycle; Api.ts re-exports both for its existing importers.
 
 export function getApiBase() {
+  // Borderfall: a server with its own account service names it in the page.
+  const own =
+    typeof window === "undefined"
+      ? undefined
+      : window.BOOTSTRAP_CONFIG?.accountApi;
+  if (own !== undefined) return own;
   const domainname = getAudience();
 
   if (domainname === "localhost") {

@@ -6,9 +6,12 @@ import {
 } from "@openfront/engine-api/game/GameTypes";
 import { AdminAction, MAX_ADMIN_BRUSH } from "@openfront/engine-api/Schemas";
 import { renderNumber, renderTroops } from "@openfront/engine-lib/Format";
+import { isAdminRole } from "@openfront/shared/ApiSchemas";
 import { EventBus } from "@openfront/shared/EventBus";
 import { html, LitElement } from "lit";
 import { customElement, state } from "lit/decorators.js";
+import { getApiBase } from "../../Api";
+import { getAuthHeader, userAuth } from "../../Auth";
 import { Controller } from "../../Controller";
 import { CloseViewEvent, MouseUpEvent, TouchEvent } from "../../InputHandler";
 import { TransformHandler } from "../../TransformHandler";
@@ -17,7 +20,6 @@ import { UIState } from "../../UIState";
 import { translateText } from "../../Utils";
 import { GameView, PlayerView } from "../../view";
 
-const KEY_STORAGE = "borderfall.adminKey";
 const TROOP_SCALE = 10;
 
 type Tab = "resources" | "map" | "control" | "intel";
@@ -55,18 +57,11 @@ const DIPLOMACY_OPS = [
   "end_pact",
 ] as const;
 
-function readKey(): string | null {
-  try {
-    return localStorage.getItem(KEY_STORAGE);
-  } catch {
-    return null;
-  }
-}
-
 /**
- * Borderfall admin tab: opened with the backquote key, and only once this
- * browser holds the admin key. The server checks the key; in solo games
- * there is nobody to protect, so any key unlocks it.
+ * Borderfall admin tab. Only the admin account (its token carries the admin
+ * role) sees the Admin button (or the backquote shortcut), and the tools
+ * open only after the account service accepts the admin password. Game
+ * servers check the account and password again before obeying.
  */
 @customElement("admin-panel")
 export class AdminPanel extends LitElement implements Controller {
@@ -76,8 +71,11 @@ export class AdminPanel extends LitElement implements Controller {
   public transformHandler: TransformHandler;
 
   @state() private open = false;
-  @state() private key: string | null = readKey();
-  @state() private keyDraft = "";
+  @state() private isAdminAccount = false;
+  // The admin password, once the account service accepted it this session.
+  @state() private password: string | null = null;
+  @state() private passwordDraft = "";
+  @state() private wrongPassword = false;
   @state() private tab: Tab = "resources";
   @state() private tool: Tool | null = null;
   @state() private god = false;
@@ -111,7 +109,9 @@ export class AdminPanel extends LitElement implements Controller {
     this.eventBus.on(MouseUpEvent, (e) => this.applyTool(e.x, e.y));
     this.eventBus.on(TouchEvent, (e) => this.applyTool(e.x, e.y));
     this.eventBus.on(CloseViewEvent, () => this.setTool(null));
-    if (this.key !== null) this.eventBus.emit(new SendAdminAuthEvent(this.key));
+    void userAuth().then((auth) => {
+      this.isAdminAccount = auth !== false && isAdminRole(auth.claims.role);
+    });
   }
 
   tick() {
@@ -119,7 +119,7 @@ export class AdminPanel extends LitElement implements Controller {
   }
 
   private onKey = (e: KeyboardEvent) => {
-    if (e.code !== "Backquote") return;
+    if (e.code !== "Backquote" || !this.isAdminAccount) return;
     const el = e.target as HTMLElement | null;
     if (el?.tagName === "INPUT" || el?.tagName === "TEXTAREA") return;
     this.open = !this.open;
@@ -130,26 +130,33 @@ export class AdminPanel extends LitElement implements Controller {
     this.eventBus.emit(new SendAdminIntentEvent(action));
   }
 
-  private saveKey() {
-    const key = this.keyDraft.trim();
-    if (key === "") return;
+  private async unlock() {
+    const password = this.passwordDraft;
+    if (password === "") return;
+    let ok: boolean;
     try {
-      localStorage.setItem(KEY_STORAGE, key);
+      const res = await fetch(`${getApiBase()}/admin/verify`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: await getAuthHeader(),
+        },
+        body: JSON.stringify({ password }),
+      });
+      ok = res.ok;
     } catch {
-      // Private mode: the key lasts this game only.
+      ok = false;
     }
-    this.key = key;
-    this.keyDraft = "";
-    this.eventBus.emit(new SendAdminAuthEvent(key));
+    this.wrongPassword = !ok;
+    if (!ok) return;
+    this.password = password;
+    this.passwordDraft = "";
+    // The game server checks it too before it obeys (solo games have none).
+    this.eventBus.emit(new SendAdminAuthEvent(password));
   }
 
-  private forgetKey() {
-    try {
-      localStorage.removeItem(KEY_STORAGE);
-    } catch {
-      // Nothing stored.
-    }
-    this.key = null;
+  private lock() {
+    this.password = null;
     this.setTool(null);
   }
 
@@ -548,7 +555,16 @@ export class AdminPanel extends LitElement implements Controller {
   }
 
   render() {
-    if (!this.open) return null;
+    if (!this.isAdminAccount) return null;
+    if (!this.open) {
+      return html`<button
+        class="fixed bottom-24 right-2 z-[1001] px-3 py-1 rounded-md text-sm
+               font-bold bg-amber-600/90 hover:bg-amber-500 text-white shadow"
+        @click=${() => (this.open = true)}
+      >
+        ${translateText("admin_panel.title")}
+      </button>`;
+    }
     return html`<div
       class="fixed top-16 right-2 z-[1001] w-80 max-h-[80vh] overflow-y-auto
              bg-gray-900/95 border border-amber-500/60 rounded-lg p-3 text-white
@@ -563,23 +579,28 @@ export class AdminPanel extends LitElement implements Controller {
           ✕
         </button>
       </div>
-      ${this.key === null
+      ${this.password === null
         ? html`<label class="text-sm"
-              >${translateText("admin_panel.enter_key")}</label
+              >${translateText("admin_panel.enter_password")}</label
             >
             <input
               type="password"
               class="bg-gray-800 border border-white/20 rounded px-1"
-              .value=${this.keyDraft}
+              .value=${this.passwordDraft}
               @input=${(e: Event) =>
-                (this.keyDraft = (e.target as HTMLInputElement).value)}
+                (this.passwordDraft = (e.target as HTMLInputElement).value)}
               @keydown=${(e: KeyboardEvent) => {
-                if (e.key === "Enter") this.saveKey();
+                if (e.key === "Enter") void this.unlock();
               }}
             />
-            ${this.button(translateText("admin_panel.unlock"), () =>
-              this.saveKey(),
-            )}`
+            ${this.wrongPassword
+              ? html`<div class="text-xs text-red-400">
+                  ${translateText("admin_panel.wrong_password")}
+                </div>`
+              : null}
+            ${this.button(translateText("admin_panel.unlock"), () => {
+              void this.unlock();
+            })}`
         : html`<div class="flex gap-1">
               ${(["resources", "map", "control", "intel"] as const).map(
                 (t) =>
@@ -599,9 +620,9 @@ export class AdminPanel extends LitElement implements Controller {
             ${this.tab === "intel" ? this.renderIntel() : null}
             <button
               class="text-xs text-gray-500 self-end"
-              @click=${() => this.forgetKey()}
+              @click=${() => this.lock()}
             >
-              ${translateText("admin_panel.forget_key")}
+              ${translateText("admin_panel.lock")}
             </button>`}
     </div>`;
   }

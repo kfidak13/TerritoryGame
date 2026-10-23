@@ -110,10 +110,33 @@ export class ServerEnv {
     return process.env.CDN_BASE ?? "";
   }
   static jwtIssuer(): string {
+    const own = ServerEnv.accountApi();
+    if (own !== undefined) return own;
     const audience = ServerEnv.jwtAudience();
     return audience === "localhost"
       ? "http://localhost:8787"
       : `https://api.${audience}`;
+  }
+  // Borderfall accounts (src/server/accounts): this server signs players in
+  // itself, under /account on its own origin, instead of OpenFront's API.
+  static accountsEnabled(): boolean {
+    return process.env.BORDERFALL_ACCOUNTS === "1";
+  }
+  // The account service's public base URL, which is also the tokens' issuer
+  // (the client checks `iss` against it); undefined with accounts off.
+  static accountApi(): string | undefined {
+    if (!ServerEnv.accountsEnabled()) return undefined;
+    const origin =
+      process.env.SITE_ORIGIN ??
+      (ServerEnv.jwtAudience() === "localhost"
+        ? "http://localhost:9000"
+        : `https://${ServerEnv.jwtAudience()}`);
+    return `${origin}/account`;
+  }
+  // Whether OpenFront's own API backs this server (matchmaking, its signed
+  // logins). Off for a standalone Borderfall server, accounts or not.
+  static usesOpenFrontApi(): boolean {
+    return ServerEnv.apiKey() !== "" && !ServerEnv.accountsEnabled();
   }
   static async jwkPublicKey(): Promise<JWK> {
     if (ServerEnv.publicKey) return ServerEnv.publicKey;

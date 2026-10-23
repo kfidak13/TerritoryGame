@@ -58,11 +58,12 @@ import {
   encodeServerMessage,
 } from "@openfront/shared/ZbinWire";
 import { ZbContext } from "@openfront/zbin";
-import { createHash, randomBytes, timingSafeEqual } from "crypto";
+import { createHash, randomBytes } from "crypto";
 import ipAnonymize from "ip-anonymize";
 import { Logger } from "winston";
 import WebSocket from "ws";
 import { z } from "zod";
+import { adminPasswordMatches } from "./accounts/AccountService";
 import { archive, finalizeGameRecord } from "./Archive";
 import { Client } from "./Client";
 import { applyGameConfigPatch, hostCheatsEnabled } from "./ConfigPatch";
@@ -197,17 +198,6 @@ export function defaultGameServerDeps(): GameServerDeps {
     telemetryBuildHash: "DEV",
     mintGroupToken,
   };
-}
-
-/**
- * Borderfall admin tab: whether `key` is the server's BORDERFALL_ADMIN_KEY.
- * Unset or empty disables admin powers in multiplayer games.
- */
-export function adminKeyMatches(key: string): boolean {
-  const expected = process.env.BORDERFALL_ADMIN_KEY ?? "";
-  if (expected === "" || key === "") return false;
-  const hash = (s: string) => createHash("sha256").update(s).digest();
-  return timingSafeEqual(hash(key), hash(expected));
 }
 
 export class GameServer {
@@ -861,7 +851,10 @@ export class GameServer {
         break;
       }
       case "admin_auth": {
-        client.borderfallAdmin = adminKeyMatches(clientMsg.key);
+        // Borderfall admin: the admin account (its token carries the admin
+        // role) plus the admin password.
+        client.borderfallAdmin =
+          isAdminRole(client.role) && adminPasswordMatches(clientMsg.key);
         this.log.info("admin auth", {
           clientID: client.clientID,
           accepted: client.borderfallAdmin,

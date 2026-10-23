@@ -95,8 +95,8 @@ export async function startWorker() {
   const singleplayerPresence = new SingleplayerPresence();
 
   // Borderfall: ranked matchmaking lives in OpenFront's API; a standalone
-  // server (no API_KEY) has nothing to poll.
-  if (ServerEnv.apiKey() !== "") {
+  // server has nothing to poll.
+  if (ServerEnv.usesOpenFrontApi()) {
     setTimeout(
       () => {
         // The ranked loop follows the deployment-active flag the master pushes

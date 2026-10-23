@@ -4,7 +4,11 @@
 #
 # Deploy with `npm run deploy:fly` (it stamps the build with the git commit,
 # which clients must match to join). Secrets, set once with `fly secrets set`:
-#   BORDERFALL_ADMIN_KEY  the admin tab's key
+#   DISCORD_CLIENT_ID, DISCORD_CLIENT_SECRET   Discord sign-in
+#   GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET     Google sign-in
+#   BORDERFALL_ADMIN_EMAIL     the email of the one account that is admin
+#   BORDERFALL_ADMIN_PASSWORD  the password the Admin button asks for
+#   API_KEY                    any long random string (game servers -> accounts)
 
 app = "borderfall"
 primary_region = "sjc"
@@ -19,6 +23,13 @@ primary_region = "sjc"
   TURNSTILE_SITE_KEY = "1x00000000000000000000AA"
   # The address players use; switch to your own domain once it points here.
   DOMAIN = "borderfall.fly.dev"
+  # Borderfall's own accounts (src/server/accounts), stored on the volume.
+  BORDERFALL_ACCOUNTS = "1"
+
+# Accounts and stats live in /data/accounts.db on this 1 GB volume.
+[mounts]
+  source = "borderfall_data"
+  destination = "/data"
 
 [http_service]
   internal_port = 80

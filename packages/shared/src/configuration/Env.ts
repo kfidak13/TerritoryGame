@@ -33,6 +33,8 @@ declare global {
       // Environment-scoped and optional like stripePublishableKey: the
       // Grafana Faro collector URL. Absent keeps client telemetry off.
       faroCollectorUrl?: string;
+      // Borderfall's own account service base URL, when the server runs one.
+      accountApi?: string;
       // The rendering server's own id. Absent on a static page, which no
       // server rendered; ClientEnv.instanceId() then answers "".
       instanceId?: string;

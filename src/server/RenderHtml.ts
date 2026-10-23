@@ -96,6 +96,12 @@ export async function renderHtmlContent(
       ServerEnv.stripePublishableKey() === undefined
         ? undefined
         : JSON.stringify(ServerEnv.stripePublishableKey()),
+    // Borderfall accounts: where the account service lives, when this server
+    // runs one. Optional, line dropped when unset.
+    accountApi:
+      ServerEnv.accountApi() === undefined
+        ? undefined
+        : JSON.stringify(ServerEnv.accountApi()),
     // Same shape: environment-scoped, optional, line dropped when unset.
     faroCollectorUrl:
       ServerEnv.faroCollectorUrl() === undefined

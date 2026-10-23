@@ -6,6 +6,8 @@ import rateLimit from "express-rate-limit";
 import http from "http";
 import path from "path";
 import { fileURLToPath } from "url";
+import { AccountService } from "./accounts/AccountService";
+import { AccountStore } from "./accounts/AccountStore";
 import {
   applyCheckinState,
   CHECKIN_INTERVAL_MS,
@@ -39,6 +41,36 @@ const log = logger.child({ comp: "m" });
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+// Borderfall accounts: the account service, ahead of the global JSON parser
+// (game records outgrow its limit) and the app shell.
+if (ServerEnv.accountsEnabled()) {
+  const accounts = new AccountService(
+    new AccountStore(
+      process.env.ACCOUNTS_DB ??
+        (ServerEnv.env() === GameEnv.Prod
+          ? "/data/accounts.db"
+          : path.join(__dirname, "../../out/accounts.db")),
+    ),
+    {
+      base: ServerEnv.accountApi()!,
+      audience: ServerEnv.jwtAudience(),
+      discord: oauthApp("DISCORD"),
+      google: oauthApp("GOOGLE"),
+      adminEmail: process.env.BORDERFALL_ADMIN_EMAIL,
+      apiKey: ServerEnv.apiKey(),
+    },
+  );
+  app.use("/account", accounts.router());
+}
+
+function oauthApp(
+  name: string,
+): { clientId: string; clientSecret: string } | undefined {
+  const clientId = process.env[`${name}_CLIENT_ID`];
+  const clientSecret = process.env[`${name}_CLIENT_SECRET`];
+  return clientId && clientSecret ? { clientId, clientSecret } : undefined;
+}
 
 app.use(express.json());
 

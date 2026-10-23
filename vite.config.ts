@@ -501,6 +501,12 @@ export default defineConfig(({ mode }) => {
           bypass: (req) => devGameHtmlBypass(req),
           rewrite: (path) => path.replace(/^\/w1/, ""),
         },
+        // Borderfall accounts (src/server/accounts)
+        "/account": {
+          target: `http://localhost:${masterPort}`,
+          changeOrigin: false,
+          secure: false,
+        },
         // API proxies
         "/api": {
           target: `http://localhost:${masterPort}`,

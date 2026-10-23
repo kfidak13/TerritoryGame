@@ -13,7 +13,7 @@ import {
 import { AdminExecution } from "@openfront/engine/execution/admin/AdminExecution";
 import { PlayerExecution } from "@openfront/engine/execution/PlayerExecution";
 import { Game, Player } from "@openfront/engine/game/Game";
-import { adminKeyMatches } from "../src/server/GameServer";
+import { adminPasswordMatches } from "../src/server/accounts/AccountService";
 import { authorizeIntent } from "../src/server/IntentAuthorization";
 import { setup } from "./util/Setup";
 import { expectSnapshotRoundTrip } from "./util/Snapshot";
@@ -197,7 +197,7 @@ describe("Admin powers", () => {
   });
 });
 
-describe("Admin key", () => {
+describe("Admin access", () => {
   const actor = {
     clientID: "client01",
     isLobbyCreator: true,
@@ -222,12 +222,12 @@ describe("Admin key", () => {
     ).toBeNull();
   });
 
-  test("the key must match the server's, and an unset key opens nothing", () => {
-    vi.stubEnv("BORDERFALL_ADMIN_KEY", "");
-    expect(adminKeyMatches("")).toBe(false);
-    vi.stubEnv("BORDERFALL_ADMIN_KEY", "hunter2");
-    expect(adminKeyMatches("hunter2")).toBe(true);
-    expect(adminKeyMatches("hunter3")).toBe(false);
+  test("the admin password must match the server's, and an unset one opens nothing", () => {
+    vi.stubEnv("BORDERFALL_ADMIN_PASSWORD", "");
+    expect(adminPasswordMatches("")).toBe(false);
+    vi.stubEnv("BORDERFALL_ADMIN_PASSWORD", "hunter2");
+    expect(adminPasswordMatches("hunter2")).toBe(true);
+    expect(adminPasswordMatches("hunter3")).toBe(false);
     vi.unstubAllEnvs();
   });
 });

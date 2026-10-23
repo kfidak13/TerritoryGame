@@ -23,9 +23,9 @@ export async function verifyClientToken(
   token: string,
 ): Promise<TokenVerificationResult> {
   if (PersistentIdSchema.safeParse(token).success) {
-    // Borderfall: a standalone server (no API_KEY) has no login service to
-    // sign tokens, so a browser's own persistent ID is the only identity.
-    if (ServerEnv.env() === GameEnv.Dev || ServerEnv.apiKey() === "") {
+    // Borderfall: without OpenFront's API, guests (no account) play under
+    // their browser's own persistent ID; signed-in players send a token.
+    if (ServerEnv.env() === GameEnv.Dev || !ServerEnv.usesOpenFrontApi()) {
       return { type: "success", persistentId: token, claims: null };
     } else {
       return {
