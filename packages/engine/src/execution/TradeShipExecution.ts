@@ -2,6 +2,10 @@ import { TileRef } from "@openfront/engine-api/game/GameMap";
 import { MessageType, UnitType } from "@openfront/engine-api/game/GameTypes";
 import { renderNumber } from "@openfront/engine-lib/Format";
 import {
+  PORT_PATH_TRADE,
+  PORT_TRADE_GOLD_PERCENT,
+} from "@openfront/engine-lib/game/Upgrades";
+import {
   zInt,
   zPlayerRef,
   zRef,
@@ -183,9 +187,14 @@ export class TradeShipExecution implements Execution {
   private complete() {
     this.active = false;
     this.tradeShip!.delete(false);
-    const gold = this.mg
+    const base = this.mg
       .config()
       .tradeShipGold(this.tilesTraveled, this.tradeShip!.owner());
+    // Borderfall: the home port's Trade path makes the trip pay more.
+    const bonus = this.srcPort.isActive()
+      ? PORT_TRADE_GOLD_PERCENT[this.srcPort.tiers()[PORT_PATH_TRADE]]
+      : 0;
+    const gold = (base * BigInt(100 + bonus)) / 100n;
 
     if (this.wasCaptured && this.tradeShip!.owner() === this.origOwner) {
       // Retaken by its original owner: the payout stands, but nobody pirated it.

@@ -1,11 +1,11 @@
 import type { TileRef } from "@openfront/engine-api/game/GameMap";
 import {
   GameType,
-  MAX_UPGRADE_AMOUNT,
   PlayerInfo,
   PlayerType,
   UnitType,
 } from "@openfront/engine-api/game/GameTypes";
+import { MAX_TIER } from "@openfront/engine-lib/game/Upgrades";
 import { UpgradeStructureExecution } from "@openfront/engine/execution/UpgradeStructureExecution";
 import { describe, expect, it } from "vitest";
 import { setup } from "../../util/Setup";
@@ -144,17 +144,16 @@ describe("UpgradeStructureExecution", () => {
       .buildableUnits(landTile!)
       .find((b) => b.type === UnitType.City)!;
     expect(bu.canUpgrade).toBe(city.id());
-    expect(bu.upgradeCosts).toHaveLength(MAX_UPGRADE_AMOUNT);
-    // First step is the currently-displayed single cost; city costs escalate
-    // per level, so the x5 total must exceed a naive cost * 5.
+    // Borderfall: five tiers up the first path, each twice the last.
+    expect(bu.upgradeCosts).toHaveLength(MAX_TIER);
     expect(bu.upgradeCosts![0]).toBe(bu.cost);
-    expect(bu.upgradeCosts![4]).toBeGreaterThan(bu.cost * 5n);
+    expect(bu.upgradeCosts![4]).toBe(bu.cost * 31n);
 
     const goldBefore = player.gold();
     game.addExecution(new UpgradeStructureExecution(player, city.id(), 5));
     game.executeNextTick();
 
-    expect(city.level()).toBe(6);
+    expect(city.tiers()).toEqual([5, 0, 0]);
     expect(goldBefore - player.gold()).toBe(bu.upgradeCosts![4]);
   });
 });

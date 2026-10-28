@@ -15,6 +15,7 @@ import {
   GameUpdateType,
   UnitUpdate,
 } from "@openfront/engine-api/game/GameUpdates";
+import { navyScaled } from "@openfront/engine-lib/game/Upgrades";
 import { maxHealthWithVeterancy } from "@openfront/engine-lib/game/Veterancy";
 import {
   snapshotType,
@@ -58,7 +59,12 @@ export class UnitImpl implements Unit {
   // Number of missiles in cooldown, if empty all missiles are ready.
   private _missileTimerQueue: number[] = [];
   private _hasTrainStation: boolean = false;
+  // Borderfall upgrades: level is 1 + every tier bought, so buildings whose
+  // paths don't do their own thing yet still grow like stacked ones.
   private _level: number = 1;
+  private _tiers: number[] = [0, 0, 0];
+  // Length of the upgrade under way (it idles as under construction).
+  private _upgradeTicks = 0;
   private _targetable: boolean = true;
   private _loaded: boolean | undefined;
   private _trainType: TrainType | undefined;
@@ -194,6 +200,8 @@ export class UnitImpl implements Unit {
       targetTile: this.targetTile() ?? undefined,
       missileTimerQueue: this._missileTimerQueue,
       level: this.level(),
+      tiers: this._tiers.some((t) => t > 0) ? [...this._tiers] : undefined,
+      upgradeTicks: this._upgradeTicks || undefined,
       hasTrainStation: this._hasTrainStation,
       trainType: this._trainType,
       loaded: this._loaded,
@@ -283,11 +291,14 @@ export class UnitImpl implements Unit {
   maxHealth(): number {
     const base = this.info().maxHealth ?? 1;
     // veterancy() is 0 for non-warships, so this returns base for them.
-    return maxHealthWithVeterancy(
+    const health = maxHealthWithVeterancy(
       base,
       this.veterancy(),
       this.mg.config().warshipVeterancyHealthBonus(),
     );
+    return this._type === UnitType.Warship
+      ? navyScaled(health, this._tiers)
+      : health;
   }
 
   modifyHealth(delta: number, attacker?: Player): void {
@@ -662,6 +673,25 @@ export class UnitImpl implements Unit {
     return this._level;
   }
 
+  tiers(): readonly number[] {
+    return this._tiers;
+  }
+
+  upgradeTicks(): number {
+    return this._upgradeTicks;
+  }
+
+  setUpgrading(ticks: number): void {
+    this._upgradeTicks = ticks;
+    this.setUnderConstruction(ticks > 0);
+    this.mg.addUpdate(this.toUpdate());
+  }
+
+  raiseTier(path: number): void {
+    this._tiers[path]++;
+    this.increaseLevel();
+  }
+
   veterancy(): number {
     return this._warshipState?.veterancy ?? 0;
   }
@@ -771,6 +801,9 @@ export class UnitImpl implements Unit {
   }
 
   decreaseLevel(destroyer?: Player): void {
+    // The furthest path loses the tier; a building with none left goes.
+    const top = Math.max(...this._tiers);
+    if (top > 0) this._tiers[this._tiers.indexOf(top)]--;
     this._level--;
     if ([UnitType.MissileSilo, UnitType.SAMLauncher].includes(this.type())) {
       this._missileTimerQueue.pop();
@@ -859,6 +892,8 @@ export class UnitImpl implements Unit {
       missileTimerQueue: [...this._missileTimerQueue],
       hasTrainStation: this._hasTrainStation,
       level: this._level,
+      tiers: this._tiers.some((t) => t > 0) ? [...this._tiers] : undefined,
+      upgradeTicks: this._upgradeTicks || undefined,
       targetable: this._targetable,
       loaded: this._loaded ?? null,
       trainType: this._trainType ?? null,
@@ -915,6 +950,8 @@ export class UnitImpl implements Unit {
     this._missileTimerQueue = [...s.missileTimerQueue];
     this._hasTrainStation = s.hasTrainStation;
     this._level = s.level;
+    this._tiers = s.tiers ? [...s.tiers] : [0, 0, 0];
+    this._upgradeTicks = s.upgradeTicks ?? 0;
     this._targetable = s.targetable;
     this._loaded = s.loaded ?? undefined;
     this._trainType = s.trainType ?? undefined;
@@ -973,6 +1010,8 @@ export const UnitSnapshot = snapshotType({
     missileTimerQueue: z.array(zInt()),
     hasTrainStation: z.boolean(),
     level: zInt(),
+    tiers: z.array(zInt()).optional(),
+    upgradeTicks: zInt().optional(),
     targetable: z.boolean(),
     loaded: z.boolean().nullable(),
     trainType: z.enum(TrainType).nullable(),

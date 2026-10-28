@@ -305,6 +305,10 @@ export interface Unit extends UnitLike {
   level(): number;
   increaseLevel(): void;
   decreaseLevel(destroyer?: Player): void;
+  // Borderfall upgrade paths (engine-lib/game/Upgrades)
+  raiseTier(path: number): void;
+  upgradeTicks(): number;
+  setUpgrading(ticks: number): void;
 }
 
 export interface Embargo {
@@ -436,8 +440,8 @@ export interface Player extends PlayerLike {
   // New units of the same type can upgrade existing units.
   // e.g. if a place a new city here, can it upgrade an existing city?
   findUnitToUpgrade(type: UnitType, targetTile: TileRef): Unit | false;
-  canUpgradeUnit(unit: Unit): boolean;
-  upgradeUnit(unit: Unit): void;
+  canUpgradeUnit(unit: Unit, path?: number): boolean;
+  upgradeUnit(unit: Unit, path?: number): void;
   captureUnit(unit: Unit): void;
 
   // Relations & Diplomacy

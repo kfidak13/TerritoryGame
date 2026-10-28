@@ -11,6 +11,7 @@ import {
 } from "@openfront/engine-api/game/GameTypes";
 import { GameUpdateType } from "@openfront/engine-api/game/GameUpdates";
 import { AdminAction } from "@openfront/engine-api/Schemas";
+import { MAX_TIER, upgradePaths } from "@openfront/engine-lib/game/Upgrades";
 import {
   ZOMBIE_MIN_PATCH_RADIUS,
   ZOMBIE_NAME,
@@ -186,8 +187,9 @@ export class AdminExecution implements Execution {
       if (mg.owner(tile) !== owner) return;
     }
     const unit = owner.buildUnit(type, tile, {});
-    if (mg.config().unitInfo(type).upgradable === true) {
-      for (let i = 1; i < level; i++) unit.increaseLevel();
+    // Level N: its first path at tier N - 1 (engine-lib/game/Upgrades).
+    if (upgradePaths(type).length > 0) {
+      for (let i = 1; i < Math.min(level, MAX_TIER + 1); i++) unit.raiseTier(0);
     }
     const exec = structureExecution(unit, owner);
     if (exec !== null) mg.addExecution(exec);

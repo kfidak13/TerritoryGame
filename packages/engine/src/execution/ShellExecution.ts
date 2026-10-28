@@ -1,5 +1,6 @@
 import { TileRef } from "@openfront/engine-api/game/GameMap";
 import { UnitType } from "@openfront/engine-api/game/GameTypes";
+import { navyScaled } from "@openfront/engine-lib/game/Upgrades";
 import { PseudoRandom } from "@openfront/engine-lib/PseudoRandom";
 import {
   zInt,
@@ -111,6 +112,10 @@ export class ShellExecution implements Execution {
       );
     }
 
+    // Borderfall: warships from a Navy port hit harder.
+    if (this.ownerUnit.type() === UnitType.Warship) {
+      damageMultiplier = navyScaled(damageMultiplier, this.ownerUnit.tiers());
+    }
     return Math.round((baseDamage / 250) * damageMultiplier);
   }
 

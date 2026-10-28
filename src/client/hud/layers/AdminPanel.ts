@@ -301,7 +301,8 @@ export class AdminPanel extends LitElement implements Controller {
             unit: this.spawnUnit,
             tile,
             owner: this.target,
-            level: this.spawnLevel,
+            // Level 0 is a plain building; the engine counts from 1.
+            level: this.spawnLevel + 1,
           },
           translateText("admin_panel.done_spawn", {
             what: translateText(unitKey(this.spawnUnit)),
@@ -627,8 +628,8 @@ export class AdminPanel extends LitElement implements Controller {
           ${this.slider(
             translateText("admin_panel.level"),
             this.spawnLevel,
-            1,
-            20,
+            0,
+            5,
             (n) => (this.spawnLevel = n),
           )}`;
       case "revive": {

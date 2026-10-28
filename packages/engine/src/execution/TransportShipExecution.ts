@@ -8,6 +8,11 @@ import {
 import { renderTroops } from "@openfront/engine-lib/Format";
 import { MotionPlanRecord } from "@openfront/engine-lib/game/MotionPlans";
 import {
+  bestTier,
+  PORT_INVASION_TROOPS_PERCENT,
+  PORT_PATH_INVASION,
+} from "@openfront/engine-lib/game/Upgrades";
+import {
   zInt,
   zNum,
   zPlayerRef,
@@ -275,9 +280,18 @@ export class TransportShipExecution implements Execution {
         if (this.target.isPlayer() && this.attacker.isFriendly(this.target)) {
           this.attacker.addTroops(this.boat.troops());
         } else {
+          // Borderfall: the best Invasion port lands extra troops.
+          const tier = bestTier(
+            this.attacker.units(UnitType.Port),
+            PORT_PATH_INVASION,
+          );
+          const landing = Math.floor(
+            (this.boat.troops() * (100 + PORT_INVASION_TROOPS_PERCENT[tier])) /
+              100,
+          );
           this.mg.addExecution(
             new AttackExecution(
-              this.boat.troops(),
+              landing,
               this.attacker,
               this.target.id(),
               this.dst,

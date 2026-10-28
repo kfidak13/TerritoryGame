@@ -11,7 +11,6 @@ import {
   PlayerActions,
   PlayerBuildableUnitType,
   PlayerType,
-  STRUCTURE_BULK_STEPS,
   Structures,
   UnitType,
 } from "@openfront/engine-api/game/GameTypes";
@@ -23,6 +22,16 @@ import {
   canAffordGoods,
   goodsCost,
 } from "@openfront/engine-lib/game/Goods";
+import {
+  canRaiseTier,
+  mainPath,
+  MAX_TIER,
+  MAX_TIER5_PER_TYPE,
+  topTier,
+  upgradeGold,
+  upgradeGoods,
+  upgradePaths,
+} from "@openfront/engine-lib/game/Upgrades";
 import { findClosestBy } from "@openfront/engine-lib/Util";
 import { assetUrl } from "@openfront/shared/AssetUrls";
 import { UIState } from "../../UIState";
@@ -445,6 +454,120 @@ function getAllEnabledUnits(
 
 // Borderfall goods lines for a build tooltip.
 /**
+ * Borderfall upgrade paths (engine-lib/game/Upgrades): a slot per path,
+ * showing its level, then Max, which takes the furthest path as far as the
+ * player can pay for. A path that can't go up now says why.
+ */
+function upgradePathRing(
+  params: MenuElementParams,
+  type: UnitType,
+  unitId: number,
+): MenuElement[] {
+  const unit = params.game.unit(unitId);
+  const me = params.game.myPlayer();
+  if (unit === undefined || me === null) return [];
+  const tiers = unit.tiers();
+  const goodsOn = params.game.config().goodsEnabled();
+  const level5s = me
+    .units(type)
+    .filter((u) => topTier(u.tiers()) >= MAX_TIER).length;
+  const paths = upgradePaths(type);
+
+  /** Why `path` can't go up now, or null when it can. */
+  const blocked = (path: number): string | null => {
+    const tier = tiers[path] + 1;
+    if (tiers[path] >= MAX_TIER) return translateText("build_paths.maxed");
+    if (!canRaiseTier(type, tiers, path)) {
+      return translateText(
+        tiers.filter((t) => t > 0).length >= 2 && tiers[path] === 0
+          ? "build_paths.locked_third"
+          : "build_paths.locked_second",
+      );
+    }
+    if (tier === MAX_TIER && level5s >= MAX_TIER5_PER_TYPE) {
+      return translateText("build_paths.locked_level5");
+    }
+    if (unit.isUnderConstruction()) return translateText("build_paths.busy");
+    const short =
+      me.gold() < upgradeGold(type, tier) ||
+      (goodsOn && !canAffordGoods(me.goods(), upgradeGoods(type, path, tier)));
+    return short ? translateText("build_paths.cant_afford") : null;
+  };
+  const send = (p: MenuElementParams, path: number, amount: number) => {
+    p.eventBus.emit(
+      new SendUpgradeStructureIntentEvent(unitId, type, amount, path),
+    );
+    p.closeMenu();
+  };
+
+  const slots: MenuElement[] = paths.map((info, path) => {
+    const tier = Math.min(MAX_TIER, tiers[path] + 1);
+    const reason = blocked(path);
+    const goods = upgradeGoods(type, path, tier);
+    return {
+      id: `upgrade_${type}_path${path}`,
+      name: translateText(`build_paths.${info.key}`),
+      text: `${translateText(`build_paths.${info.key}_short`)} ${tiers[path]}`,
+      fontSize: "11px",
+      color: reason === null ? COLORS.building : COLORS.disabled,
+      icon: "",
+      tooltipItems: [
+        {
+          text: translateText("build_paths.title", {
+            path: translateText(`build_paths.${info.key}`),
+            level: tiers[path].toString(),
+          }),
+          className: "title",
+        },
+        {
+          text: translateText(`build_paths.${info.key}_desc`),
+          className: "description",
+        },
+        ...(tiers[path] < MAX_TIER
+          ? [
+              {
+                text: `${renderNumber(upgradeGold(type, tier))} ${translateText("player_panel.gold")}`,
+                className: "cost",
+              },
+              ...(goodsOn
+                ? [{ text: goodsCostText(goods), className: "cost" }]
+                : []),
+            ]
+          : []),
+        ...(reason !== null
+          ? [{ text: reason, className: "description" }]
+          : []),
+      ],
+      disabled: () => reason !== null,
+      action: (p: MenuElementParams) => send(p, path, 1),
+    };
+  });
+  const main = mainPath(tiers);
+  const mainKey = paths[main]?.key;
+  if (mainKey !== undefined) {
+    slots.push({
+      id: `upgrade_${type}_max`,
+      name: translateText("build_paths.max"),
+      text: translateText("build_paths.max"),
+      fontSize: "14px",
+      color: blocked(main) === null ? COLORS.building : COLORS.disabled,
+      icon: "",
+      tooltipItems: [
+        {
+          text: translateText("build_paths.max_desc", {
+            path: translateText(`build_paths.${mainKey}`),
+          }),
+          className: "title",
+        },
+      ],
+      disabled: () => blocked(main) !== null,
+      action: (p: MenuElementParams) => send(p, main, MAX_TIER),
+    });
+  }
+  return slots;
+}
+
+/**
  * Borderfall: how many of a bulk buy the player's goods pay for. The first
  * is a build or an upgrade (firstIsBuild), and so is each after it.
  */
@@ -542,20 +665,18 @@ function createMenuElements(
           if (!buildableUnit) {
             return [];
           }
+          // Borderfall: an existing building goes up one of its paths.
+          if (buildableUnit.canUpgrade !== false) {
+            return upgradePathRing(
+              params,
+              buildableUnit.type,
+              buildableUnit.canUpgrade,
+            );
+          }
           const isStackableNuke =
             item.unitType === UnitType.AtomBomb &&
             buildableUnit.canBuild !== false;
-          // Borderfall: a new upgradable structure can be built at a level.
-          const isNewStructure =
-            buildableUnit.canUpgrade === false &&
-            buildableUnit.canBuild !== false &&
-            buildableUnit.upgradeCosts !== undefined;
-          if (
-            (buildableUnit.canUpgrade === false &&
-              !isStackableNuke &&
-              !isNewStructure) ||
-            !params.buildMenu.canBuildOrUpgrade(item)
-          ) {
+          if (!isStackableNuke || !params.buildMenu.canBuildOrUpgrade(item)) {
             return [];
           }
           // Always four slots in fixed positions for muscle memory — laid
@@ -567,29 +688,21 @@ function createMenuElements(
           // return no submenu so the click falls through to an immediate x1
           // (see action below).
           const myPlayer = params.game.myPlayer();
-          let maxAmount = maxBulkAmount(buildableUnit, myPlayer?.gold() ?? 0n);
-          if (isStackableNuke) {
-            maxAmount = Math.min(maxAmount, myPlayer?.readyMissileCount() ?? 0);
-          }
-          // Borderfall: every bomb, build and upgrade costs goods too.
+          let maxAmount = Math.min(
+            maxBulkAmount(buildableUnit, myPlayer?.gold() ?? 0n),
+            myPlayer?.readyMissileCount() ?? 0,
+          );
+          // Borderfall: every bomb costs goods too.
           if (myPlayer && params.game.config().goodsEnabled()) {
             maxAmount = Math.min(
               maxAmount,
-              goodsAllow(
-                item.unitType,
-                myPlayer.goods(),
-                isStackableNuke || isNewStructure,
-                isStackableNuke,
-              ),
+              goodsAllow(item.unitType, myPlayer.goods(), true, true),
             );
           }
           if (maxAmount <= 1) {
             return [];
           }
-          const steps = isStackableNuke
-            ? NUKE_BULK_STEPS
-            : STRUCTURE_BULK_STEPS;
-          const slots = [1, ...steps, maxAmount];
+          const slots = [1, ...NUKE_BULK_STEPS, maxAmount];
           return slots.map((amount, i) => {
             const isMaxSlot = i === slots.length - 1;
             const executable = amount <= maxAmount;
@@ -625,24 +738,14 @@ function createMenuElements(
               disabled: (p: MenuElementParams) =>
                 !executable || (p.game.myPlayer()?.gold() ?? 0n) < cost,
               action: (p: MenuElementParams) => {
-                if (isStackableNuke || isNewStructure) {
-                  p.eventBus.emit(
-                    new BuildUnitIntentEvent(
-                      buildableUnit.type,
-                      p.tile,
-                      p.uiState?.rocketDirectionUp,
-                      amount,
-                    ),
-                  );
-                } else {
-                  p.eventBus.emit(
-                    new SendUpgradeStructureIntentEvent(
-                      buildableUnit.canUpgrade as number,
-                      buildableUnit.type,
-                      amount,
-                    ),
-                  );
-                }
+                p.eventBus.emit(
+                  new BuildUnitIntentEvent(
+                    buildableUnit.type,
+                    p.tile,
+                    p.uiState?.rocketDirectionUp,
+                    amount,
+                  ),
+                );
                 p.closeMenu();
               },
             };

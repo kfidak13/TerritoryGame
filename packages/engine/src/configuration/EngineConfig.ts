@@ -1,6 +1,7 @@
 import {
   Difficulty,
   Gold,
+  GoodsAmounts,
   PlayerInfo,
   PlayerType,
   TerrainType,
@@ -13,6 +14,11 @@ import { TeamCountConfig } from "@openfront/engine-api/Schemas";
 import { NukeType } from "@openfront/engine-api/StatsSchemas";
 import { Config } from "@openfront/engine-lib/configuration/Config";
 import { exp, log, pow2 } from "@openfront/engine-lib/DetMath";
+import {
+  cityGold,
+  upgradeGold,
+  upgradeGoods,
+} from "@openfront/engine-lib/game/Upgrades";
 import {
   assertNever,
   sigmoid,
@@ -426,6 +432,24 @@ export class EngineConfig extends Config {
     return base;
   }
 
+  /**
+   * Borderfall: what raising `path` of a `type` building to `tier` costs
+   * `player` (engine-lib/game/Upgrades). Goods are null when they're off.
+   */
+  upgradeCost(
+    player: PlayerLike,
+    type: UnitType,
+    path: number,
+    tier: number,
+  ): { gold: Gold; goods: GoodsAmounts | null } {
+    const free =
+      player.type() === PlayerType.Human && this.hasInfiniteGoldFor(player);
+    return {
+      gold: free ? 0n : upgradeGold(type, tier),
+      goods: this.goodsEnabled() ? upgradeGoods(type, path, tier) : null,
+    };
+  }
+
   private costWrapper(
     costFn: (units: number) => number,
     ...types: UnitType[]
@@ -664,7 +688,14 @@ export class EngineConfig extends Config {
     } else {
       baseRate = 100n;
     }
-    return BigInt(Math.floor(Number(baseRate) * multiplier));
+    // Borderfall: Market and Capital cities pay out too.
+    let cities = 0;
+    for (const city of player.units(UnitType.City)) {
+      if (!city.isUnderConstruction() && !city.isDisrupted()) {
+        cities += cityGold(city.tiers());
+      }
+    }
+    return BigInt(Math.floor((Number(baseRate) + cities) * multiplier));
   }
 
   nukeSpeed(unitType: UnitType): number {

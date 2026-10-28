@@ -1,5 +1,6 @@
 import { TileRef } from "@openfront/engine-api/game/GameMap";
 import { UnitType } from "@openfront/engine-api/game/GameTypes";
+import { PORT_PATH_NAVY } from "@openfront/engine-lib/game/Upgrades";
 import { PseudoRandom } from "@openfront/engine-lib/PseudoRandom";
 import {
   zInt,
@@ -72,6 +73,13 @@ export class WarshipExecution implements Execution {
         spawn,
         this.input,
       );
+      // Borderfall: it takes the Navy tier of the port it sails from.
+      const port = mg
+        .nearbyUnits(spawn, 0, UnitType.Port, undefined, true)
+        .find((e) => e.unit.tile() === spawn)?.unit;
+      const navy = port?.tiers()[PORT_PATH_NAVY] ?? 0;
+      for (let i = 0; i < navy; i++) this.warship.raiseTier(PORT_PATH_NAVY);
+      this.warship.modifyHealth(this.warship.maxHealth());
     }
     this.lastObservedPatrolTile = this.warship.warshipState().patrolTile;
   }

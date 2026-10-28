@@ -1153,7 +1153,7 @@ describe("Juicy ally betrayal strategy - end-to-end via maybeAttack", () => {
 });
 
 describe("City troops and expansion", () => {
-  // A Hard nation with 30 city levels but few troops, bordering free land, a bot and a human
+  // A Hard nation with a level-3 Market city (1M people) but few troops, bordering free land, a bot and a human
   async function setupCityRich(startingGold: number) {
     const game = await setup("big_plains", {
       difficulty: Difficulty.Hard,
@@ -1174,7 +1174,7 @@ describe("City troops and expansion", () => {
       Array.from(nation.tiles())[0],
       {},
     );
-    for (let level = 1; level < 30; level++) city.increaseLevel();
+    for (let tier = 0; tier < 3; tier++) city.raiseTier(1);
     nation.addTroops(100_000);
     bot.addTroops(100);
     human.addTroops(1_000);
@@ -1202,8 +1202,8 @@ describe("City troops and expansion", () => {
     const config = game.config();
     expect(
       config.maxTroops(nation) - config.maxTroopsWithoutCities(nation),
-    ).toBe(30 * 250_000);
-    // 100k troops are a few percent of the 7.6M max troops
+    ).toBe(250_000 + 10_000_000);
+    // 100k troops are a few percent of the 10M max troops
     expect(behavior.sendAttack(game.terraNullius())).toBe(true);
     expect(sent()[0]["startTroops"]).toBeCloseTo(
       nation.troops() - 0.2 * config.maxTroopsWithoutCities(nation),

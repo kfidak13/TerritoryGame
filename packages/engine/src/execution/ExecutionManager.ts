@@ -1,9 +1,15 @@
+import { UnitType } from "@openfront/engine-api/game/GameTypes";
 import {
   ClientID,
   GameID,
   StampedIntent,
   Turn,
 } from "@openfront/engine-api/Schemas";
+import {
+  bestTier,
+  PORT_INVASION_TWIN_TIER,
+  PORT_PATH_INVASION,
+} from "@openfront/engine-lib/game/Upgrades";
 import { PseudoRandom } from "@openfront/engine-lib/PseudoRandom";
 import { simpleHash } from "@openfront/engine-lib/Util";
 import { Execution, Game } from "../game/Game";
@@ -58,7 +64,25 @@ export class Executor {
   }
 
   createExecs(turn: Turn): Execution[] {
-    return turn.intents.map((i) => this.createExec(i));
+    return turn.intents.flatMap((i) => this.twinBoats(i) ?? this.createExec(i));
+  }
+
+  /** Borderfall: a level-5 Invasion port sends a boat order in two boats. */
+  private twinBoats(intent: StampedIntent): Execution[] | null {
+    if (intent.type !== "boat") return null;
+    const player = this.mg.playerByClientID(intent.clientID);
+    if (
+      !player ||
+      bestTier(player.units(UnitType.Port), PORT_PATH_INVASION) <
+        PORT_INVASION_TWIN_TIER
+    ) {
+      return null;
+    }
+    const half = Math.floor(intent.troops / 2);
+    return [
+      new TransportShipExecution(player, intent.dst, half),
+      new TransportShipExecution(player, intent.dst, intent.troops - half),
+    ];
   }
 
   createExec(intent: StampedIntent): Execution {
@@ -134,6 +158,7 @@ export class Executor {
           player,
           intent.unitId,
           intent.amount,
+          intent.path,
         );
       case "delete_unit":
         return new DeleteUnitExecution(player, intent.unitId);

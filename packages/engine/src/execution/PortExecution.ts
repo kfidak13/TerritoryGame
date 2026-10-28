@@ -1,4 +1,8 @@
 import { UnitType } from "@openfront/engine-api/game/GameTypes";
+import {
+  PORT_PATH_TRADE,
+  PORT_TRADE_ROLLS,
+} from "@openfront/engine-lib/game/Upgrades";
 import { PseudoRandom } from "@openfront/engine-lib/PseudoRandom";
 import {
   zInt,
@@ -88,7 +92,9 @@ export class PortExecution implements Execution {
 
   shouldSpawnTradeShip(): boolean {
     const numTradeShips = this.mg.unitCount(UnitType.TradeShip);
-    for (let i = 0; i < this.port!.level(); i++) {
+    // Borderfall: the Trade path rolls for more ships.
+    const rolls = PORT_TRADE_ROLLS[this.port!.tiers()[PORT_PATH_TRADE]];
+    for (let i = 0; i < rolls; i++) {
       const spawnRate = this.mg
         .config()
         .tradeShipSpawnRate(this.tradeShipSpawnRejections, numTradeShips);
@@ -141,7 +147,9 @@ export class PortExecution implements Execution {
     const weightedPorts: Unit[] = [];
 
     for (const [i, otherPort] of ports.entries()) {
-      const expanded = new Array(otherPort.level()).fill(otherPort);
+      // Busier Trade ports draw more ships.
+      const weight = 1 + otherPort.tiers()[PORT_PATH_TRADE];
+      const expanded = new Array(weight).fill(otherPort);
       weightedPorts.push(...expanded);
       const tooClose =
         this.mg.manhattanDist(this.port!.tile(), otherPort.tile()) <

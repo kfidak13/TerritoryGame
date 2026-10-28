@@ -47,6 +47,8 @@ function makeUnit(
     troops: 0,
     missileTimerQueue: [],
     level: 1,
+    tiers: [0, 0, 0],
+    upgradeTicks: 0,
     veterancy: 0,
     hasTrainStation: false,
     trainType: null,

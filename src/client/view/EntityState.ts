@@ -67,6 +67,8 @@ export function unitStateFromUpdate(u: UnitUpdate): UnitState {
     troops: u.troops,
     missileTimerQueue: u.missileTimerQueue,
     level: u.level,
+    tiers: u.tiers?.slice() ?? [0, 0, 0],
+    upgradeTicks: u.upgradeTicks ?? 0,
     veterancy: u.warshipState?.veterancy ?? 0,
     hasTrainStation: u.hasTrainStation,
     trainType: trainTypeToNum(u.trainType),
@@ -102,6 +104,8 @@ export function applyUnitUpdateInPlace(target: UnitState, u: UnitUpdate): void {
   target.troops = u.troops;
   target.missileTimerQueue = u.missileTimerQueue;
   target.level = u.level;
+  target.tiers = u.tiers?.slice() ?? [0, 0, 0];
+  target.upgradeTicks = u.upgradeTicks ?? 0;
   target.veterancy = u.warshipState?.veterancy ?? 0;
   target.hasTrainStation = u.hasTrainStation;
   target.trainType = trainTypeToNum(u.trainType);

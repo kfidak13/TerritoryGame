@@ -437,6 +437,8 @@ export const UNIT_FIELDS: readonly FieldDef<UnitFields>[] = [
   ),
   // Borderfall disasters (appended; REPLAY_VERSION 4).
   field(["disrupted", BOOL]),
+  // Borderfall upgrade paths (appended; REPLAY_VERSION 6).
+  field(["tiers", list(U8)], ["upgradeTicks", U32]),
 ];
 
 for (const [name, schema] of [

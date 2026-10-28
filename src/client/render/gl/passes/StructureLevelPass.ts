@@ -1,7 +1,7 @@
 /**
  * StructureLevelPass — level numbers above structures.
  *
- * Renders level digits for structures with level > 1 in one of two fonts,
+ * Renders level digits for upgraded structures in one of two fonts,
  * switchable at runtime via settings.structureLevel.classicFont:
  *   - classic: the round_6x6_modified bitmap font (white digits with a
  *     baked-in dark outline), matching the v31 StructureLayer look.
@@ -312,9 +312,11 @@ export class StructureLevelPass {
     for (const unit of units.values()) {
       if (!unit.isActive) continue;
       if (!STRUCTURE_TYPES.has(unit.unitType)) continue;
-      if (unit.level <= 1) continue;
+      // Borderfall: a building's level is its furthest upgrade path.
+      const level = Math.max(...unit.tiers);
+      if (level < 1) continue;
 
-      const levelStr = unit.level.toString();
+      const levelStr = level.toString();
       layoutString(
         levelStr,
         glyph,

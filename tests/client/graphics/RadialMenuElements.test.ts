@@ -546,87 +546,75 @@ describe("RadialMenuElements", () => {
       }
     });
 
-    it("builds a new building at the most levels gold and goods allow", () => {
+    it("builds a new building at once, with no level ring", () => {
       mockPlayerActions.buildableUnits = [
-        {
-          type: UnitType.City,
-          canBuild: 77,
-          canUpgrade: false,
-          cost: 100n,
-          upgradeCosts: [100n, 200n, 300n, 400n, 500n],
-        },
+        { type: UnitType.City, canBuild: 77, canUpgrade: false, cost: 100n },
       ];
-      (mockGame as any).config = vi.fn(() => ({
-        isUnitDisabled: () => false,
-        goodsEnabled: () => true,
-      }));
-      // The build itself takes no goods; each upgrade after it takes 40 metal.
-      (mockGame as any).myPlayer = vi.fn(() => ({
-        gold: () => 10_000n,
-        goods: () => [0, 0, 85],
-      }));
       const cityElement = buildMenuElement.subMenu!(mockParams).find(
         (item) => item.id === "build_City",
       );
-      const options = cityElement!.subMenu!(mockParams);
-      options[options.length - 1].action!(mockParams);
-      expect(mockParams.eventBus.emit).toHaveBeenLastCalledWith(
-        expect.objectContaining({
-          unit: UnitType.City,
-          tile: mockParams.tile,
-          amount: 3,
-        }),
-      );
+      expect(cityElement!.subMenu!(mockParams)).toHaveLength(0);
     });
 
-    it("offers x1 plus the largest affordable bulk amount", () => {
-      mockPlayerActions.buildableUnits = [
-        {
-          type: UnitType.City,
-          canBuild: true,
-          canUpgrade: 123,
-          cost: 100n,
-          upgradeCosts: [100n, 250n, 450n, 700n, 1000n],
-        },
-      ];
+    describe("upgrade paths", () => {
+      function ring(tiers: number[], level5s = 0) {
+        mockPlayerActions.buildableUnits = [
+          { type: UnitType.City, canBuild: false, canUpgrade: 123, cost: 1n },
+        ];
+        (mockGame as any).config = vi.fn(() => ({
+          isUnitDisabled: () => false,
+          goodsEnabled: () => true,
+        }));
+        (mockGame as any).unit = vi.fn(() => ({
+          tiers: () => tiers,
+          isUnderConstruction: () => false,
+        }));
+        (mockGame as any).myPlayer = vi.fn(() => ({
+          gold: () => 1_000_000_000n,
+          goods: () => [10_000, 10_000, 10_000],
+          units: () =>
+            Array.from({ length: level5s }, () => ({ tiers: () => [5, 0, 0] })),
+        }));
+        const cityElement = buildMenuElement.subMenu!(mockParams).find(
+          (item) => item.id === "build_City",
+        );
+        return cityElement!.subMenu!(mockParams);
+      }
 
-      const subMenu = buildMenuElement.subMenu!(mockParams);
-      const cityElement = subMenu.find((item) => item.id === "build_City");
+      it("offers a slot per path, then Max up the furthest one", () => {
+        const options = ring([2, 0, 0]);
+        expect(options.map((o) => o.id)).toEqual([
+          `upgrade_${UnitType.City}_path0`,
+          `upgrade_${UnitType.City}_path1`,
+          `upgrade_${UnitType.City}_path2`,
+          `upgrade_${UnitType.City}_max`,
+        ]);
+        expect(options.map((o) => o.disabled(mockParams))).toEqual([
+          false,
+          false,
+          false,
+          false,
+        ]);
+        options[1].action!(mockParams);
+        expect(mockParams.eventBus.emit).toHaveBeenLastCalledWith(
+          expect.objectContaining({ unitId: 123, path: 1, amount: 1 }),
+        );
+        options[3].action!(mockParams);
+        expect(mockParams.eventBus.emit).toHaveBeenLastCalledWith(
+          expect.objectContaining({ unitId: 123, path: 0, amount: 5 }),
+        );
+      });
 
-      // Only x1 affordable: no submenu — the click upgrades x1 directly.
-      (mockGame as any).myPlayer = vi.fn(() => ({ gold: () => 249n }));
-      expect(cityElement!.subMenu!(mockParams)).toHaveLength(0);
-
-      // 999 covers four upgrades: always the fixed x1/x5/x10/xMax slots,
-      // with unexecutable steps disabled and the max slot at x4.
-      (mockGame as any).myPlayer = vi.fn(() => ({ gold: () => 999n }));
-      let options = cityElement!.subMenu!(mockParams);
-      expect(options.map((o) => o.id)).toEqual([
-        `upgrade_${UnitType.City}_1`,
-        `upgrade_${UnitType.City}_5`,
-        `upgrade_${UnitType.City}_10`,
-        `upgrade_${UnitType.City}_max`,
-      ]);
-      expect(options.map((o) => o.disabled(mockParams))).toEqual([
-        false,
-        true,
-        true,
-        false,
-      ]);
-      options[3].action!(mockParams);
-      expect(mockParams.eventBus.emit).toHaveBeenLastCalledWith(
-        expect.objectContaining({ amount: 4 }),
-      );
-
-      // The full x5 total: the x5 slot becomes executable.
-      (mockGame as any).myPlayer = vi.fn(() => ({ gold: () => 1000n }));
-      options = cityElement!.subMenu!(mockParams);
-      expect(options.map((o) => o.disabled(mockParams))).toEqual([
-        false,
-        false,
-        true,
-        false,
-      ]);
+      it("shuts the third path, stops the second at 2, and allows two level 5s", () => {
+        expect(ring([3, 2, 0]).map((o) => o.disabled(mockParams))).toEqual([
+          false,
+          true,
+          true,
+          false,
+        ]);
+        expect(ring([4, 0, 0], 2)[0].disabled(mockParams)).toBe(true);
+        expect(ring([4, 0, 0], 1)[0].disabled(mockParams)).toBe(false);
+      });
     });
 
     it("caps the nuke bulk amount at loaded silo tubes", () => {

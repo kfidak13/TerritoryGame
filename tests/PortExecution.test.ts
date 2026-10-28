@@ -25,7 +25,7 @@ describe("PortExecution", () => {
     game.config().structureMinDist = () => 10;
   });
 
-  test("Destination ports chances scale with level", () => {
+  test("Destination ports chances scale with Trade level", () => {
     game.config().proximityBonusPortsNb = () => 0;
     game.config().tradeShipShortRangeDebuff = () => 0;
 
@@ -41,8 +41,8 @@ describe("PortExecution", () => {
 
     other.conquer(game.ref(0, 0));
     const otherPort = other.buildUnit(UnitType.Port, game.ref(0, 0), {});
-    otherPort.increaseLevel();
-    otherPort.increaseLevel();
+    otherPort.raiseTier(0);
+    otherPort.raiseTier(0);
 
     const ports = execution.tradingPorts();
 
@@ -97,7 +97,8 @@ describe("PortExecution", () => {
   test("shouldSpawnTradeShip recomputes spawn rate per level with updated rejection count", () => {
     player.conquer(game.ref(7, 10));
     const port = player.buildUnit(UnitType.Port, game.ref(7, 10), {});
-    port.increaseLevel(); // level 2
+    port.raiseTier(0); // Trade 2: two rolls
+    port.raiseTier(0);
     const execution = new PortExecution(port);
     execution.init(game, 0);
 

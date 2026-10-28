@@ -88,6 +88,8 @@ export class SendUpgradeStructureIntentEvent implements GameEvent {
     public readonly unitId: number,
     public readonly unitType: UnitType,
     public readonly amount: number = 1,
+    /** Borderfall upgrade path; the engine picks its furthest if unset. */
+    public readonly path?: number,
   ) {}
 }
 
@@ -891,6 +893,7 @@ export class Transport {
       unit: event.unitType,
       unitId: event.unitId,
       amount: event.amount,
+      path: event.path,
     });
   }
 

@@ -17,6 +17,11 @@ import {
   foodUpkeep,
   OIL_RIG_MAX_HEALTH,
 } from "../game/Goods";
+import {
+  CAPITAL_REGROWTH_BONUS,
+  cityPathTroops,
+  isCapital,
+} from "../game/Upgrades";
 import { assertNever } from "../Util";
 
 export interface NukeMagnitude {
@@ -387,8 +392,11 @@ export class Config {
       ? player
           .units(UnitType.City)
           .filter((u) => !u.isUnderConstruction() && !u.isDisrupted())
-          .map((city) => city.level())
-          .reduce((a, b) => a + b, 0) * this.cityTroopIncrease()
+          // Borderfall: a base city's share plus its upgrade paths'.
+          .map(
+            (city) => this.cityTroopIncrease() + cityPathTroops(city.tiers()),
+          )
+          .reduce((a, b) => a + b, 0)
       : 0;
     const maxTroops =
       player.type() === PlayerType.Human && this.hasInfiniteTroopsFor(player)
@@ -451,6 +459,15 @@ export class Config {
 
     if (this.goodsEnabled()) {
       toAdd *= foodGrowthModifier(player, this.foodLandFed(player));
+    }
+
+    // Borderfall: a level-5 Capital speeds all its owner's regrowth.
+    if (
+      player
+        .units(UnitType.City)
+        .some((c) => !c.isUnderConstruction() && isCapital(c.tiers()))
+    ) {
+      toAdd *= 1 + CAPITAL_REGROWTH_BONUS;
     }
 
     return Math.min(player.troops() + toAdd, max) - player.troops();

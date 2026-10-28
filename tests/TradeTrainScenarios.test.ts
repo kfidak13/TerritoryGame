@@ -159,7 +159,8 @@ function buildPorts(game: Game, player: Player, side: TradeSide): Unit[] {
   const ocean = oceanOf(map.ref(cx, cy));
 
   const port = build(game, player, UnitType.Port, cx, cy);
-  for (let l = 1; l < (side.portLevel ?? 1); l++) port.increaseLevel();
+  // Borderfall: portLevel is the port's Trade path tier.
+  for (let l = 0; l < (side.portLevel ?? 0); l++) port.raiseTier(0);
   const ports = [port];
 
   for (let y = Math.max(0, cy - r); y <= cy + r && ports.length < count; y++) {
@@ -286,8 +287,8 @@ describe("trade ship scenarios", () => {
     ).toMatchSnapshot();
   }, 120_000);
 
-  // Same route as "across the ocean" but side A's port is level 3, which
-  // rolls the spawn chance three times per check.
+  // Same route as "across the ocean" but side A's port is at Trade level 3,
+  // which rolls the spawn chance twice per check and pays 50% more.
   test("across the ocean, level-3 port", async () => {
     expect(
       await runTradeScenario({

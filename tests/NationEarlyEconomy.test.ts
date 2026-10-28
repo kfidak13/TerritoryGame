@@ -10,6 +10,7 @@ import { ConstructionExecution } from "@openfront/engine/execution/ConstructionE
 import { NationStructureBehavior } from "@openfront/engine/execution/nation/NationStructureBehavior";
 import { UpgradeStructureExecution } from "@openfront/engine/execution/UpgradeStructureExecution";
 import { createGame, L, W } from "./core/pathfinding/_fixtures";
+import { executeTicks } from "./util/utils";
 
 // size x size with a lake in the middle half: `nation` owns the west coast, `other` the
 // east coast, optionally with team spawn areas on either shore. When landlocked, `coast`
@@ -327,10 +328,10 @@ describe("Nation structure upgrades", () => {
     },
   );
 
-  // The next port levels cost 250k, 500k, then 1M each. With four city equivalents the nation
+  // Port levels cost 125k, 250k, 500k... (Upgrades.ts). With four city equivalents the nation
   // wants three ports, so two more levels.
   it.each([
-    ["what the gold beyond the 1.5M savings pays for", 2_000_000n, 1],
+    ["what the gold beyond the 1.5M savings pays for", 1_750_000n, 1],
     ["what the port ratio asks for", 1_000_000_000n, 2],
   ])("upgrades its port by %s", (_, gold, levels) => {
     const { game, behavior, port } = withPort(Difficulty.Hard, {
@@ -339,8 +340,8 @@ describe("Nation structure upgrades", () => {
     });
     expect(behavior.handleStructures()).toBe(true);
     game.endSpawnPhase();
-    game.executeNextTick();
-    expect(port.level()).toBe(1 + levels);
+    executeTicks(game, 200);
+    expect(port.tiers()[0]).toBe(levels);
   });
 
   // Two cities and a port leave nothing else due, and are dense enough to upgrade a city.
@@ -353,27 +354,27 @@ describe("Nation structure upgrades", () => {
     nation.addGold(1_000_000_000n);
     expect(setup.behavior.handleStructures()).toBe(true);
     game.endSpawnPhase();
-    game.executeNextTick();
+    // Every level takes time to build (Upgrades.ts upgradeTicks).
+    executeTicks(game, 600);
     const cityLevels = nation
       .units(UnitType.City)
-      .reduce((sum, c) => sum + c.level(), 0);
+      .reduce((sum, c) => sum + c.tiers()[0], 0);
     return { ...setup, cityLevels };
   }
 
   it.each([
     [Difficulty.Easy, 3],
-    [Difficulty.Medium, 10],
+    [Difficulty.Medium, 5],
   ])("%s buys at most %i city levels at once", (difficulty, levels) => {
-    expect(withCities(difficulty).cityLevels).toBe(2 + levels);
+    expect(withCities(difficulty).cityLevels).toBe(levels);
   });
 
   it.each([Difficulty.Hard, Difficulty.Impossible])(
-    "%s spends everything beyond its savings on city levels at once",
+    "%s takes a city straight to level 5 when it can pay",
     (difficulty) => {
       const { nation, cityLevels } = withCities(difficulty);
-      expect(cityLevels).toBeGreaterThan(900);
+      expect(cityLevels).toBe(5);
       expect(nation.gold()).toBeGreaterThanOrEqual(30_000_000n);
-      expect(nation.gold()).toBeLessThan(31_000_000n);
     },
   );
 

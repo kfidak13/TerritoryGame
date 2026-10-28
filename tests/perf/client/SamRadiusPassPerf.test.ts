@@ -142,6 +142,8 @@ function createMockSAMStructures(
       troops: 0,
       missileTimerQueue: [],
       level,
+      tiers: [0, 0, 0],
+      upgradeTicks: 0,
       veterancy: 0,
       hasTrainStation: false,
       trainType: 0,

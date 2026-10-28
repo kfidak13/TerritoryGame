@@ -9,6 +9,10 @@ import {
 import { NukeType } from "@openfront/engine-api/StatsSchemas";
 import { atan2 } from "@openfront/engine-lib/DetMath";
 import { listNukeBreakAlliance } from "@openfront/engine-lib/execution/NukeAlliance";
+import {
+  NUKE_STRENGTH,
+  nukeTierDamage,
+} from "@openfront/engine-lib/game/Upgrades";
 import { PseudoRandom } from "@openfront/engine-lib/PseudoRandom";
 import {
   zInt,
@@ -476,6 +480,8 @@ export class NukeExecution implements Execution {
     }
 
     const outer2 = magnitude.outer * magnitude.outer;
+    const inner2 = magnitude.inner * magnitude.inner;
+    const strength = NUKE_STRENGTH[this.nukeType] ?? 1;
     const dst = this.dst;
     for (const unit of mg.units()) {
       const type = unit.type();
@@ -488,11 +494,22 @@ export class NukeExecution implements Execution {
       ) {
         continue;
       }
-      if (mg.euclideanDistSquared(dst, unit.tile()) < outer2) {
+      const d2 = mg.euclideanDistSquared(dst, unit.tile());
+      if (d2 < outer2) {
         // treatAFKFriendly matches warship targeting: a disconnected
         // teammate's or ally's units are still not kills.
         const friendly = this.player.isFriendly(unit.owner(), true);
-        unit.delete(true, friendly ? undefined : this.player);
+        const destroyer = friendly ? undefined : this.player;
+        if (!Structures.has(type)) {
+          unit.delete(true, destroyer);
+          continue;
+        }
+        // Borderfall: a building loses as many tiers as the nuke is strong
+        // (half at the edge), and goes once it has none left to lose.
+        const damage = nukeTierDamage(strength, d2 <= inner2);
+        for (let i = 0; i < damage && unit.isActive(); i++) {
+          unit.decreaseLevel(destroyer);
+        }
       }
     }
 

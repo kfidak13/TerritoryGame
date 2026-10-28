@@ -17,6 +17,7 @@ import {
   GOOD_BUILDINGS,
   oilRigRange,
 } from "@openfront/engine-lib/game/Goods";
+import { mainPath, MAX_TIER } from "@openfront/engine-lib/game/Upgrades";
 import { PseudoRandom } from "@openfront/engine-lib/PseudoRandom";
 import {
   readVersioned,
@@ -1064,14 +1065,18 @@ export class NationStructureBehavior {
       new UpgradeStructureExecution(
         this.player,
         structure.id(),
-        this.upgradeAmount(structure.type()),
+        this.upgradeAmount(structure),
       ),
     );
     return true;
   }
 
   /** One level, or as many as the gold beyond the save-up target pays for and the structure ratios ask for. */
-  private upgradeAmount(type: UnitType): number {
+  private upgradeAmount(structure: Unit): number {
+    const type = structure.type();
+    // Nations keep to each building's first path (engine-lib/game/Upgrades).
+    const path = mainPath(structure.tiers());
+    const tier = structure.tiers()[path];
     const { difficulty } = this.game.config().gameConfig();
     // Cities set the ratios, so only gold limits them
     const due =
@@ -1082,11 +1087,17 @@ export class NationStructureBehavior {
             this.cityCount(),
             this._sharedWaterComponents !== null,
           );
-    const max = Math.min(MAX_UPGRADES_AT_ONCE[difficulty], due);
+    const max = Math.min(
+      MAX_UPGRADES_AT_ONCE[difficulty],
+      due,
+      MAX_TIER - tier,
+    );
     let spare = this.player.gold() - this.getSaveUpTarget();
     let amount = 0;
     while (amount < max) {
-      const cost = this.cost(type, amount);
+      const cost = this.game
+        .config()
+        .upgradeCost(this.player, type, path, tier + amount + 1).gold;
       if (cost > spare) break;
       spare -= cost;
       amount++;

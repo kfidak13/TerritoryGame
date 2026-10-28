@@ -233,6 +233,12 @@ export class UnitView implements UnitLike {
   level(): number {
     return this.state.level;
   }
+  tiers(): readonly number[] {
+    return this.state.tiers;
+  }
+  upgradeTicks(): number {
+    return this.state.upgradeTicks;
+  }
   hasTrainStation(): boolean {
     return this.state.hasTrainStation;
   }

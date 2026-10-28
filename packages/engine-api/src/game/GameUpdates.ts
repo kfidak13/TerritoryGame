@@ -217,6 +217,10 @@ export interface UnitUpdate {
   disrupted?: boolean;
   missileTimerQueue: number[];
   level: number;
+  /** Borderfall: upgrade tier per path; absent means none. */
+  tiers?: number[];
+  /** Borderfall: length of the upgrade it is busy with, in ticks. */
+  upgradeTicks?: number;
   hasTrainStation: boolean;
   trainType?: TrainType; // Only for trains
   loaded?: boolean; // Only for trains

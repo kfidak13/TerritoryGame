@@ -14,6 +14,7 @@
 
 import { UnitType } from "@openfront/engine-api/game/GameTypes";
 import type { Config } from "@openfront/engine-lib/configuration/Config";
+import { navyScaled } from "@openfront/engine-lib/game/Upgrades";
 import { maxHealthWithVeterancy } from "@openfront/engine-lib/game/Veterancy";
 import type { RendererConfig, UnitState } from "../../types";
 import { UT_MISSILE_SILO, UT_SAM_LAUNCHER } from "../../types";
@@ -146,10 +147,13 @@ export class BarPass {
       if (unit.health === null || unit.health <= 0) continue;
       // Veteran warships have a higher effective max health, so a full veteran
       // ship reads as full. Shared with the engine's UnitImpl.maxHealth().
-      const maxHealth = maxHealthWithVeterancy(
-        this.warshipMaxHealth,
-        unit.veterancy,
-        this.veterancyHealthBonus,
+      const maxHealth = navyScaled(
+        maxHealthWithVeterancy(
+          this.warshipMaxHealth,
+          unit.veterancy,
+          this.veterancyHealthBonus,
+        ),
+        unit.tiers,
       );
       if (unit.health < maxHealth) {
         this.pushHealth(unit, unit.health / maxHealth);
@@ -309,8 +313,9 @@ export class BarPass {
     // Construction progress
     if (unit.underConstruction && unit.constructionStartTick !== null) {
       const duration =
-        this.config.unitInfo(unit.unitType as UnitType).constructionDuration ??
-        50;
+        unit.upgradeTicks ||
+        (this.config.unitInfo(unit.unitType as UnitType).constructionDuration ??
+          50);
       const elapsed = gameTick - unit.constructionStartTick;
       return Math.min(1, Math.max(0, elapsed / duration));
     }

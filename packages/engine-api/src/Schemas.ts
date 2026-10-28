@@ -556,7 +556,7 @@ export const AdminActionSchema = z.discriminatedUnion("kind", [
     unit: z.enum(UnitType),
     tile: zb.uint(),
     owner: MappedID,
-    level: zb.uint({ min: 1, max: 20 }),
+    level: zb.uint({ min: 1, max: 6 }),
   }),
   // Owner null: back to neutral.
   z.object({
@@ -607,6 +607,8 @@ export const UpgradeStructureIntentSchema = z.object({
   unit: z.enum(UnitType),
   unitId: zb.uint(),
   amount: zb.uint({ min: 1, max: MAX_UPGRADE_AMOUNT }).optional(),
+  // Borderfall upgrade path (engine-lib/game/Upgrades); its furthest if left out.
+  path: zb.uint({ max: 2 }).optional(),
 });
 
 export const CancelAttackIntentSchema = z.object({

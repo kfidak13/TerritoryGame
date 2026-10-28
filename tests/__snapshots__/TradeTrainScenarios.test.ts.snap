@@ -43,20 +43,20 @@ exports[`trade ship scenarios > across the ocean 1`] = `
 exports[`trade ship scenarios > across the ocean, level-3 port 1`] = `
 {
   "a": {
-    "arrivalsPerMinute": 14.6,
-    "goldPerMinute": 1485000,
-    "shipsArrived": 73,
-    "shipsSent": 81,
-    "tradeGold": 7424274n,
+    "arrivalsPerMinute": 11,
+    "goldPerMinute": 1623000,
+    "shipsArrived": 55,
+    "shipsSent": 60,
+    "tradeGold": 8115723n,
   },
   "b": {
     "arrivalsPerMinute": 5.8,
-    "goldPerMinute": 1485000,
+    "goldPerMinute": 1623000,
     "shipsArrived": 29,
     "shipsSent": 35,
-    "tradeGold": 7424274n,
+    "tradeGold": 8115723n,
   },
-  "goldPerTrade": 72790,
+  "goldPerTrade": 96620,
 }
 `;
 

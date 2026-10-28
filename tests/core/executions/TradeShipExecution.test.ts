@@ -97,6 +97,7 @@ describe("TradeShipExecution", () => {
       isActive: vi.fn(() => true),
       isUnderConstruction: vi.fn(() => false),
       isMarkedForDeletion: vi.fn(() => false),
+      tiers: vi.fn(() => [0, 0, 0]),
     } as any;
 
     dstPort = {

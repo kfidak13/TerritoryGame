@@ -1,4 +1,5 @@
-import { MessageType } from "@openfront/engine-api/game/GameTypes";
+import { MessageType, Structures } from "@openfront/engine-api/game/GameTypes";
+import { sellRefund } from "@openfront/engine-lib/game/Upgrades";
 import {
   zInt,
   zPlayerRef,
@@ -89,6 +90,12 @@ export class DeleteUnitExecution implements Execution {
       return;
     }
     if (this.unit.isOverdueDeletion()) {
+      // Borderfall: selling a building gives back half what it cost.
+      if (Structures.has(this.unit.type())) {
+        const refund = sellRefund(this.unit.type(), this.unit.tiers());
+        this.player.addGold(refund.gold);
+        this.player.addGoods(refund.goods);
+      }
       this.unit.delete(false);
 
       this.mg.displayMessage(

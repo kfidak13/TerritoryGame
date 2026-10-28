@@ -48,6 +48,8 @@ export interface UnitLike {
   /** Borderfall: struck by disease or drought, so it produces nothing. */
   isDisrupted(): boolean;
   level(): number;
+  /** Borderfall: upgrade tier on each path (engine-lib/game/Upgrades). */
+  tiers(): readonly number[];
 }
 
 export interface GameLike extends GameMap {

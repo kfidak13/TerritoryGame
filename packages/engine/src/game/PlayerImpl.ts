@@ -12,7 +12,6 @@ import {
   Good,
   GOODS,
   GoodsAmounts,
-  MAX_UPGRADE_AMOUNT,
   PlayerBuildable,
   PlayerBuildableUnitType,
   PlayerID,
@@ -51,6 +50,14 @@ import {
   MAX_TRADE_PACTS,
   tradePactMultiplier,
 } from "@openfront/engine-lib/game/Trade";
+import {
+  canRaiseTier,
+  mainPath,
+  MAX_TIER,
+  MAX_TIER5_PER_TYPE,
+  topTier,
+  upgradePaths,
+} from "@openfront/engine-lib/game/Upgrades";
 import { PseudoRandom } from "@openfront/engine-lib/PseudoRandom";
 import {
   snapshotType,
@@ -1531,6 +1538,10 @@ export class PlayerImpl implements Player {
       throw new Error(`Cannot capture unit, ${this} already owns ${unit}`);
     }
     unit.setOwner(this);
+    // Borderfall: a captured building loses a tier on its furthest path.
+    if (Structures.has(unit.type()) && topTier(unit.tiers()) > 0) {
+      unit.decreaseLevel();
+    }
   }
 
   buildUnit<T extends UnitType>(
@@ -1630,25 +1641,40 @@ export class PlayerImpl implements Player {
     return true;
   }
 
-  public canUpgradeUnit(unit: Unit): boolean {
-    if (!this.canUpgradeUnitType(unit.type())) {
+  /**
+   * Whether `unit` can go a tier up `path` (its furthest path by default)
+   * now: the path rules, the two level-5s a type allows, and the cost.
+   */
+  public canUpgradeUnit(
+    unit: Unit,
+    path: number = mainPath(unit.tiers()),
+  ): boolean {
+    const type = unit.type();
+    if (!this.canUpgradeUnitType(type) || !this.isUnitValidToUpgrade(unit)) {
       return false;
     }
-    if (!this.canBuildUnitType(unit.type(), null, true)) {
+    if (this.mg.config().isUnitDisabled(type) || !this.isAlive()) return false;
+    const tiers = unit.tiers();
+    if (!canRaiseTier(type, tiers, path)) return false;
+    const tier = tiers[path] + 1;
+    if (
+      tier === MAX_TIER &&
+      this._units.filter(
+        (u) => u.type() === type && topTier(u.tiers()) >= MAX_TIER,
+      ).length >= MAX_TIER5_PER_TYPE
+    ) {
       return false;
     }
-    if (!this.isUnitValidToUpgrade(unit)) {
-      return false;
-    }
-    return true;
+    const cost = this.mg.config().upgradeCost(this, type, path, tier);
+    return this._gold >= cost.gold && canAffordGoods(this._goods, cost.goods);
   }
 
-  upgradeUnit(unit: Unit) {
-    const cost = this.mg.unitInfo(unit.type()).cost(this.mg, this);
-    this.removeGold(cost);
-    const goods = this.goodsCostFor(unit.type(), true);
-    if (goods !== null) this.removeGoods(goods);
-    unit.increaseLevel();
+  /** Pays for `unit`'s next tier on `path`; UpgradeStructureExecution adds it. */
+  upgradeUnit(unit: Unit, path: number = mainPath(unit.tiers())) {
+    const tier = unit.tiers()[path] + 1;
+    const cost = this.mg.config().upgradeCost(this, unit.type(), path, tier);
+    this.removeGold(cost.gold);
+    if (cost.goods !== null) this.removeGoods(cost.goods);
     this.recordUnitConstructed(unit.type());
   }
 
@@ -1672,44 +1698,46 @@ export class PlayerImpl implements Player {
     for (let i = 0; i < len; i++) {
       const u = units[i];
 
-      const cost = config.unitInfo(u).cost(mg, this);
+      const buildCost = config.unitInfo(u).cost(mg, this);
+      let cost = buildCost;
       let canUpgrade: number | false = false;
       let canBuild: TileRef | false = false;
+      let goods = this.goodsCostFor(u, false);
+      // Cumulative gold for the next tiers up the furthest path.
+      let upgradeCosts: Gold[] | undefined;
 
-      if (tile !== null && this.canBuildUnitType(u, cost) && !inSpawnPhase) {
-        if (this.canUpgradeUnitType(u)) {
-          const existingUnit = this.findExistingUnitToUpgrade(u, tile);
-          if (
-            existingUnit !== false &&
-            this.isUnitValidToUpgrade(existingUnit) &&
-            this.canBuildUnitType(u, cost, true)
-          ) {
-            canUpgrade = existingUnit.id();
+      if (tile !== null && !inSpawnPhase) {
+        // Borderfall: an upgrade is priced by its tier, apart from building
+        // a new one, and any path it can go up now counts.
+        const existing = this.canUpgradeUnitType(u)
+          ? this.findExistingUnitToUpgrade(u, tile)
+          : false;
+        if (
+          existing !== false &&
+          upgradePaths(u).some((_, p) => this.canUpgradeUnit(existing, p))
+        ) {
+          canUpgrade = existing.id();
+          const tiers = existing.tiers();
+          const path = mainPath(tiers);
+          upgradeCosts = [];
+          let total = 0n;
+          for (let tier = tiers[path] + 1; tier <= MAX_TIER; tier++) {
+            const step = config.upgradeCost(this, u, path, tier);
+            total += step.gold;
+            upgradeCosts.push(total);
+            if (tier === tiers[path] + 1) {
+              cost = step.gold;
+              goods = step.goods;
+            }
           }
         }
-        canBuild = this.canSpawnUnitType(u, tile, validTiles);
+        if (this.canBuildUnitType(u, buildCost)) {
+          canBuild = this.canSpawnUnitType(u, tile, validTiles);
+        }
       }
-      const goods = this.goodsCostFor(u, canUpgrade !== false);
       const goodsShort = !canAffordGoods(this._goods, goods);
 
       const buildNew = canBuild !== false && canUpgrade === false;
-
-      // Cumulative bulk-upgrade totals. Each upgrade raises the unit's level
-      // and the constructed count, so step n costs the same as if the player
-      // already had n extra units — cost(mg, this, n).
-      // A new upgradable structure prices the same way: its build is step 0.
-      let upgradeCosts: Gold[] | undefined;
-      if (
-        canUpgrade !== false ||
-        (buildNew && Structures.has(u) && this.canUpgradeUnitType(u))
-      ) {
-        upgradeCosts = new Array<Gold>(MAX_UPGRADE_AMOUNT);
-        let total = 0n;
-        for (let n = 0; n < MAX_UPGRADE_AMOUNT; n++) {
-          total += config.unitInfo(u).cost(mg, this, n);
-          upgradeCosts[n] = total;
-        }
-      }
 
       result[i] = {
         type: u,
