@@ -6,8 +6,12 @@ import {
 } from "@openfront/engine-api/game/GameTypes";
 import {
   canRaiseTier,
+  maxPostReach,
   missileTubes,
   navyScaled,
+  POST_PATH_BARRACKS,
+  POST_PATH_WATCHTOWER,
+  postReach,
   SAM_PATH_AEGIS,
   samRangeLevel,
   sellRefund,
@@ -20,6 +24,7 @@ import {
   upgradeGold,
   upgradeTicks,
 } from "@openfront/engine-lib/game/Upgrades";
+import { DefensePostExecution } from "@openfront/engine/execution/DefensePostExecution";
 import { DeleteUnitExecution } from "@openfront/engine/execution/DeleteUnitExecution";
 import { Executor } from "@openfront/engine/execution/ExecutionManager";
 import { NukeExecution } from "@openfront/engine/execution/NukeExecution";
@@ -29,6 +34,7 @@ import { UpgradeStructureExecution } from "@openfront/engine/execution/UpgradeSt
 import { Game, Player, Unit } from "@openfront/engine/game/Game";
 import { setup } from "./util/Setup";
 import { expectSnapshotRoundTrip } from "./util/Snapshot";
+import { UseRealAttackLogic } from "./util/TestConfig";
 import { executeTicks } from "./util/utils";
 
 describe("Upgrade paths", () => {
@@ -302,5 +308,74 @@ describe("Missile Silo paths", () => {
     executeTicks(game, SILO_PLAGUE_TICKS[1]);
     rome.conquer(tile);
     expect(game.owner(tile)).toBe(rome);
+  });
+});
+
+describe("Defense Post paths", () => {
+  test("a Watchtower post reaches twice as far at level 5", () => {
+    expect(postReach(30, [0, 0, 0])).toBe(30);
+    expect(postReach(30, [0, 5, 0])).toBe(60);
+    expect(maxPostReach(30)).toBe(60);
+  });
+
+  test("Fortress hardens nearby land, Barracks speed regrowth and house troops", async () => {
+    const game = await setup("plains", { infiniteGold: true }, [
+      new PlayerInfo("rome", PlayerType.Human, null, "rome"),
+    ]);
+    const rome = game.player("rome");
+    for (let x = 0; x < 40; x++) rome.conquer(game.ref(x, 10));
+    rome.setTroops(1_000);
+    const config = game.config();
+    const growth = config.troopIncreaseRate(rome);
+    const cap = config.maxTroops(rome);
+    const post = rome.buildUnit(UnitType.DefensePost, game.ref(5, 10), {});
+    for (let i = 0; i < 5; i++) post.raiseTier(POST_PATH_BARRACKS);
+    expect(config.troopIncreaseRate(rome)).toBeGreaterThan(growth * 1.4);
+    expect(config.maxTroops(rome) - cap).toBe(5_000_000);
+
+    const attack = (fortress: number) =>
+      UseRealAttackLogic.prototype.attackLogic.call(config, {
+        terrain: game.terrainType(game.ref(5, 10)),
+        attackTroops: 10_000,
+        attacker: { type: PlayerType.Human, numTiles: 100 },
+        defender: {
+          type: PlayerType.Human,
+          numTiles: 100,
+          troops: 10_000,
+          isTraitor: false,
+          isDisconnectedTeammate: false,
+        },
+        defenderHasDefensePost: true,
+        defensePostFortress: fortress,
+        falloutRatio: null,
+        borderSize: 10,
+      });
+    expect(attack(5).attackerTroopLoss).toBeGreaterThan(
+      attack(0).attackerTroopLoss * 4,
+    );
+    expect(attack(5).tickFraction).toBeGreaterThan(attack(0).tickFraction);
+  });
+
+  test("a level-2 Watchtower shells an enemy boat in reach", async () => {
+    // 16x16: land at x <= 7, ocean beyond.
+    const game = await setup("half_land_half_ocean", { instantBuild: true }, [
+      new PlayerInfo("rome", PlayerType.Human, null, "rome"),
+      new PlayerInfo("carthage", PlayerType.Human, null, "carthage"),
+    ]);
+    const rome = game.player("rome");
+    const carthage = game.player("carthage");
+    rome.conquer(game.ref(7, 2));
+    carthage.conquer(game.ref(0, 15));
+    game.endSpawnPhase();
+    const post = rome.buildUnit(UnitType.DefensePost, game.ref(7, 2), {});
+    post.raiseTier(POST_PATH_WATCHTOWER);
+    post.raiseTier(POST_PATH_WATCHTOWER);
+    game.addExecution(new DefensePostExecution(post));
+    const boat = carthage.buildUnit(UnitType.TransportShip, game.ref(9, 3), {
+      troops: 100,
+    });
+    // A post reloads for defensePostShellAttackRate (10 s) from the start.
+    executeTicks(game, 140);
+    expect(boat.isActive()).toBe(false);
   });
 });

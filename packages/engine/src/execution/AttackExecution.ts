@@ -10,6 +10,11 @@ import {
   UnitType,
 } from "@openfront/engine-api/game/GameTypes";
 import { renderTroops } from "@openfront/engine-lib/Format";
+import {
+  maxPostReach,
+  POST_PATH_FORTRESS,
+  postReach,
+} from "@openfront/engine-lib/game/Upgrades";
 import { PseudoRandom } from "@openfront/engine-lib/PseudoRandom";
 import {
   zInt,
@@ -373,15 +378,32 @@ export class AttackExecution implements Execution {
     // Same test as scanning nearbyUnits() for a post owned by the defender
     // (active, not under construction, within range), without building a
     // result array per conquered tile — this runs for every tile of every
-    // attack on the map.
-    const defenderHasDefensePost =
+    // attack on the map. Only near a post does it look closer: Borderfall
+    // posts reach as far as their Watchtower tier, and the best Fortress
+    // among those that cover the tile sets the defense.
+    const base = this.mg.config().defensePostRange();
+    let fortress = -1;
+    if (
       defender !== null &&
       this.mg.hasUnitNearby(
         tile,
-        this.mg.config().defensePostRange(),
+        maxPostReach(base),
         UnitType.DefensePost,
         defender.id(),
-      );
+      )
+    ) {
+      for (const { unit, distSquared } of this.mg.nearbyUnits(
+        tile,
+        maxPostReach(base),
+        UnitType.DefensePost,
+      )) {
+        if (unit.owner() !== defender) continue;
+        const reach = postReach(base, unit.tiers());
+        if (distSquared > reach * reach) continue;
+        fortress = Math.max(fortress, unit.tiers()[POST_PATH_FORTRESS]);
+      }
+    }
+    const defenderHasDefensePost = fortress >= 0;
     return {
       terrain: this.map.terrainType(tile),
       attackTroops,
@@ -401,6 +423,7 @@ export class AttackExecution implements Execution {
                 defender.isDisconnected() && this._owner.isOnSameTeam(defender),
             },
       defenderHasDefensePost,
+      defensePostFortress: Math.max(0, fortress),
       falloutRatio: this.mg.hasFallout(tile)
         ? this.mg.numTilesWithFallout() / this.mg.numLandTiles()
         : null,

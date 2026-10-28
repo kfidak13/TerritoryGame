@@ -21,6 +21,7 @@ import {
 } from "@openfront/engine-lib/execution/NukeAlliance";
 import {
   mainPath,
+  postReach,
   samRangeLevel,
   warheadMagnitude,
 } from "@openfront/engine-lib/game/Upgrades";
@@ -469,9 +470,15 @@ export class BuildPreviewController implements Controller {
       case UnitType.Factory:
         rangeRadius = this.game.config().trainStationMaxRange();
         break;
-      case UnitType.DefensePost:
-        rangeRadius = this.game.config().defensePostRange();
+      case UnitType.DefensePost: {
+        // An upgrade goes up the post's furthest path (Upgrades.ts).
+        const existing =
+          u.canUpgrade !== false ? this.game.unit(u.canUpgrade) : undefined;
+        const tiers = existing ? [...existing.tiers()] : [0, 0, 0];
+        if (existing) tiers[mainPath(tiers)]++;
+        rangeRadius = postReach(this.game.config().defensePostRange(), tiers);
         break;
+      }
     }
     let radiusTileX = this.game.x(placementTile);
     let radiusTileY = this.game.y(placementTile);

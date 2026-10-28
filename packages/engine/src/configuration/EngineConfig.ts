@@ -16,6 +16,8 @@ import { Config } from "@openfront/engine-lib/configuration/Config";
 import { exp, log, pow2 } from "@openfront/engine-lib/DetMath";
 import {
   cityGold,
+  POST_FORTRESS_DEFENSE_PERCENT,
+  POST_FORTRESS_SLOW_PERCENT,
   samRangeLevel,
   upgradeGold,
   upgradeGoods,
@@ -43,6 +45,8 @@ export interface AttackLogicInput {
   } | null;
   /** A defense post owned by the defender is in range of the tile. */
   defenderHasDefensePost: boolean;
+  /** Borderfall: the best Fortress tier among those posts. */
+  defensePostFortress?: number;
   /** Fraction of land tiles with fallout, or null if the tile has no fallout. */
   falloutRatio: number | null;
   /** Tiles on the attack front this tick (plus jitter); fixed for the tick. */
@@ -541,8 +545,14 @@ export class EngineConfig extends Config {
     let { mag, tileCost } = terrainAttackBase(input.terrain);
 
     if (defender !== null && input.defenderHasDefensePost) {
-      mag *= this.defensePostDefenseBonus();
-      tileCost *= this.defensePostSpeedBonus();
+      const fortress = input.defensePostFortress ?? 0;
+      mag *=
+        (this.defensePostDefenseBonus() *
+          POST_FORTRESS_DEFENSE_PERCENT[fortress]) /
+        100;
+      tileCost *=
+        (this.defensePostSpeedBonus() * POST_FORTRESS_SLOW_PERCENT[fortress]) /
+        100;
     }
     if (input.falloutRatio !== null) {
       const fallout = this.falloutDefenseModifier(input.falloutRatio);

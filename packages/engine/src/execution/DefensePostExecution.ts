@@ -1,3 +1,10 @@
+import { UnitType } from "@openfront/engine-api/game/GameTypes";
+import {
+  POST_PATH_WATCHTOWER,
+  POST_WATCHTOWER_BOAT_TIER,
+  POST_WATCHTOWER_WARSHIP_TIER,
+  postReach,
+} from "@openfront/engine-lib/game/Upgrades";
 import { zInt, zRef } from "@openfront/engine-lib/snapshot/SnapshotType";
 import { z } from "zod";
 import { Execution, Game, Unit } from "../game/Game";
@@ -61,49 +68,35 @@ export class DefensePostExecution implements Execution {
       this.target = null;
     }
 
-    // TODO: Reconsider how/if defense posts target ships.
-    // const ships = this.mg
-    //   .nearbyUnits(
-    //     this.post.tile(),
-    //     this.mg.config().defensePostTargettingRange(),
-    //     [UnitType.TransportShip, UnitType.Warship],
-    //   )
-    //   .filter(
-    //     ({ unit }) =>
-    //       this.post !== null &&
-    //       unit.owner() !== this.post.owner() &&
-    //       !unit.owner().isFriendly(this.post.owner()) &&
-    //       !this.alreadySentShell.has(unit),
-    //   );
-    //
-    // this.target =
-    //   ships.sort((a, b) => {
-    //     const { unit: unitA, distSquared: distA } = a;
-    //     const { unit: unitB, distSquared: distB } = b;
-    //
-    //     // Prioritize TransportShip
-    //     if (
-    //       unitA.type() === UnitType.TransportShip &&
-    //       unitB.type() !== UnitType.TransportShip
-    //     )
-    //       return -1;
-    //     if (
-    //       unitA.type() !== UnitType.TransportShip &&
-    //       unitB.type() === UnitType.TransportShip
-    //     )
-    //       return 1;
-    //
-    //     // If both are the same type, sort by distance (lower `distSquared` means closer)
-    //     return distA - distB;
-    //   })[0]?.unit ?? null;
-    //
-    // if (this.target === null || !this.target.isActive()) {
-    //   this.target = null;
-    //   return;
-    // } else {
-    //   this.shoot();
-    //   return;
-    // }
+    // Borderfall Watchtower path: from POST_WATCHTOWER_BOAT_TIER the post
+    // shells enemy boats in its reach, transports first, and from
+    // POST_WATCHTOWER_WARSHIP_TIER warships too.
+    const watch = this.post.tiers()[POST_PATH_WATCHTOWER];
+    if (watch < POST_WATCHTOWER_BOAT_TIER) return;
+    const owner = this.post.owner();
+    const reach = postReach(
+      this.mg.config().defensePostRange(),
+      this.post.tiers(),
+    );
+    const types =
+      watch >= POST_WATCHTOWER_WARSHIP_TIER
+        ? [UnitType.TransportShip, UnitType.Warship]
+        : [UnitType.TransportShip];
+    this.target =
+      this.mg
+        .nearbyUnits(this.post.tile(), reach, types)
+        .filter(
+          ({ unit }) =>
+            unit.owner() !== owner &&
+            !unit.owner().isFriendly(owner) &&
+            !this.alreadySentShell.has(unit),
+        )
+        .sort((a, b) => {
+          const boatA = a.unit.type() === UnitType.TransportShip ? 0 : 1;
+          const boatB = b.unit.type() === UnitType.TransportShip ? 0 : 1;
+          return boatA - boatB || a.distSquared - b.distSquared;
+        })[0]?.unit ?? null;
+    this.shoot();
   }
 
   isActive(): boolean {

@@ -18,9 +18,13 @@ import {
   OIL_RIG_MAX_HEALTH,
 } from "../game/Goods";
 import {
+  barracksTroops,
+  bestTier,
   CAPITAL_REGROWTH_BONUS,
   cityPathTroops,
   isCapital,
+  POST_BARRACKS_REGROWTH_PERCENT,
+  POST_PATH_BARRACKS,
 } from "../game/Upgrades";
 import { assertNever } from "../Util";
 
@@ -261,7 +265,10 @@ export class Config {
         };
         break;
       case UnitType.DefensePost:
-        info = { constructionDuration: this.instantBuild() ? 0 : 5 * 10 };
+        info = {
+          constructionDuration: this.instantBuild() ? 0 : 5 * 10,
+          upgradable: true,
+        };
         break;
       case UnitType.SAMLauncher:
         info = {
@@ -396,7 +403,12 @@ export class Config {
           .map(
             (city) => this.cityTroopIncrease() + cityPathTroops(city.tiers()),
           )
-          .reduce((a, b) => a + b, 0)
+          .reduce((a, b) => a + b, 0) +
+        // Borderfall: Barracks posts house troops too.
+        player
+          .units(UnitType.DefensePost)
+          .filter((u) => !u.isUnderConstruction())
+          .reduce((sum, post) => sum + barracksTroops(post.tiers()), 0)
       : 0;
     const maxTroops =
       player.type() === PlayerType.Human && this.hasInfiniteTroopsFor(player)
@@ -460,6 +472,14 @@ export class Config {
     if (this.goodsEnabled()) {
       toAdd *= foodGrowthModifier(player, this.foodLandFed(player));
     }
+
+    // Borderfall: the best Barracks post speeds all its owner's regrowth.
+    toAdd *=
+      1 +
+      POST_BARRACKS_REGROWTH_PERCENT[
+        bestTier(player.units(UnitType.DefensePost), POST_PATH_BARRACKS)
+      ] /
+        100;
 
     // Borderfall: a level-5 Capital speeds all its owner's regrowth.
     if (

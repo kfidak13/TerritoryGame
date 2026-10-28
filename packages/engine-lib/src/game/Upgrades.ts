@@ -48,8 +48,8 @@ const BASE_GOLD: Partial<Record<UnitType, number>> = {
   [UnitType.Farm]: 100_000,
   [UnitType.Mineshaft]: 100_000,
   [UnitType.OilExtractor]: 150_000,
-  // No paths yet: only for the sell refund.
   [UnitType.DefensePost]: 50_000,
+  // No paths yet: only for the sell refund.
   [UnitType.OilRig]: 200_000,
 };
 
@@ -78,6 +78,11 @@ const PATHS: Partial<Record<UnitType, readonly UpgradePath[]>> = {
     { key: "silo_warhead", goods: g(0, 25, 0) },
     { key: "silo_arsenal", goods: g(0, 0, 25) },
     { key: "silo_plague", goods: g(15, 15, 0) },
+  ],
+  [UnitType.DefensePost]: [
+    { key: "post_fortress", goods: g(0, 0, 20) },
+    { key: "post_watchtower", goods: g(0, 20, 0) },
+    { key: "post_barracks", goods: g(20, 0, 0) },
   ],
   // Goods buildings only grow their output: one path.
   [UnitType.Farm]: [{ key: "output", goods: g(0, 0, 20) }],
@@ -405,3 +410,43 @@ export function siloReloadTicks(cooldown: number, tiers: Tiers): number {
 export const SILO_PLAGUE_TICKS = [0, 300, 600, 1200, 2100, 3000];
 /** The poisoned area's radius as a % of the blast's, by Plague tier. */
 export const SILO_PLAGUE_AREA_PERCENT = [0, 100, 100, 125, 125, 150];
+
+// ---------------------------------------------------------------- defense post
+
+export const POST_PATH_FORTRESS = 0;
+export const POST_PATH_WATCHTOWER = 1;
+export const POST_PATH_BARRACKS = 2;
+
+/** The post's defense bonus, % of a plain post's, by Fortress tier. */
+export const POST_FORTRESS_DEFENSE_PERCENT = [100, 120, 150, 200, 300, 500];
+/** How much it slows attacks, % of a plain post's, by Fortress tier. */
+export const POST_FORTRESS_SLOW_PERCENT = [100, 100, 100, 100, 100, 150];
+/** Extra reach over a plain post's, % by Watchtower tier. */
+export const POST_WATCHTOWER_RANGE_PERCENT = [0, 20, 40, 60, 80, 100];
+/** From this Watchtower tier the post shells enemy boats in reach... */
+export const POST_WATCHTOWER_BOAT_TIER = 2;
+/** ...and from this one warships too. */
+export const POST_WATCHTOWER_WARSHIP_TIER = 4;
+/** Extra troop regrowth from the owner's best Barracks, % by tier. */
+export const POST_BARRACKS_REGROWTH_PERCENT = [0, 5, 10, 20, 35, 50];
+/** Troops (shown) each Barracks post adds to its owner's cap, by tier. */
+const POST_BARRACKS_TROOPS = [0, 0, 0, 100_000, 250_000, 500_000];
+
+/** A post's reach, grown by its Watchtower tier. */
+export function postReach(base: number, tiers: Tiers): number {
+  return (
+    (base *
+      (100 + POST_WATCHTOWER_RANGE_PERCENT[tiers[POST_PATH_WATCHTOWER]])) /
+    100
+  );
+}
+
+/** The farthest any post reaches. */
+export function maxPostReach(base: number): number {
+  return (base * (100 + POST_WATCHTOWER_RANGE_PERCENT[MAX_TIER])) / 100;
+}
+
+/** Troops a Barracks post adds to its owner's cap. */
+export function barracksTroops(tiers: Tiers): number {
+  return POST_BARRACKS_TROOPS[tiers[POST_PATH_BARRACKS]] * TROOP_SCALE;
+}
