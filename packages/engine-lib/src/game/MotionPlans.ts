@@ -12,9 +12,44 @@ export interface GridPathPlan {
   startTick: number;
   ticksPerStep: number;
   /**
+   * Borderfall: pace as a percent of a step per `ticksPerStep`; above 100
+   * the unit sometimes takes two steps in a tick (gridPlanStep). 100 if
+   * left out.
+   */
+  speedPercent?: number;
+  /**
    * TileRef path where `path[0]` is the unit tile at `startTick`.
    */
   path: readonly TileRef[] | Uint32Array;
+}
+
+/**
+ * The path index a grid plan has reached `dt` ticks after its start. The
+ * engine moves its units by it and the client draws them by it, so the two
+ * agree tick for tick at any speed. Integer math only.
+ */
+export function gridPlanStep(
+  dt: number,
+  ticksPerStep: number,
+  speedPercent = 100,
+): number {
+  if (dt <= 0) return 0;
+  return Math.floor((dt * speedPercent) / (100 * Math.max(1, ticksPerStep)));
+}
+
+/**
+ * Steps a unit on a grid plan takes on tick `tick`. The engine runs a tick
+ * ahead of the plan: at `startTick - 1` it already stands on `path[0]`.
+ */
+export function gridPlanStepsAt(
+  tick: number,
+  startTick: number,
+  speedPercent = 100,
+): number {
+  const dt = tick - startTick + 1;
+  return (
+    gridPlanStep(dt, 1, speedPercent) - gridPlanStep(dt - 1, 1, speedPercent)
+  );
 }
 
 export interface TrainRailPathPlan {
@@ -44,7 +79,7 @@ export function packMotionPlans(
     switch (record.kind) {
       case "grid": {
         const pathLen = (record.path.length >>> 0) as number;
-        totalWords += 2 + 5 + pathLen;
+        totalWords += 2 + 6 + pathLen;
         break;
       }
       case "train": {
@@ -65,7 +100,7 @@ export function packMotionPlans(
       case "grid": {
         const path = record.path as ArrayLike<number>;
         const pathLen = path.length >>> 0;
-        const wordCount = 2 + 5 + pathLen;
+        const wordCount = 2 + 6 + pathLen;
 
         out[offset++] = PackedMotionPlanKind.GridPathSet;
         out[offset++] = wordCount >>> 0;
@@ -73,6 +108,7 @@ export function packMotionPlans(
         out[offset++] = record.planId >>> 0;
         out[offset++] = record.startTick >>> 0;
         out[offset++] = record.ticksPerStep >>> 0;
+        out[offset++] = (record.speedPercent ?? 100) >>> 0;
         out[offset++] = pathLen >>> 0;
 
         for (let i = 0; i < pathLen; i++) {
@@ -136,21 +172,22 @@ export function unpackMotionPlans(packed: Uint32Array): MotionPlanRecord[] {
 
     switch (kind) {
       case PackedMotionPlanKind.GridPathSet: {
-        if (wordCount < 2 + 5) {
+        if (wordCount < 2 + 6) {
           break;
         }
         const unitId = packed[offset + 2] >>> 0;
         const planId = packed[offset + 3] >>> 0;
         const startTick = packed[offset + 4] >>> 0;
         const ticksPerStep = packed[offset + 5] >>> 0;
-        const pathLen = packed[offset + 6] >>> 0;
+        const speedPercent = packed[offset + 6] >>> 0;
+        const pathLen = packed[offset + 7] >>> 0;
 
-        const expectedWordCount = 2 + 5 + pathLen;
+        const expectedWordCount = 2 + 6 + pathLen;
         if (expectedWordCount !== wordCount) {
           break;
         }
 
-        const pathStart = offset + 7;
+        const pathStart = offset + 8;
         const pathEnd = pathStart + pathLen;
         const path = packed.slice(pathStart, pathEnd);
 
@@ -160,6 +197,7 @@ export function unpackMotionPlans(packed: Uint32Array): MotionPlanRecord[] {
           planId,
           startTick,
           ticksPerStep,
+          speedPercent,
           path,
         });
         break;

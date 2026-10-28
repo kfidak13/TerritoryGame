@@ -155,15 +155,16 @@ describe("FrameNormalizer", () => {
   test("grid motion plans own the position of the units they drive", () => {
     const n = new FrameNormalizer();
     // GridPathSet record: kind, wordCount, unitId, planId, startTick,
-    // ticksPerStep, pathLen, path...
+    // ticksPerStep, speedPercent, pathLen, path...
     const plan = Uint32Array.from([
       1,
       1,
-      2 + 5 + 3,
+      2 + 6 + 3,
       9,
       1,
       1,
       2,
+      100,
       3,
       100,
       101,

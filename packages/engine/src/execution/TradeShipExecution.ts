@@ -1,9 +1,11 @@
 import { TileRef } from "@openfront/engine-api/game/GameMap";
 import { MessageType, UnitType } from "@openfront/engine-api/game/GameTypes";
 import { renderNumber } from "@openfront/engine-lib/Format";
+import { gridPlanStepsAt } from "@openfront/engine-lib/game/MotionPlans";
 import {
   PORT_PATH_TRADE,
   PORT_TRADE_GOLD_PERCENT,
+  PORT_TRADE_SPEED_PERCENT,
 } from "@openfront/engine-lib/game/Upgrades";
 import {
   zInt,
@@ -37,6 +39,8 @@ export class TradeShipExecution implements Execution {
   private tilesTraveled = 0;
   private motionPlanId = 1;
   private motionPlanDst: TileRef | null = null;
+  private planStart = 0;
+  private speedPercent = 100;
 
   constructor(
     private origOwner: Player,
@@ -46,6 +50,8 @@ export class TradeShipExecution implements Execution {
 
   init(mg: Game, ticks: number): void {
     this.mg = mg;
+    this.speedPercent =
+      100 + PORT_TRADE_SPEED_PERCENT[this.srcPort.tiers()[PORT_PATH_TRADE]];
     const stagger = mg.nextShipStagger("tradeShip");
     this.pathFinder = new WaterPathFinder(mg, stagger, true); // memoized: port tile to port tile repeats
   }
@@ -145,42 +151,54 @@ export class TradeShipExecution implements Execution {
     }
 
     const dst = this._dstPort.tile();
-    const result = this.pathFinder.next(curTile, dst);
+    // Borderfall: ships from a Trade port sometimes take two steps a tick.
+    const steps =
+      dst === this.motionPlanDst
+        ? gridPlanStepsAt(ticks, this.planStart, this.speedPercent)
+        : 1;
+    for (let i = 0; i < steps; i++) {
+      const result = this.pathFinder.next(this.tradeShip.tile(), dst);
 
-    switch (result.status) {
-      case PathStatus.NEXT:
-        if (dst !== this.motionPlanDst) {
-          this.motionPlanId++;
-          const from = result.node;
-          const path = this.pathFinder.pathForTraversal(from, dst);
+      switch (result.status) {
+        case PathStatus.NEXT:
+          if (dst !== this.motionPlanDst) {
+            this.motionPlanId++;
+            const from = result.node;
+            const path = this.pathFinder.pathForTraversal(from, dst);
 
-          this.mg.recordMotionPlan({
-            kind: "grid",
-            unitId: this.tradeShip.id(),
-            planId: this.motionPlanId,
-            startTick: ticks + 1,
-            ticksPerStep: 1,
-            path,
-          });
-          this.motionPlanDst = dst;
-        }
-        // Update safeFromPirates status
-        if (this.mg.isWater(result.node) && this.mg.isShoreline(result.node)) {
-          this.tradeShip.setSafeFromPirates();
-        }
-        this.tradeShip.move(result.node);
-        this.tilesTraveled++;
-        break;
-      case PathStatus.COMPLETE:
-        this.complete();
-        return;
-      case PathStatus.NOT_FOUND:
-        console.warn("captured trade ship cannot find route");
-        if (this.tradeShip.isActive()) {
-          this.tradeShip.delete(false);
-        }
-        this.active = false;
-        return;
+            this.planStart = ticks + 1;
+            this.mg.recordMotionPlan({
+              kind: "grid",
+              unitId: this.tradeShip.id(),
+              planId: this.motionPlanId,
+              startTick: this.planStart,
+              ticksPerStep: 1,
+              speedPercent: this.speedPercent,
+              path,
+            });
+            this.motionPlanDst = dst;
+          }
+          // Update safeFromPirates status
+          if (
+            this.mg.isWater(result.node) &&
+            this.mg.isShoreline(result.node)
+          ) {
+            this.tradeShip.setSafeFromPirates();
+          }
+          this.tradeShip.move(result.node);
+          this.tilesTraveled++;
+          break;
+        case PathStatus.COMPLETE:
+          this.complete();
+          return;
+        case PathStatus.NOT_FOUND:
+          console.warn("captured trade ship cannot find route");
+          if (this.tradeShip.isActive()) {
+            this.tradeShip.delete(false);
+          }
+          this.active = false;
+          return;
+      }
     }
   }
 
@@ -256,6 +274,8 @@ export class TradeShipExecution implements Execution {
       tilesTraveled: this.tilesTraveled,
       motionPlanId: this.motionPlanId,
       motionPlanDst: this.motionPlanDst,
+      planStart: this.planStart,
+      speedPercent: this.speedPercent,
       origOwner: w.player(this.origOwner),
       srcPort: w.unit(this.srcPort),
       dstPort: w.unit(this._dstPort),
@@ -273,6 +293,8 @@ export class TradeShipExecution implements Execution {
     this.tilesTraveled = s.tilesTraveled;
     this.motionPlanId = s.motionPlanId;
     this.motionPlanDst = s.motionPlanDst;
+    this.planStart = s.planStart ?? 0;
+    this.speedPercent = s.speedPercent ?? 100;
     this.origOwner = r.player(s.origOwner);
     this.srcPort = r.unit(s.srcPort);
     this._dstPort = r.unit(s.dstPort);
@@ -289,6 +311,8 @@ const TradeShipExecutionStateSchema = z.object({
   tilesTraveled: zInt(),
   motionPlanId: zInt(),
   motionPlanDst: zTile().nullable(),
+  planStart: zInt().optional(),
+  speedPercent: zInt().optional(),
   origOwner: zPlayerRef(),
   srcPort: zRef(),
   dstPort: zRef(),

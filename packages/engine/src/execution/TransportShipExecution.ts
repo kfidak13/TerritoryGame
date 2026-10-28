@@ -6,9 +6,13 @@ import {
   UnitType,
 } from "@openfront/engine-api/game/GameTypes";
 import { renderTroops } from "@openfront/engine-lib/Format";
-import { MotionPlanRecord } from "@openfront/engine-lib/game/MotionPlans";
+import {
+  gridPlanStepsAt,
+  MotionPlanRecord,
+} from "@openfront/engine-lib/game/MotionPlans";
 import {
   bestTier,
+  PORT_INVASION_SPEED_PERCENT,
   PORT_INVASION_TROOPS_PERCENT,
   PORT_PATH_INVASION,
 } from "@openfront/engine-lib/game/Upgrades";
@@ -44,6 +48,8 @@ export class TransportShipExecution implements Execution {
 
   // TODO: make this configurable
   private ticksPerMove = 1;
+  private planStart = 0;
+  private speedPercent = 100;
   private lastMove: number;
 
   private mg: Game;
@@ -81,6 +87,11 @@ export class TransportShipExecution implements Execution {
     this.lastMove = ticks;
     this.mg = mg;
     this.target = mg.owner(this.ref);
+    this.speedPercent =
+      100 +
+      PORT_INVASION_SPEED_PERCENT[
+        bestTier(this.attacker.units(UnitType.Port), PORT_PATH_INVASION)
+      ];
     const stagger = mg.nextShipStagger("transportShip");
     this.pathFinder = new WaterPathFinder(mg, stagger);
 
@@ -162,8 +173,10 @@ export class TransportShipExecution implements Execution {
       planId: this.motionPlanId,
       startTick: ticks + this.ticksPerMove,
       ticksPerStep: this.ticksPerMove,
+      speedPercent: this.speedPercent,
       path: fullPath,
     };
+    this.planStart = motionPlan.startTick;
     this.mg.recordMotionPlan(motionPlan);
     this.motionPlanDst = this.dst;
 
@@ -251,76 +264,84 @@ export class TransportShipExecution implements Execution {
       }
     }
 
-    const result = this.pathFinder.next(this.boat.tile(), this.dst);
-    switch (result.status) {
-      case PathStatus.COMPLETE:
-        if (this.mg.owner(this.dst) === this.attacker) {
-          const deaths = this.boat.troops() * (malusForRetreat / 100);
-          const survivors = this.boat.troops() - deaths;
-          this.attacker.addTroops(survivors);
+    // Borderfall: an Invasion port's boats sometimes take two steps a tick.
+    const steps =
+      this.dst === this.motionPlanDst
+        ? gridPlanStepsAt(ticks, this.planStart, this.speedPercent)
+        : 1;
+    for (let i = 0; i < steps; i++) {
+      const result = this.pathFinder.next(this.boat.tile(), this.dst);
+      switch (result.status) {
+        case PathStatus.COMPLETE:
+          if (this.mg.owner(this.dst) === this.attacker) {
+            const deaths = this.boat.troops() * (malusForRetreat / 100);
+            const survivors = this.boat.troops() - deaths;
+            this.attacker.addTroops(survivors);
+            this.boat.delete(false);
+            this.active = false;
+
+            // Record stats
+            this.mg
+              .stats()
+              .boatArriveTroops(this.attacker, this.target, survivors);
+            if (deaths) {
+              this.mg.displayMessage(
+                "events_display.attack_cancelled_retreat",
+                MessageType.ATTACK_CANCELLED,
+                this.attacker.id(),
+                undefined,
+                { troops: renderTroops(deaths) },
+              );
+            }
+            return;
+          }
+          this.attacker.conquer(this.dst);
+          if (this.target.isPlayer() && this.attacker.isFriendly(this.target)) {
+            this.attacker.addTroops(this.boat.troops());
+          } else {
+            // Borderfall: the best Invasion port lands extra troops.
+            const tier = bestTier(
+              this.attacker.units(UnitType.Port),
+              PORT_PATH_INVASION,
+            );
+            const landing = Math.floor(
+              (this.boat.troops() *
+                (100 + PORT_INVASION_TROOPS_PERCENT[tier])) /
+                100,
+            );
+            this.mg.addExecution(
+              new AttackExecution(
+                landing,
+                this.attacker,
+                this.target.id(),
+                this.dst,
+                false,
+              ),
+            );
+          }
           this.boat.delete(false);
           this.active = false;
 
           // Record stats
           this.mg
             .stats()
-            .boatArriveTroops(this.attacker, this.target, survivors);
-          if (deaths) {
-            this.mg.displayMessage(
-              "events_display.attack_cancelled_retreat",
-              MessageType.ATTACK_CANCELLED,
-              this.attacker.id(),
-              undefined,
-              { troops: renderTroops(deaths) },
-            );
-          }
+            .boatArriveTroops(this.attacker, this.target, this.boat.troops());
+          return;
+        case PathStatus.NEXT:
+          this.boat.move(result.node);
+          break;
+        case PathStatus.NOT_FOUND: {
+          // TODO: add to poisoned port list
+          const map = this.mg.map();
+          const boatTile = this.boat.tile();
+          console.warn(
+            `TransportShip path not found: boat@(${map.x(boatTile)},${map.y(boatTile)}) -> dst@(${map.x(this.dst)},${map.y(this.dst)}), attacker=${this.attacker.id()}, target=${this.target.id()}`,
+          );
+          this.attacker.addTroops(this.boat.troops());
+          this.boat.delete(false);
+          this.active = false;
           return;
         }
-        this.attacker.conquer(this.dst);
-        if (this.target.isPlayer() && this.attacker.isFriendly(this.target)) {
-          this.attacker.addTroops(this.boat.troops());
-        } else {
-          // Borderfall: the best Invasion port lands extra troops.
-          const tier = bestTier(
-            this.attacker.units(UnitType.Port),
-            PORT_PATH_INVASION,
-          );
-          const landing = Math.floor(
-            (this.boat.troops() * (100 + PORT_INVASION_TROOPS_PERCENT[tier])) /
-              100,
-          );
-          this.mg.addExecution(
-            new AttackExecution(
-              landing,
-              this.attacker,
-              this.target.id(),
-              this.dst,
-              false,
-            ),
-          );
-        }
-        this.boat.delete(false);
-        this.active = false;
-
-        // Record stats
-        this.mg
-          .stats()
-          .boatArriveTroops(this.attacker, this.target, this.boat.troops());
-        return;
-      case PathStatus.NEXT:
-        this.boat.move(result.node);
-        break;
-      case PathStatus.NOT_FOUND: {
-        // TODO: add to poisoned port list
-        const map = this.mg.map();
-        const boatTile = this.boat.tile();
-        console.warn(
-          `TransportShip path not found: boat@(${map.x(boatTile)},${map.y(boatTile)}) -> dst@(${map.x(this.dst)},${map.y(this.dst)}), attacker=${this.attacker.id()}, target=${this.target.id()}`,
-        );
-        this.attacker.addTroops(this.boat.troops());
-        this.boat.delete(false);
-        this.active = false;
-        return;
       }
     }
 
@@ -339,8 +360,10 @@ export class TransportShipExecution implements Execution {
         planId: this.motionPlanId,
         startTick: ticks + this.ticksPerMove,
         ticksPerStep: this.ticksPerMove,
+        speedPercent: this.speedPercent,
         path: fullPath,
       });
+      this.planStart = ticks + this.ticksPerMove;
       this.motionPlanDst = this.dst;
     }
   }
@@ -368,6 +391,8 @@ export class TransportShipExecution implements Execution {
       active: this.active,
       initialized: this.mg !== undefined,
       ticksPerMove: this.ticksPerMove,
+      planStart: this.planStart,
+      speedPercent: this.speedPercent,
       lastMove: this.lastMove,
       target: this.target === undefined ? undefined : w.owner(this.target),
       pathFinder:
@@ -391,6 +416,8 @@ export class TransportShipExecution implements Execution {
     this.active = s.active;
     if (s.initialized) this.mg = r.game;
     this.ticksPerMove = s.ticksPerMove;
+    this.planStart = s.planStart ?? 0;
+    this.speedPercent = s.speedPercent ?? 100;
     if (s.lastMove !== undefined) this.lastMove = s.lastMove;
     if (s.target !== undefined) this.target = r.owner(s.target);
     if (s.pathFinder !== undefined) {
@@ -413,6 +440,8 @@ const TransportShipExecutionStateSchema = z.object({
   active: z.boolean(),
   initialized: z.boolean(),
   ticksPerMove: zInt(),
+  planStart: zInt().optional(),
+  speedPercent: zInt().optional(),
   lastMove: zInt().optional(),
   target: zPlayerRef().optional(),
   pathFinder: WaterPathFinderSchema.optional(),

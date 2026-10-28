@@ -1,6 +1,10 @@
 import { TileRef } from "@openfront/engine-api/game/GameMap";
 import { UnitType } from "@openfront/engine-api/game/GameTypes";
-import { PORT_PATH_NAVY } from "@openfront/engine-lib/game/Upgrades";
+import { gridPlanStepsAt } from "@openfront/engine-lib/game/MotionPlans";
+import {
+  PORT_NAVY_SPEED_PERCENT,
+  PORT_PATH_NAVY,
+} from "@openfront/engine-lib/game/Upgrades";
 import { PseudoRandom } from "@openfront/engine-lib/PseudoRandom";
 import {
   zInt,
@@ -759,6 +763,14 @@ export class WarshipExecution implements Execution {
   }
 
   private patrol() {
+    // Borderfall: a Navy port's warships sometimes take two steps a tick.
+    const speed =
+      100 + PORT_NAVY_SPEED_PERCENT[this.warship.tiers()[PORT_PATH_NAVY]];
+    const steps = gridPlanStepsAt(this.mg.ticks(), 0, speed);
+    for (let i = 0; i < steps; i++) this.patrolStep();
+  }
+
+  private patrolStep() {
     if (this.warship.targetTile() === undefined) {
       this.warship.setTargetTile(this.randomTile());
       if (this.warship.targetTile() === undefined) {

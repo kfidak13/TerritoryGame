@@ -362,7 +362,9 @@ export class AttacksDisplay extends LitElement implements Controller {
     if (!plan) return "";
 
     const planSteps = plan.path.length;
-    const planTicks = planSteps * plan.ticksPerStep;
+    const planTicks = Math.ceil(
+      (planSteps * plan.ticksPerStep * 100) / plan.speedPercent,
+    );
     const planEndTick = plan.startTick + planTicks;
 
     const remainingTicks = planEndTick - this.game.ticks();

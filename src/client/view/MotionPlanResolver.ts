@@ -8,12 +8,17 @@
  * to store real per-tick positions.
  */
 
-import type { MotionPlanRecord } from "@openfront/engine-lib/game/MotionPlans";
+import {
+  gridPlanStep,
+  type MotionPlanRecord,
+} from "@openfront/engine-lib/game/MotionPlans";
 
 export interface GridMotionPlan {
   planId: number;
   startTick: number;
   ticksPerStep: number;
+  /** Borderfall: percent pace, 100 normally (MotionPlans.gridPlanStep). */
+  speedPercent: number;
   path: Uint32Array;
 }
 
@@ -88,6 +93,7 @@ export class MotionPlanResolver {
           planId: record.planId,
           startTick: record.startTick,
           ticksPerStep: record.ticksPerStep,
+          speedPercent: record.speedPercent ?? 100,
           path: asUint32(record.path),
         });
       } else {
@@ -158,8 +164,7 @@ export class MotionPlanResolver {
         continue;
       }
       const dt = tick - plan.startTick;
-      const stepIndex =
-        dt <= 0 ? 0 : Math.floor(dt / Math.max(1, plan.ticksPerStep));
+      const stepIndex = gridPlanStep(dt, plan.ticksPerStep, plan.speedPercent);
       const lastIndex = plan.path.length - 1;
       const newTile = plan.path[Math.max(0, Math.min(lastIndex, stepIndex))];
       if (newTile !== tile) {

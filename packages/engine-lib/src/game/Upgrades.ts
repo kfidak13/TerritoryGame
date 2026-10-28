@@ -224,14 +224,18 @@ export const PORT_PATH_TRADE = 0;
 export const PORT_PATH_NAVY = 1;
 export const PORT_PATH_INVASION = 2;
 
-// Ship speed bonuses wait on motion plans that can run faster than a tile
-// a tick; until then the paths grow everything else.
 /** Extra gold per trade ship from its home port's Trade path, % by tier. */
 export const PORT_TRADE_GOLD_PERCENT = [0, 10, 25, 50, 100, 200];
 /** Spawn rolls a port makes for trade ships, by Trade tier. */
 export const PORT_TRADE_ROLLS = [1, 1, 2, 2, 3, 4];
 /** Extra health and shell damage for warships from here, % by Navy tier. */
 export const PORT_NAVY_POWER_PERCENT = [0, 15, 35, 60, 100, 150];
+/** Extra trade ship speed, % by its home port's Trade tier. */
+export const PORT_TRADE_SPEED_PERCENT = [0, 0, 10, 10, 30, 30];
+/** Extra speed for warships from here, % by Navy tier. */
+export const PORT_NAVY_SPEED_PERCENT = [0, 0, 0, 25, 25, 25];
+/** Extra invasion boat speed, % by the best Invasion tier. */
+export const PORT_INVASION_SPEED_PERCENT = [0, 10, 10, 10, 30, 30];
 /** Extra troops when invasion boats land, % by the best Invasion tier. */
 export const PORT_INVASION_TROOPS_PERCENT = [0, 10, 25, 45, 70, 100];
 /** At this Invasion tier each boat order sends two boats. */
