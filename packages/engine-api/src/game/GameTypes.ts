@@ -171,7 +171,7 @@ export interface PublicGameModifiers {
 }
 
 // Largest bulk-purchase amount an intent may carry (mirrored by the intent
-// schemas' max). Also the length of BuildableUnit.upgradeCosts.
+// schemas' max).
 export const MAX_UPGRADE_AMOUNT = 50;
 
 export interface UnitInfo {
@@ -376,27 +376,19 @@ export interface PlayerActions {
 
 export interface BuildableUnit {
   canBuild: TileRef | false;
-  // unit id of the existing unit that can be upgraded, or false if it cannot be upgraded.
-  canUpgrade: number | false;
   type: PlayerBuildableUnitType;
   cost: Gold;
-  // Cumulative cost of upgrading 1..MAX_UPGRADE_AMOUNT times (upgrade costs
-  // escalate per level, so a bulk total is NOT cost * amount). Only set when
-  // canUpgrade is not false.
-  upgradeCosts?: Gold[];
-  // Borderfall: goods the build (or, when canUpgrade is set, the upgrade)
-  // consumes, and whether the player is short of them (then canBuild and
-  // canUpgrade are false). Absent when the build takes no goods.
+  // Borderfall: goods the build consumes, and whether the player is short
+  // of them (then canBuild is false). Absent when the build takes no goods.
   goodsCost?: Readonly<GoodsAmounts>;
   goodsShort?: boolean;
   overlappingRailroads: TileRef[];
   ghostRailPaths: TileRef[][];
 }
 
-// Total price of buying `amount` of a buildable in one intent. Upgrades use
-// the escalating totals from core; flat-cost units (nukes) scale linearly.
+// Total price of buying `amount` of a buildable in one intent.
 export function bulkCost(bu: BuildableUnit, amount: number): Gold {
-  return bu.upgradeCosts?.[amount - 1] ?? bu.cost * BigInt(amount);
+  return bu.cost * BigInt(amount);
 }
 
 // Largest amount (up to MAX_UPGRADE_AMOUNT) whose bulk total fits in `gold`.
@@ -404,11 +396,6 @@ export function bulkCost(bu: BuildableUnit, amount: number): Gold {
 export function maxBulkAmount(bu: BuildableUnit, gold: Gold): number {
   let max = 0;
   for (let n = 1; n <= MAX_UPGRADE_AMOUNT; n++) {
-    // Never price upgrades past the shipped totals — beyond the array,
-    // bulkCost would silently fall back to linear pricing.
-    if (bu.upgradeCosts !== undefined && n > bu.upgradeCosts.length) {
-      break;
-    }
     if (bulkCost(bu, n) > gold) {
       break;
     }

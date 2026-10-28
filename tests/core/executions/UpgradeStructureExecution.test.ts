@@ -5,7 +5,7 @@ import {
   PlayerType,
   UnitType,
 } from "@openfront/engine-api/game/GameTypes";
-import { MAX_TIER } from "@openfront/engine-lib/game/Upgrades";
+import { upgradeGold } from "@openfront/engine-lib/game/Upgrades";
 import { UpgradeStructureExecution } from "@openfront/engine/execution/UpgradeStructureExecution";
 import { describe, expect, it } from "vitest";
 import { setup } from "../../util/Setup";
@@ -140,20 +140,14 @@ describe("UpgradeStructureExecution", () => {
 
     player.addGold(10_000_000n);
 
-    const bu = player
-      .buildableUnits(landTile!)
-      .find((b) => b.type === UnitType.City)!;
-    expect(bu.canUpgrade).toBe(city.id());
-    // Borderfall: five tiers up the first path, each twice the last.
-    expect(bu.upgradeCosts).toHaveLength(MAX_TIER);
-    expect(bu.upgradeCosts![0]).toBe(bu.cost);
-    expect(bu.upgradeCosts![4]).toBe(bu.cost * 31n);
-
     const goldBefore = player.gold();
     game.addExecution(new UpgradeStructureExecution(player, city.id(), 5));
     game.executeNextTick();
 
     expect(city.tiers()).toEqual([5, 0, 0]);
-    expect(goldBefore - player.gold()).toBe(bu.upgradeCosts![4]);
+    // Borderfall: five tiers up the first path, each twice the last.
+    expect(goldBefore - player.gold()).toBe(
+      upgradeGold(UnitType.City, 1) * 31n,
+    );
   });
 });

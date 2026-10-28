@@ -489,20 +489,6 @@ export class HelpModal extends BaseModal {
                   </tr>
                   <tr class="hover:bg-white/5 transition-colors">
                     <td class="py-3 ps-4 border-b border-white/5">
-                      <div
-                        class="w-5 h-8 border border-white/40 rounded-full relative"
-                      >
-                        <div
-                          class="w-0.5 h-2 bg-red-400 rounded-full absolute top-1.5 left-1/2 -translate-x-1/2"
-                        ></div>
-                      </div>
-                    </td>
-                    <td class="py-3 border-b border-white/5 text-white/70">
-                      ${translateText("help_modal.action_auto_upgrade")}
-                    </td>
-                  </tr>
-                  <tr class="hover:bg-white/5 transition-colors">
-                    <td class="py-3 ps-4 border-b border-white/5">
                       <div class="inline-flex items-center gap-2">
                         ${this.renderKey(keybinds.boxSelectWarships)}
                         <span class="text-white/40 font-bold">+</span>

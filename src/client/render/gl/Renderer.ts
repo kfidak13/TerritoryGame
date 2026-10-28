@@ -1092,7 +1092,7 @@ export class GPURenderer {
             tileY: data.tileY,
             cost: showCost ? data.cost : 0,
             canAfford: data.canAfford,
-            canPlace: data.canBuild || data.canUpgrade,
+            canPlace: data.canBuild,
             topText,
           }
         : null,

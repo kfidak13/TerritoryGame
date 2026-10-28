@@ -54,12 +54,12 @@ const makeParams = (opts?: Partial<MenuElementParams>): MenuElementParams => {
       owner: () => ({ isPlayer: () => false }),
     } as any,
     buildMenu: {
-      canBuildOrUpgrade: () => false,
+      canBuildItem: () => false,
       cost: () => 0,
       count: () => 0,
       goodsCost: () => undefined,
       goodsShortReason: () => null,
-      sendBuildOrUpgrade: () => {},
+      sendBuild: () => {},
     } as any,
     emojiTable: {} as any,
     playerActionHandler: {

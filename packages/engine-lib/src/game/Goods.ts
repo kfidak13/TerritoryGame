@@ -47,6 +47,8 @@ import {
 
 /** Goods a whole deposit field yields per tick (10 ticks per second). */
 export const FIELD_YIELD_PER_TICK = 0.1;
+/** Farms work their fields this many times harder than other goods buildings. */
+export const FARM_FOOD_BOOST = 2;
 /** Share of its output an owned deposit tile gives with no building working it. */
 export const UNWORKED_SHARE = 0.25;
 /** Food one troop beyond the land-fed share eats per tick: a field feeds 300k. */
@@ -520,7 +522,7 @@ export function canAffordGoods(
  * Goods a player's deposits produce per tick, by Good (PlayerLike.goodsIncome).
  * Every owned deposit tile gives UNWORKED_SHARE of its output; each finished
  * building of the good works up to one average field of them, at full output
- * grown by its Output tier, and each finished Oil Rig adds
+ * grown by its Output tier (Farms double that), and each finished Oil Rig adds
  * OIL_RIG_YIELD_PER_TICK of Oil, grown by its Drill tier.
  * `multiplier` covers trade pacts.
  */
@@ -545,7 +547,8 @@ export function goodsIncome(
     for (const percent of outputs) {
       if (left <= 0) break;
       const field = Math.min(left, area);
-      worked += (field * percent) / 100;
+      worked +=
+        (field * percent * (g === Good.Food ? FARM_FOOD_BOOST : 1)) / 100;
       left -= field;
     }
     return (

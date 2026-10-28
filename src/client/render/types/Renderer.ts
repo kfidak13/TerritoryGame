@@ -254,9 +254,8 @@ export interface GhostPreviewData {
   radiusTileX: number;
   radiusTileY: number;
   canBuild: boolean; // Valid placement?
-  canUpgrade: boolean; // Upgrading existing structure?
   cost: number; // Gold cost
-  multiplier?: number; // Upgrade multiplier (e.g., 5 for x5)
+  multiplier?: number; // Bulk multiplier (e.g., 5 for x5 bombs)
   /** Whether to render the cost label under the ghost (user setting). */
   showCost: boolean;
   /** True if the player has enough gold to afford this build (drives label color). */
@@ -264,8 +263,6 @@ export interface GhostPreviewData {
   ghostRailPaths: TileRef[][]; // TileRef paths (City/Port only)
   overlappingRailroads: TileRef[]; // TileRefs containing rails in snap zone
   ownerID: number; // Player's smallID (for color)
-  /** Tile position of existing structure being upgraded (null if fresh build). */
-  upgradeTargetTile: number | null;
   /** Range radius in tiles for the placement circle (0 = no circle). */
   rangeRadius: number;
   /** True if placing here would carry a penalty (e.g. nuking an ally → traitor). */

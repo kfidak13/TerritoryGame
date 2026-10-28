@@ -56,7 +56,6 @@ import {
   MAX_TIER,
   MAX_TIER5_PER_TYPE,
   topTier,
-  upgradePaths,
 } from "@openfront/engine-lib/game/Upgrades";
 import { PseudoRandom } from "@openfront/engine-lib/PseudoRandom";
 import {
@@ -1577,32 +1576,6 @@ export class PlayerImpl implements Player {
     return b;
   }
 
-  public findUnitToUpgrade(type: UnitType, targetTile: TileRef): Unit | false {
-    const unit = this.findExistingUnitToUpgrade(type, targetTile);
-    if (unit === false || !this.canUpgradeUnit(unit)) {
-      return false;
-    }
-    return unit;
-  }
-
-  private findExistingUnitToUpgrade(
-    type: UnitType,
-    targetTile: TileRef,
-  ): Unit | false {
-    const closest = findClosestBy(
-      this.mg.nearbyUnits(
-        targetTile,
-        this.mg.config().structureMinDist(),
-        type,
-        undefined,
-        true,
-      ),
-      (entry) => entry.distSquared,
-    );
-
-    return closest?.unit ?? false;
-  }
-
   private canBuildUnitType(
     unitType: UnitType,
     knownCost: Gold | null = null,
@@ -1699,52 +1672,26 @@ export class PlayerImpl implements Player {
       const u = units[i];
 
       const buildCost = config.unitInfo(u).cost(mg, this);
-      let cost = buildCost;
-      let canUpgrade: number | false = false;
+      const cost = buildCost;
       let canBuild: TileRef | false = false;
-      let goods = this.goodsCostFor(u, false);
-      // Cumulative gold for the next tiers up the furthest path.
-      let upgradeCosts: Gold[] | undefined;
+      const goods = this.goodsCostFor(u, false);
 
       if (tile !== null && !inSpawnPhase) {
-        // Borderfall: an upgrade is priced by its tier, apart from building
-        // a new one, and any path it can go up now counts.
-        const existing = this.canUpgradeUnitType(u)
-          ? this.findExistingUnitToUpgrade(u, tile)
-          : false;
-        if (
-          existing !== false &&
-          upgradePaths(u).some((_, p) => this.canUpgradeUnit(existing, p))
-        ) {
-          canUpgrade = existing.id();
-          const tiers = existing.tiers();
-          const path = mainPath(tiers);
-          upgradeCosts = [];
-          let total = 0n;
-          for (let tier = tiers[path] + 1; tier <= MAX_TIER; tier++) {
-            const step = config.upgradeCost(this, u, path, tier);
-            total += step.gold;
-            upgradeCosts.push(total);
-            if (tier === tiers[path] + 1) {
-              cost = step.gold;
-              goods = step.goods;
-            }
-          }
-        }
+        // Borderfall: no stacking. An existing building goes up its paths
+        // from its own panel (UpgradeStructureExecution), never by building
+        // on it.
         if (this.canBuildUnitType(u, buildCost)) {
           canBuild = this.canSpawnUnitType(u, tile, validTiles);
         }
       }
       const goodsShort = !canAffordGoods(this._goods, goods);
 
-      const buildNew = canBuild !== false && canUpgrade === false;
+      const buildNew = canBuild !== false;
 
       result[i] = {
         type: u,
         canBuild,
-        canUpgrade,
         cost,
-        upgradeCosts,
         goodsCost: goods ?? undefined,
         goodsShort,
         overlappingRailroads: buildNew
@@ -1882,7 +1829,16 @@ export class PlayerImpl implements Player {
         manhattanDistFN(tile, this.mg.config().radiusPortSpawn()),
       ),
     )
-      .filter((t) => this.mg.owner(t) === this && this.mg.isShore(t))
+      .filter(
+        (t) =>
+          this.mg.owner(t) === this &&
+          this.mg.isShore(t) &&
+          // Borderfall: a person's port snaps at most one tile (the coast is
+          // one tile thin); nations keep the wide search.
+          (this.type() !== PlayerType.Human ||
+            (Math.abs(this.mg.x(t) - this.mg.x(tile)) <= 1 &&
+              Math.abs(this.mg.y(t) - this.mg.y(tile)) <= 1)),
+      )
       .sort(
         (a, b) =>
           this.mg.manhattanDist(a, tile) - this.mg.manhattanDist(b, tile),

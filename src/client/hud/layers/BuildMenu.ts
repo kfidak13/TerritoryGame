@@ -21,10 +21,7 @@ import {
   ShowEmojiMenuEvent,
 } from "../../InputHandler";
 import { TransformHandler } from "../../TransformHandler";
-import {
-  BuildUnitIntentEvent,
-  SendUpgradeStructureIntentEvent,
-} from "../../Transport";
+import { BuildUnitIntentEvent } from "../../Transport";
 import { UIState } from "../../UIState";
 import { GameView } from "../../view";
 import { goodsCostText, goodsShortText } from "../GoodsText";
@@ -393,12 +390,12 @@ export class BuildMenu extends LitElement implements Controller {
   @state()
   private _hidden = true;
 
-  public canBuildOrUpgrade(item: BuildItemDisplay): boolean {
+  public canBuildItem(item: BuildItemDisplay): boolean {
     if (this.game?.myPlayer() === null || this.playerBuildables === null) {
       return false;
     }
     const unit = this.playerBuildables.find((u) => u.type === item.unitType);
-    return unit ? unit.canBuild !== false || unit.canUpgrade !== false : false;
+    return unit ? unit.canBuild !== false : false;
   }
 
   public cost(item: BuildItemDisplay): Gold {
@@ -433,15 +430,8 @@ export class BuildMenu extends LitElement implements Controller {
     return player.totalUnitLevels(item.unitType).toString();
   }
 
-  public sendBuildOrUpgrade(buildableUnit: BuildableUnit, tile: TileRef): void {
-    if (buildableUnit.canUpgrade !== false) {
-      this.eventBus.emit(
-        new SendUpgradeStructureIntentEvent(
-          buildableUnit.canUpgrade,
-          buildableUnit.type,
-        ),
-      );
-    } else if (buildableUnit.canBuild) {
+  public sendBuild(buildableUnit: BuildableUnit, tile: TileRef): void {
+    if (buildableUnit.canBuild) {
       const rocketDirectionUp =
         buildableUnit.type === UnitType.AtomBomb ||
         buildableUnit.type === UnitType.HydrogenBomb
@@ -470,14 +460,12 @@ export class BuildMenu extends LitElement implements Controller {
                 if (buildableUnit === undefined) {
                   return html``;
                 }
-                const enabled =
-                  buildableUnit.canBuild !== false ||
-                  buildableUnit.canUpgrade !== false;
+                const enabled = buildableUnit.canBuild !== false;
                 return html`
                   <button
                     class="build-button"
                     @click=${() =>
-                      this.sendBuildOrUpgrade(buildableUnit, this.clickedTile)}
+                      this.sendBuild(buildableUnit, this.clickedTile)}
                     ?disabled=${!enabled}
                     title=${!enabled
                       ? (this.goodsShortReason(item) ??

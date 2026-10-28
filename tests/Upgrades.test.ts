@@ -17,6 +17,7 @@ import {
   RIG_HULL_HEALTH_PERCENT,
   RIG_PATH_PLATFORM,
   SAM_PATH_AEGIS,
+  SAM_PATH_BATTERY,
   samRangeLevel,
   sellRefund,
   SILO_PATH_ARSENAL,
@@ -39,7 +40,7 @@ import { UpgradeStructureExecution } from "@openfront/engine/execution/UpgradeSt
 import { Game, Player, Unit } from "@openfront/engine/game/Game";
 import { setup } from "./util/Setup";
 import { expectSnapshotRoundTrip } from "./util/Snapshot";
-import { UseRealAttackLogic } from "./util/TestConfig";
+import { TestConfig, UseRealAttackLogic } from "./util/TestConfig";
 import { executeTicks } from "./util/utils";
 
 describe("Upgrade paths", () => {
@@ -230,6 +231,35 @@ describe("Factory and SAM paths", () => {
     const samRange = (level: number) => 150 - 480 / (level + 5);
     expect(samRange(samRangeLevel([0, 0, 0]))).toBeCloseTo(70);
     expect(samRange(samRangeLevel([5, 0, 0]))).toBeCloseTo(140);
+  });
+
+  test("an upgrading SAM still shoots down nukes", async () => {
+    const game = await setup("big_plains", { infiniteGold: true }, [
+      new PlayerInfo("rome", PlayerType.Human, null, "rome"),
+      new PlayerInfo("carthage", PlayerType.Human, null, "carthage"),
+    ]);
+    const rome = game.player("rome");
+    const carthage = game.player("carthage");
+    for (let x = 0; x < 200; x++) {
+      for (let y = 0; y < 60; y++) {
+        (x < 8 ? carthage : rome).conquer(game.ref(x, y));
+      }
+    }
+    game.endSpawnPhase();
+    // Lands well inside the 30-tick upgrade.
+    (game.config() as TestConfig).setDefaultNukeSpeed(20);
+    const sam = rome.buildUnit(UnitType.SAMLauncher, game.ref(190, 30), {});
+    game.addExecution(new SAMLauncherExecution(rome, null, sam));
+    carthage.buildUnit(UnitType.MissileSilo, game.ref(2, 30), {});
+    const target = game.ref(180, 30);
+    game.addExecution(
+      new NukeExecution(UnitType.AtomBomb, carthage, target, null),
+      new UpgradeStructureExecution(rome, sam.id(), 1, SAM_PATH_BATTERY),
+    );
+    game.executeNextTick();
+    expect(sam.upgradeTicks()).toBeGreaterThan(0);
+    for (let i = 0; i < 100; i++) game.executeNextTick();
+    expect(game.owner(target)).toBe(rome);
   });
 
   test("an Aegis SAM sinks an enemy boat in range", async () => {

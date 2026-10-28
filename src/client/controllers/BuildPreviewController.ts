@@ -20,8 +20,6 @@ import {
   wouldNukeBreakAlliance,
 } from "@openfront/engine-lib/execution/NukeAlliance";
 import {
-  mainPath,
-  postReach,
   samRangeLevel,
   warheadMagnitude,
 } from "@openfront/engine-lib/game/Upgrades";
@@ -36,10 +34,7 @@ import { buildNukeTrajectory, MapRenderer } from "../render/gl";
 import type { SAMInfo } from "../render/gl/utils/NukeTrajectory";
 import type { GhostPreviewData } from "../render/types";
 import { TransformHandler } from "../TransformHandler";
-import {
-  BuildUnitIntentEvent,
-  SendUpgradeStructureIntentEvent,
-} from "../Transport";
+import { BuildUnitIntentEvent } from "../Transport";
 import { UIState } from "../UIState";
 import { UserSettings } from "../UserSettings";
 import { GameView } from "../view";
@@ -136,13 +131,9 @@ export class BuildPreviewController implements Controller {
           this.mousePos.y,
         );
         if (ghost !== null) {
-          // The range circle (defense post / SAM / nuke radius) normally
-          // follows the cursor, so smooth it the same way as the icon. When
-          // upgrading, the circle is anchored to the existing structure's tile
-          // (stationary, correctly snapped) — leave it alone in that case.
-          const radiusFollowsCursor =
-            !ghost.snapToPlacement &&
-            !(ghost.canUpgrade && ghost.upgradeTargetTile !== null);
+          // The range circle (defense post / SAM / nuke radius) follows the
+          // cursor, so smooth it the same way as the icon.
+          const radiusFollowsCursor = !ghost.snapToPlacement;
           this.view.updateGhostPreview({
             ...ghost,
             tileX: ghost.snapToPlacement ? ghost.tileX : w.x - 0.5,
@@ -276,10 +267,7 @@ export class BuildPreviewController implements Controller {
           (u) => u.type === this.ghostUnit!.buildableUnit.type,
         );
         if (!unit) {
-          Object.assign(this.ghostUnit.buildableUnit, {
-            canBuild: false,
-            canUpgrade: false,
-          });
+          this.ghostUnit.buildableUnit.canBuild = false;
           this.pendingConfirm = null;
           this.emitGhostPreview(tileRef, targetingAlly, trajectoryTileRef);
           return;
@@ -444,23 +432,14 @@ export class BuildPreviewController implements Controller {
 
     const u = this.ghostUnit.buildableUnit;
     const placementTile =
-      u.canUpgrade === false && Structures.has(u.type) && u.canBuild !== false
-        ? u.canBuild
-        : tileRef;
-
-    // Upgrade-target tile — only when upgrading an existing unit.
-    let upgradeTargetTile: number | null = null;
-    if (u.canUpgrade !== false) {
-      upgradeTargetTile = this.game.unit(u.canUpgrade)?.tile() ?? null;
-    }
+      Structures.has(u.type) && u.canBuild !== false ? u.canBuild : tileRef;
 
     // Range circle: SAM placement preview shows targetable radius; nuke
     // previews show the outer blast radius at the target tile.
     let rangeRadius = 0;
     switch (u.type) {
       case UnitType.SAMLauncher: {
-        const level = this.resolveGhostRangeLevel(u) ?? 1;
-        rangeRadius = this.game.config().samRange(level);
+        rangeRadius = this.game.config().samRange(1);
         break;
       }
       case UnitType.AtomBomb:
@@ -470,32 +449,15 @@ export class BuildPreviewController implements Controller {
       case UnitType.Factory:
         rangeRadius = this.game.config().trainStationMaxRange();
         break;
-      case UnitType.DefensePost: {
-        // An upgrade goes up the post's furthest path (Upgrades.ts).
-        const existing =
-          u.canUpgrade !== false ? this.game.unit(u.canUpgrade) : undefined;
-        const tiers = existing ? [...existing.tiers()] : [0, 0, 0];
-        if (existing) tiers[mainPath(tiers)]++;
-        rangeRadius = postReach(this.game.config().defensePostRange(), tiers);
+      case UnitType.DefensePost:
+        rangeRadius = this.game.config().defensePostRange();
         break;
-      }
     }
-    let radiusTileX = this.game.x(placementTile);
-    let radiusTileY = this.game.y(placementTile);
-    if (
-      rangeRadius > 0 &&
-      u.canUpgrade !== false &&
-      upgradeTargetTile !== null
-    ) {
-      radiusTileX = this.game.x(upgradeTargetTile);
-      radiusTileY = this.game.y(upgradeTargetTile);
-    }
+    const radiusTileX = this.game.x(placementTile);
+    const radiusTileY = this.game.y(placementTile);
 
     const isNuke = u.type === UnitType.AtomBomb;
-    const multiplier =
-      u.canUpgrade !== false || isNuke
-        ? (this.uiState.upgradeMultiplier ?? 1)
-        : 1;
+    const multiplier = isNuke ? (this.uiState.upgradeMultiplier ?? 1) : 1;
     const cost = bulkCost(u, multiplier);
     // Drives the red cost label: gold short of the bulk total, or (for
     // bombs) fewer loaded silo tubes than the selected amount.
@@ -511,7 +473,6 @@ export class BuildPreviewController implements Controller {
       radiusTileX,
       radiusTileY,
       canBuild: u.canBuild !== false,
-      canUpgrade: u.canUpgrade !== false,
       cost: Number(cost),
       multiplier: multiplier,
       showCost: this.userSettings.cursorCostLabel(),
@@ -519,7 +480,6 @@ export class BuildPreviewController implements Controller {
       ghostRailPaths: u.ghostRailPaths,
       overlappingRailroads: u.overlappingRailroads,
       ownerID: myPlayer.smallID(),
-      upgradeTargetTile,
       rangeRadius,
       rangeWarning: targetingAlly,
     };
@@ -528,7 +488,7 @@ export class BuildPreviewController implements Controller {
   private isGhostReadyForConfirm(): boolean {
     if (!this.ghostUnit) return false;
     const bu = this.ghostUnit.buildableUnit;
-    return bu.canBuild !== false || bu.canUpgrade !== false;
+    return bu.canBuild !== false;
   }
 
   private requestConfirmStructure(e: MouseUpEvent): void {
@@ -542,24 +502,12 @@ export class BuildPreviewController implements Controller {
 
   private createStructure(e: MouseUpEvent) {
     if (!this.ghostUnit) return;
-    if (
-      this.ghostUnit.buildableUnit.canBuild === false &&
-      this.ghostUnit.buildableUnit.canUpgrade === false
-    ) {
+    if (this.ghostUnit.buildableUnit.canBuild === false) {
       this.removeGhostStructure();
       return;
     }
     const tile = this.transformHandler.screenToWorldCoordinates(e.x, e.y);
-    if (this.ghostUnit.buildableUnit.canUpgrade !== false) {
-      this.eventBus.emit(
-        new SendUpgradeStructureIntentEvent(
-          this.ghostUnit.buildableUnit.canUpgrade,
-          this.ghostUnit.buildableUnit.type,
-          this.uiState.upgradeMultiplier || 1,
-        ),
-      );
-      this.removeGhostStructure();
-    } else if (this.ghostUnit.buildableUnit.canBuild) {
+    if (this.ghostUnit.buildableUnit.canBuild) {
       // The pointer can be released just off the map edge before the
       // throttled hover refresh marks the ghost unbuildable; there is no
       // tile to build on, so keep the ghost and wait for a click on the map.
@@ -661,7 +609,6 @@ export class BuildPreviewController implements Controller {
       buildableUnit: {
         type,
         canBuild: false,
-        canUpgrade: false,
         cost: 0n,
         overlappingRailroads: [],
         ghostRailPaths: [],
@@ -695,23 +642,5 @@ export class BuildPreviewController implements Controller {
       ?.units(UnitType.MissileSilo)
       .find((s) => s.tile() === spawn);
     return silo ? warheadMagnitude(base, silo.tiers()) : base;
-  }
-
-  private resolveGhostRangeLevel(
-    buildableUnit: BuildableUnit,
-  ): number | undefined {
-    if (buildableUnit.type !== UnitType.SAMLauncher) return undefined;
-    if (buildableUnit.canUpgrade !== false) {
-      const existing = this.game.unit(buildableUnit.canUpgrade);
-      if (existing) {
-        // The upgrade goes up the SAM's furthest path (Upgrades.ts).
-        const tiers = [...existing.tiers()];
-        tiers[mainPath(tiers)]++;
-        return samRangeLevel(tiers);
-      } else {
-        console.warn("Failed to find existing SAMLauncher for upgrade");
-      }
-    }
-    return 1;
   }
 }

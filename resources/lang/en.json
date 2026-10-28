@@ -377,6 +377,9 @@
     "silo_warhead_short": "Warhead",
     "title": "{path}: level {level}"
   },
+  "building_panel": {
+    "level": "Level {level}"
+  },
   "change_username_modal": {
     "title": "Change Username",
     "unavailable": "Username management isn't available on this account yet."
@@ -1367,7 +1370,6 @@
   },
   "help_modal": {
     "action_attack_altclick": "Attack (when left click is set to open menu)",
-    "action_auto_upgrade": "Auto-upgrade nearest building",
     "action_build": "Open build menu",
     "action_coordinate_grid": "Toggle coordinate grid overlay",
     "action_emote": "Open emote menu",

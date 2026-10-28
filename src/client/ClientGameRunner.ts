@@ -12,7 +12,6 @@ import {
   GameUpdateViewData,
   HashUpdate,
 } from "@openfront/engine-api/game/GameUpdates";
-import { findClosestBy } from "@openfront/engine-lib/Util";
 import { Config } from "@openfront/engine-lib/configuration/Config";
 import { TerrainMapData } from "@openfront/engine-lib/game/TerrainMapLoader";
 import { EventBus } from "@openfront/shared/EventBus";
@@ -32,7 +31,6 @@ import { isDesktopShell } from "./DesktopShell";
 import { GameMetrics } from "./GameMetrics";
 import { showInGameAlert } from "./InGameModal";
 import {
-  AutoUpgradeEvent,
   DoBoatAttackEvent,
   DoBreakAllianceEvent,
   DoGroundAttackEvent,
@@ -67,7 +65,6 @@ import {
   SendHashEvent,
   SendSpawnIntentEvent,
   SendTargetPlayerIntentEvent,
-  SendUpgradeStructureIntentEvent,
   Transport,
 } from "./Transport";
 import {
@@ -80,6 +77,7 @@ import { WebGLFrameBuilder } from "./WebGLFrameBuilder";
 import { WorkerClient } from "./WorkerClient";
 import { MapLayerController } from "./controllers/MapLayerController";
 import { createRenderer, GameRenderer } from "./hud/GameRenderer";
+import { SelectBuildingEvent } from "./hud/layers/BuildingPanel";
 import { goldRateTracker } from "./hud/layers/lib/GoldRateTracker";
 import {
   applyGraphicsOverrides,
@@ -97,7 +95,7 @@ import { ALL_UNIT_TYPES, UnitState } from "./render/types";
 import { audioMixer, initAudioMixer } from "./sound/AudioMixer";
 import { SoundManager } from "./sound/SoundManager";
 import { themeProvider } from "./theme/ThemeProvider";
-import { GameView, PlayerView } from "./view";
+import { GameView, PlayerView, UnitView } from "./view";
 
 export interface LobbyConfig {
   cosmetics: PlayerCosmeticRefs;
@@ -984,7 +982,6 @@ export class ClientGameRunner {
 
     this.eventBus.on(MouseUpEvent, this.inputEvent.bind(this));
     this.eventBus.on(MouseMoveEvent, this.onMouseMove.bind(this));
-    this.eventBus.on(AutoUpgradeEvent, this.autoUpgradeEvent.bind(this));
     this.eventBus.on(
       DoBoatAttackEvent,
       this.doBoatAttackUnderCursor.bind(this),
@@ -1257,6 +1254,10 @@ export class ClientGameRunner {
       if (myPlayer === null) return;
       this.myPlayer = myPlayer;
     }
+    // Borderfall: clicking one of your buildings opens its upgrade paths.
+    const building = this.buildingAt(tile);
+    this.eventBus.emit(new SelectBuildingEvent(building));
+    if (building !== null) return;
     this.myPlayer
       .actions(tile, [UnitType.TransportShip])
       .then((actions) => {
@@ -1276,114 +1277,26 @@ export class ClientGameRunner {
       });
   }
 
-  private autoUpgradeEvent(event: AutoUpgradeEvent) {
-    if (!this.isActive) {
-      return;
+  /**
+   * The player's building nearest a click on their own land (or on the
+   * water beside a port or rig), or null.
+   */
+  private buildingAt(tile: TileRef): UnitView | null {
+    const me = this.myPlayer!;
+    const own = this.gameView.owner(tile) === me;
+    if (!own && this.gameView.isLand(tile)) return null;
+    // ponytail: fixed tile radius; scale with zoom if icons feel hard to hit.
+    const radius = own ? 5 : 2;
+    let best: UnitView | null = null;
+    let bestDist = Infinity;
+    for (const unit of me.units(...Structures.types)) {
+      const dist = this.gameView.manhattanDist(unit.tile(), tile);
+      if (dist <= radius && dist < bestDist) {
+        best = unit;
+        bestDist = dist;
+      }
     }
-
-    const cell = this.renderer.transformHandler.screenToWorldCoordinates(
-      event.x,
-      event.y,
-    );
-    if (!this.gameView.isValidCoord(cell.x, cell.y)) {
-      return;
-    }
-
-    const tile = this.gameView.ref(cell.x, cell.y);
-
-    if (this.myPlayer === null) {
-      if (!this.clientID) return;
-      const myPlayer = this.gameView.playerByClientID(this.clientID);
-      if (myPlayer === null) return;
-      this.myPlayer = myPlayer;
-    }
-
-    if (this.gameView.inSpawnPhase()) {
-      return;
-    }
-
-    this.findAndUpgradeNearestBuilding(tile);
-  }
-
-  private findAndUpgradeNearestBuilding(clickedTile: TileRef) {
-    this.myPlayer!.actions(clickedTile, Structures.types)
-      .then((actions) => {
-        const upgradeUnits: {
-          unitId: number;
-          unitType: UnitType;
-          distance: number;
-        }[] = [];
-
-        for (const bu of actions.buildableUnits) {
-          if (bu.canUpgrade !== false) {
-            const existingUnit = this.gameView
-              .units()
-              .find((unit) => unit.id() === bu.canUpgrade);
-            if (existingUnit) {
-              const distance = this.gameView.manhattanDist(
-                clickedTile,
-                existingUnit.tile(),
-              );
-
-              upgradeUnits.push({
-                unitId: bu.canUpgrade,
-                unitType: bu.type,
-                distance: distance,
-              });
-            }
-          }
-        }
-
-        if (upgradeUnits.length === 0) {
-          return;
-        }
-
-        // Upgrade the closest affordable building. But if there's an unaffordable
-        // building (any type) that's closer to clickedTile than the best candidate,
-        // do nothing — the player clicked on that unaffordable building intending
-        // to upgrade it, and we must not spend their gold on a different building.
-        const bestUpgrade = findClosestBy(upgradeUnits, (u) => u.distance);
-        if (!bestUpgrade) {
-          return;
-        }
-
-        // Check if any unaffordable building is closer than bestUpgrade
-        for (const bu of actions.buildableUnits) {
-          if (bu.canUpgrade === false && bu.type !== bestUpgrade.unitType) {
-            const myPlayerID = this.myPlayer!.id();
-            const closestOfType = this.gameView
-              .nearbyUnits(
-                clickedTile,
-                this.gameView.config().structureMinDist(),
-                bu.type,
-              )
-              .filter(({ unit }) => unit.owner().id() === myPlayerID)
-              .sort((a, b) => a.distSquared - b.distSquared)[0];
-
-            if (closestOfType) {
-              const dist = this.gameView.manhattanDist(
-                clickedTile,
-                closestOfType.unit.tile(),
-              );
-              if (dist <= bestUpgrade.distance) {
-                // An unaffordable building of type bu.type is at least as close
-                // as bestUpgrade — player clicked on it, not on bestUpgrade.
-                return;
-              }
-            }
-          }
-        }
-
-        this.eventBus.emit(
-          new SendUpgradeStructureIntentEvent(
-            bestUpgrade.unitId,
-            bestUpgrade.unitType,
-          ),
-        );
-      })
-      .catch((error) => {
-        console.warn("Failed to check structure upgrade actions:", error);
-      });
+    return best;
   }
 
   private doBoatAttackUnderCursor(e: DoBoatAttackEvent): void {

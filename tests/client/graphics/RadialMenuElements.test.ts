@@ -115,7 +115,7 @@ describe("RadialMenuElements", () => {
     } as unknown as GameView;
 
     mockBuildMenu = {
-      canBuildOrUpgrade: vi.fn(() => true),
+      canBuildItem: vi.fn(() => true),
       cost: vi.fn(() => 100),
       count: vi.fn(() => 5),
       goodsCost: vi.fn(() => undefined),
@@ -534,7 +534,7 @@ describe("RadialMenuElements", () => {
 
     it("should not execute action when buildable unit is not found", () => {
       mockPlayerActions.buildableUnits = [];
-      mockBuildMenu.canBuildOrUpgrade = vi.fn(() => false);
+      mockBuildMenu.canBuildItem = vi.fn(() => false);
 
       const subMenu = buildMenuElement.subMenu!(mockParams);
       const cityElement = subMenu.find((item) => item.id === "build_City");
@@ -554,67 +554,6 @@ describe("RadialMenuElements", () => {
         (item) => item.id === "build_City",
       );
       expect(cityElement!.subMenu!(mockParams)).toHaveLength(0);
-    });
-
-    describe("upgrade paths", () => {
-      function ring(tiers: number[], level5s = 0) {
-        mockPlayerActions.buildableUnits = [
-          { type: UnitType.City, canBuild: false, canUpgrade: 123, cost: 1n },
-        ];
-        (mockGame as any).config = vi.fn(() => ({
-          isUnitDisabled: () => false,
-          goodsEnabled: () => true,
-        }));
-        (mockGame as any).unit = vi.fn(() => ({
-          tiers: () => tiers,
-          isUnderConstruction: () => false,
-        }));
-        (mockGame as any).myPlayer = vi.fn(() => ({
-          gold: () => 1_000_000_000n,
-          goods: () => [10_000, 10_000, 10_000],
-          units: () =>
-            Array.from({ length: level5s }, () => ({ tiers: () => [5, 0, 0] })),
-        }));
-        const cityElement = buildMenuElement.subMenu!(mockParams).find(
-          (item) => item.id === "build_City",
-        );
-        return cityElement!.subMenu!(mockParams);
-      }
-
-      it("offers a slot per path, then Max up the furthest one", () => {
-        const options = ring([2, 0, 0]);
-        expect(options.map((o) => o.id)).toEqual([
-          `upgrade_${UnitType.City}_path0`,
-          `upgrade_${UnitType.City}_path1`,
-          `upgrade_${UnitType.City}_path2`,
-          `upgrade_${UnitType.City}_max`,
-        ]);
-        expect(options.map((o) => o.disabled(mockParams))).toEqual([
-          false,
-          false,
-          false,
-          false,
-        ]);
-        options[1].action!(mockParams);
-        expect(mockParams.eventBus.emit).toHaveBeenLastCalledWith(
-          expect.objectContaining({ unitId: 123, path: 1, amount: 1 }),
-        );
-        options[3].action!(mockParams);
-        expect(mockParams.eventBus.emit).toHaveBeenLastCalledWith(
-          expect.objectContaining({ unitId: 123, path: 0, amount: 5 }),
-        );
-      });
-
-      it("shuts the third path, stops the second at 2, and allows two level 5s", () => {
-        expect(ring([3, 2, 0]).map((o) => o.disabled(mockParams))).toEqual([
-          false,
-          true,
-          true,
-          false,
-        ]);
-        expect(ring([4, 0, 0], 2)[0].disabled(mockParams)).toBe(true);
-        expect(ring([4, 0, 0], 1)[0].disabled(mockParams)).toBe(false);
-      });
     });
 
     it("caps the nuke bulk amount at loaded silo tubes", () => {
@@ -772,7 +711,7 @@ describe("RadialMenuElements", () => {
     });
 
     it("should use disabled color when element is disabled", () => {
-      mockBuildMenu.canBuildOrUpgrade = vi.fn(() => false);
+      mockBuildMenu.canBuildItem = vi.fn(() => false);
 
       const subMenu = buildMenuElement.subMenu!(mockParams);
       const cityElement = subMenu.find((item) => item.id === "build_City");

@@ -439,7 +439,6 @@ export interface Player extends PlayerLike {
   // or false if it cannot be upgraded.
   // New units of the same type can upgrade existing units.
   // e.g. if a place a new city here, can it upgrade an existing city?
-  findUnitToUpgrade(type: UnitType, targetTile: TileRef): Unit | false;
   canUpgradeUnit(unit: Unit, path?: number): boolean;
   upgradeUnit(unit: Unit, path?: number): void;
   captureUnit(unit: Unit): void;

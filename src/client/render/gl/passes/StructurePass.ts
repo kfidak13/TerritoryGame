@@ -456,23 +456,6 @@ export class StructurePass {
       gl.vertexAttribPointer(1, 4, gl.FLOAT, false, BYTES_PER_INSTANCE, 0);
       gl.vertexAttribPointer(2, 2, gl.FLOAT, false, BYTES_PER_INSTANCE, 16);
 
-      // -- Green highlight on existing structure being upgraded --
-      if (g.canUpgrade && g.upgradeTargetTile !== null) {
-        const tx = g.upgradeTargetTile % this.mapW;
-        const ty = (g.upgradeTargetTile - tx) / this.mapW;
-        this.ghostBuf[0] = tx;
-        this.ghostBuf[1] = ty;
-        this.ghostBuf[2] = g.ownerID;
-        this.ghostBuf[3] = 0;
-        this.ghostBuf[4] = atlasIdx;
-        this.ghostBuf[5] = 0;
-        gl.bufferSubData(gl.ARRAY_BUFFER, 0, this.ghostBuf);
-
-        gl.uniform1f(this.uGhostAlpha, 0.6);
-        gl.uniform3f(this.uOutlineColor, 0.0, 0.8, 0.0); // green highlight
-        gl.drawArraysInstanced(gl.TRIANGLES, 0, 6, 1);
-      }
-
       // -- Ghost icon at cursor --
       this.ghostBuf[0] = g.tileX;
       this.ghostBuf[1] = g.tileY;
@@ -483,9 +466,7 @@ export class StructurePass {
       gl.bufferSubData(gl.ARRAY_BUFFER, 0, this.ghostBuf);
 
       gl.uniform1f(this.uGhostAlpha, 0.5);
-      if (g.canUpgrade) {
-        gl.uniform3f(this.uOutlineColor, 0.0, 0.8, 0.0); // green tint — upgrade
-      } else if (g.canBuild) {
+      if (g.canBuild) {
         gl.uniform3f(this.uOutlineColor, 0, 0, 0); // no tint — valid build
       } else {
         gl.uniform3f(this.uOutlineColor, 0.8, 0.2, 0.2); // red tint — can't build

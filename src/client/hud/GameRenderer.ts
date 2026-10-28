@@ -26,6 +26,7 @@ import { ActionableEvents } from "./layers/ActionableEvents";
 import { AdminPanel } from "./layers/AdminPanel";
 import { AlertFrame } from "./layers/AlertFrame";
 import { AttacksDisplay } from "./layers/AttacksDisplay";
+import { BuildingPanel } from "./layers/BuildingPanel";
 import { BuildMenu } from "./layers/BuildMenu";
 import { ChatDisplay } from "./layers/ChatDisplay";
 import { ChatModal } from "./layers/ChatModal";
@@ -246,6 +247,15 @@ export function createRenderer(
   tradePanel.transformHandler = transformHandler;
   tradePanel.view = view;
 
+  const buildingPanel = document.querySelector(
+    "building-panel",
+  ) as BuildingPanel;
+  if (!(buildingPanel instanceof BuildingPanel)) {
+    console.error("BuildingPanel element not found in the DOM");
+  }
+  buildingPanel.game = game;
+  buildingPanel.eventBus = eventBus;
+
   const adminPanel = document.querySelector("admin-panel") as AdminPanel;
   if (!(adminPanel instanceof AdminPanel)) {
     console.error("AdminPanel element not found in the DOM");
@@ -384,6 +394,7 @@ export function createRenderer(
     settingsModal,
     playerPanel,
     tradePanel,
+    buildingPanel,
     adminPanel,
     headsUpMessage,
     multiTabModal,

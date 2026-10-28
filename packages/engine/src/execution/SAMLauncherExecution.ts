@@ -350,7 +350,9 @@ export class SAMLauncherExecution implements Execution {
       this.targetingSystem.onLevelUp();
     }
 
-    if (this.sam.isUnderConstruction()) {
+    // Borderfall: an upgrading SAM keeps guarding at its old level; only a
+    // new one being built stands idle.
+    if (this.sam.isUnderConstruction() && this.sam.upgradeTicks() === 0) {
       return;
     }
 

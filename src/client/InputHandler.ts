@@ -230,13 +230,6 @@ export class CenterCameraEvent implements GameEvent {
   constructor() {}
 }
 
-export class AutoUpgradeEvent implements GameEvent {
-  constructor(
-    public readonly x: number,
-    public readonly y: number,
-  ) {}
-}
-
 export class ToggleCoordinateGridEvent implements GameEvent {
   constructor(public readonly enabled: boolean) {}
 }
@@ -948,12 +941,6 @@ export class InputHandler {
   }
 
   private onPointerDown(event: PointerEvent) {
-    if (event.button === 1) {
-      event.preventDefault();
-      this.eventBus.emit(new AutoUpgradeEvent(event.clientX, event.clientY));
-      return;
-    }
-
     if (event.button > 0) {
       return;
     }

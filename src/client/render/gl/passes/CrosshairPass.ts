@@ -102,7 +102,7 @@ export class CrosshairPass {
       this.active = true;
       this.centerX = data.tileX;
       this.centerY = data.tileY;
-      this.canBuild = data.canBuild || data.canUpgrade;
+      this.canBuild = data.canBuild;
     } else {
       this.active = false;
     }

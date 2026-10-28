@@ -12,6 +12,7 @@ import {
   depositGood,
   depositSeed,
   depositYield,
+  FARM_FOOD_BOOST,
   fieldArea,
   FOOD_PER_TROOP,
   FOOD_SHORTAGE_GROWTH,
@@ -181,6 +182,24 @@ describe("goods economy", () => {
     for (let i = 0; i < 5; i++) mine.raiseTier(0);
     expect(player.goodsIncome()[Good.Metal] - trickle).toBeCloseTo(
       worked * 5,
+      6,
+    );
+  });
+
+  test("a Farm works its field twice as hard", async () => {
+    const { game, player } = await goodsGame();
+    const food = depositTiles(game, Good.Food, 10);
+    for (const t of food) player.conquer(t);
+    player.addGold(10_000_000n);
+    const trickle = player.goodsIncome()[Good.Food];
+    game.addExecution(
+      new ConstructionExecution(player, UnitType.Farm, food[0]),
+    );
+    for (let i = 0; i < 5; i++) game.executeNextTick();
+    expect(player.units(UnitType.Farm)).toHaveLength(1);
+    // Unworked tiles give UNWORKED_SHARE; a farm adds the rest, doubled.
+    expect(player.goodsIncome()[Good.Food] / trickle).toBeCloseTo(
+      1 + ((1 - UNWORKED_SHARE) * FARM_FOOD_BOOST) / UNWORKED_SHARE,
       6,
     );
   });
