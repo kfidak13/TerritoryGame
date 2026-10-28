@@ -25,6 +25,7 @@ import {
 import { PlayerLike } from "@openfront/engine-api/game/ReadViews";
 import { goodsIncome } from "@openfront/engine-lib/game/Goods";
 import { tradePactMultiplier } from "@openfront/engine-lib/game/Trade";
+import { missileTubes } from "@openfront/engine-lib/game/Upgrades";
 import { PatternDecoder } from "@openfront/shared/PatternDecoder";
 import { createRandomName } from "@openfront/shared/SharedUtil";
 import { PlayerCosmetics } from "@openfront/shared/WireSchemas";
@@ -376,7 +377,12 @@ export class PlayerView implements PlayerLike {
       (acc, silo) =>
         silo.isUnderConstruction()
           ? acc
-          : acc + Math.max(0, silo.level() - silo.missileTimerQueue().length),
+          : acc +
+            Math.max(
+              0,
+              missileTubes(silo.type(), silo.tiers()) -
+                silo.missileTimerQueue().length,
+            ),
       0,
     );
   }

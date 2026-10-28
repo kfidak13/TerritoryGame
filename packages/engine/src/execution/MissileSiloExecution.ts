@@ -1,3 +1,4 @@
+import { siloReloadTicks } from "@openfront/engine-lib/game/Upgrades";
 import { zRef } from "@openfront/engine-lib/snapshot/SnapshotType";
 import { z } from "zod";
 import { Execution, Game, Unit } from "../game/Game";
@@ -37,8 +38,10 @@ export class MissileSiloExecution implements Execution {
       return;
     }
 
+    // Borderfall: an Arsenal silo reloads faster.
     const cooldown =
-      this.mg.config().SiloCooldown() - (this.mg.ticks() - frontTime);
+      siloReloadTicks(this.mg.config().SiloCooldown(), this.silo.tiers()) -
+      (this.mg.ticks() - frontTime);
 
     if (cooldown <= 0) {
       this.silo.reloadMissile();

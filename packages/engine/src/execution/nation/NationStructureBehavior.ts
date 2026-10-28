@@ -21,6 +21,8 @@ import {
   mainPath,
   MAX_TIER,
   samRangeLevel,
+  SILO_PATH_ARSENAL,
+  topTier,
 } from "@openfront/engine-lib/game/Upgrades";
 import { PseudoRandom } from "@openfront/engine-lib/PseudoRandom";
 import {
@@ -240,6 +242,16 @@ const DEFENSE_POST_SAMPLE_ATTEMPTS = 150;
 
 // Reusable neighbor buffer for hot loops; the simulation is single-threaded.
 const NEIGHBOR_SCRATCH: TileRef[] = [0, 0, 0, 0];
+
+/**
+ * The one upgrade path a nation takes on a building (engine-lib/game/Upgrades):
+ * Arsenal on silos, for more nukes at once, and the first path elsewhere.
+ */
+function nationPath(structure: Unit): number {
+  const tiers = structure.tiers();
+  if (topTier(tiers) > 0) return mainPath(tiers);
+  return structure.type() === UnitType.MissileSilo ? SILO_PATH_ARSENAL : 0;
+}
 
 export class NationStructureBehavior {
   private reachableStationsCache: Array<{
@@ -1070,6 +1082,7 @@ export class NationStructureBehavior {
         this.player,
         structure.id(),
         this.upgradeAmount(structure),
+        nationPath(structure),
       ),
     );
     return true;
@@ -1078,8 +1091,7 @@ export class NationStructureBehavior {
   /** One level, or as many as the gold beyond the save-up target pays for and the structure ratios ask for. */
   private upgradeAmount(structure: Unit): number {
     const type = structure.type();
-    // Nations keep to each building's first path (engine-lib/game/Upgrades).
-    const path = mainPath(structure.tiers());
+    const path = nationPath(structure);
     const tier = structure.tiers()[path];
     const { difficulty } = this.game.config().gameConfig();
     // Cities set the ratios, so only gold limits them

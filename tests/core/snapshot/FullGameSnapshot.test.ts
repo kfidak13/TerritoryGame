@@ -197,8 +197,9 @@ describe.each(VARIANTS)("full game snapshots: %s", (_, overrides) => {
       // Runs during the spawn phase and finishes inside init, so it is never
       // alive at a tick boundary. BasicExecutions.test.ts covers it directly.
       // HeavenlyNuke wipes the map, which would end the scripted game;
-      // Admin.test.ts round-trips it mid-wave.
-      const neverStored = new Set(["Pause", "HeavenlyNuke"]);
+      // Admin.test.ts round-trips it mid-wave. Plague needs an upgraded
+      // silo; Upgrades.test.ts round-trips it while the land is poisoned.
+      const neverStored = new Set(["Pause", "HeavenlyNuke", "Plague"]);
       const missing = EXECUTION_SNAPSHOT_TYPES.map((t) => t.name).filter(
         (name) => !reference.execTypes.has(name) && !neverStored.has(name),
       );

@@ -1,3 +1,4 @@
+import { warheadMagnitude } from "@openfront/engine-lib/game/Upgrades";
 import type { NukeTelegraphData, UnitState } from "../../types";
 import { NUKE_MAGNITUDES } from "../../types";
 
@@ -57,8 +58,10 @@ export function extractNukeTelegraphs(
     const plan = motionPlans?.get(u.id);
     if (plan && plan.startTick > currentTick) continue;
 
-    const mag = NUKE_MAGNITUDES[u.unitType];
-    if (!mag) continue;
+    const base = NUKE_MAGNITUDES[u.unitType];
+    if (!base) continue;
+    // Borderfall: a Warhead silo's nukes blast wider.
+    const mag = warheadMagnitude(base, u.tiers);
     telegraphs.push({
       x: u.targetTile % mapW,
       y: (u.targetTile - (u.targetTile % mapW)) / mapW,
@@ -97,8 +100,10 @@ export function extractNukeTelegraphsFromIds(
     const plan = motionPlans?.get(u.id);
     if (plan && plan.startTick > currentTick) continue;
 
-    const mag = NUKE_MAGNITUDES[u.unitType];
-    if (!mag) continue;
+    const base = NUKE_MAGNITUDES[u.unitType];
+    if (!base) continue;
+    // Borderfall: a Warhead silo's nukes blast wider.
+    const mag = warheadMagnitude(base, u.tiers);
     telegraphs.push({
       x: u.targetTile % mapW,
       y: (u.targetTile - (u.targetTile % mapW)) / mapW,

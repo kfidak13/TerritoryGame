@@ -19,7 +19,11 @@ import {
   listNukeBreakAlliance,
   wouldNukeBreakAlliance,
 } from "@openfront/engine-lib/execution/NukeAlliance";
-import { mainPath, samRangeLevel } from "@openfront/engine-lib/game/Upgrades";
+import {
+  mainPath,
+  samRangeLevel,
+  warheadMagnitude,
+} from "@openfront/engine-lib/game/Upgrades";
 import { EventBus } from "@openfront/shared/EventBus";
 import { Controller } from "../Controller";
 import {
@@ -250,7 +254,7 @@ export class BuildPreviewController implements Controller {
         targetingAlly = wouldNukeBreakAlliance({
           game: this.game,
           targetTile: tileRef,
-          magnitude: this.game.config().nukeMagnitudes(nukeType),
+          magnitude: this.nukeMagnitude(nukeType),
           allySmallIds: this.connectedAllySmallIds,
           threshold: this.game.config().nukeAllianceBreakThreshold(),
         });
@@ -386,7 +390,7 @@ export class BuildPreviewController implements Controller {
         ? listNukeBreakAlliance({
             game: this.game,
             targetTile: tileRef,
-            magnitude: this.game.config().nukeMagnitudes(type),
+            magnitude: this.nukeMagnitude(type),
             threshold: this.game.config().nukeAllianceBreakThreshold(),
           })
         : new Set();
@@ -460,7 +464,7 @@ export class BuildPreviewController implements Controller {
       }
       case UnitType.AtomBomb:
       case UnitType.HydrogenBomb:
-        rangeRadius = this.game.config().nukeMagnitudes(u.type).outer;
+        rangeRadius = this.nukeMagnitude(u.type).outer;
         break;
       case UnitType.Factory:
         rangeRadius = this.game.config().trainStationMaxRange();
@@ -616,7 +620,7 @@ export class BuildPreviewController implements Controller {
         : listNukeBreakAlliance({
             game: this.game,
             targetTile: tile,
-            magnitude: this.game.config().nukeMagnitudes(unitType),
+            magnitude: this.nukeMagnitude(unitType),
             threshold: this.game.config().nukeAllianceBreakThreshold(),
           });
 
@@ -669,6 +673,21 @@ export class BuildPreviewController implements Controller {
   private removeGhostStructure() {
     this.clearGhostStructure();
     this.uiState.ghostStructure = null;
+  }
+
+  /**
+   * A nuke's blast as it will launch: grown by the Warhead level of the silo
+   * the hovered build would fire from (engine-lib/game/Upgrades).
+   */
+  private nukeMagnitude(type: UnitType) {
+    const base = this.game.config().nukeMagnitudes(type);
+    const spawn = this.ghostUnit?.buildableUnit.canBuild;
+    if (typeof spawn !== "number") return base;
+    const silo = this.game
+      .myPlayer()
+      ?.units(UnitType.MissileSilo)
+      .find((s) => s.tile() === spawn);
+    return silo ? warheadMagnitude(base, silo.tiers()) : base;
   }
 
   private resolveGhostRangeLevel(

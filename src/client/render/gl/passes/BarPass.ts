@@ -18,6 +18,7 @@ import {
   missileTubes,
   navyScaled,
   samReloadTicks,
+  siloReloadTicks,
 } from "@openfront/engine-lib/game/Upgrades";
 import { maxHealthWithVeterancy } from "@openfront/engine-lib/game/Veterancy";
 import type { RendererConfig, UnitState } from "../../types";
@@ -337,11 +338,7 @@ export class BarPass {
   }
 
   private missileReadiness(unit: UnitState, gameTick: number): number {
-    const maxMissiles = missileTubes(
-      unit.unitType as UnitType,
-      unit.level,
-      unit.tiers,
-    );
+    const maxMissiles = missileTubes(unit.unitType as UnitType, unit.tiers);
     const reloading = unit.missileTimerQueue.length;
     if (reloading === 0) return 1;
 
@@ -350,7 +347,7 @@ export class BarPass {
     const cooldown =
       unit.unitType === UT_SAM_LAUNCHER
         ? samReloadTicks(this.config.SAMCooldown(), unit.tiers)
-        : this.config.SiloCooldown();
+        : siloReloadTicks(this.config.SiloCooldown(), unit.tiers);
 
     let readiness = ready / maxMissiles;
     for (const timer of unit.missileTimerQueue) {

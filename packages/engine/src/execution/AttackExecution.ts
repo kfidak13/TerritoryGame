@@ -341,7 +341,9 @@ export class AttackExecution implements Execution {
       }
       if (
         !this.map.isLand(tileToConquer) ||
-        this.map.isImpassable(tileToConquer)
+        this.map.isImpassable(tileToConquer) ||
+        // Borderfall Plague: poisoned land can't be taken.
+        this.mg.isPoisoned(tileToConquer)
       ) {
         continue;
       }

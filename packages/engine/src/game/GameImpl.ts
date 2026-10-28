@@ -127,6 +127,9 @@ export type CellString = string;
 
 export class GameImpl implements Game {
   private _ticks = 0;
+  // Borderfall Plague: tile -> the tick it can be taken again. Not in the
+  // game snapshot: PlagueExecution holds it and puts it back on restore.
+  private poisonedUntil = new Map<TileRef, Tick>();
   private startTick: number | null = null;
 
   private unInitExecs: Execution[] = [];
@@ -826,6 +829,21 @@ export class GameImpl implements Game {
     this._map.forEachNeighborWithDiag(tile, callback);
   }
 
+  poison(tile: TileRef, until: Tick): void {
+    if ((this.poisonedUntil.get(tile) ?? 0) < until) {
+      this.poisonedUntil.set(tile, until);
+    }
+  }
+
+  /** Lifts `until`'s poison, unless a later Plague set a longer one. */
+  unpoison(tile: TileRef, until: Tick): void {
+    if (this.poisonedUntil.get(tile) === until) this.poisonedUntil.delete(tile);
+  }
+
+  isPoisoned(tile: TileRef): boolean {
+    return (this.poisonedUntil.get(tile) ?? 0) > this._ticks;
+  }
+
   conquer(owner: PlayerImpl, tile: TileRef): void {
     if (!this.isLand(tile)) {
       throw Error(`cannot conquer water`);
@@ -833,6 +851,8 @@ export class GameImpl implements Game {
     if (this.isImpassable(tile)) {
       throw Error(`cannot conquer impassable terrain`);
     }
+    // Borderfall Plague: poisoned land can't be taken.
+    if (this.isPoisoned(tile)) return;
     const previousOwner = this.owner(tile) as TerraNullius | PlayerImpl;
     // Borderfall admin god mode: a god's land can't be taken.
     if (

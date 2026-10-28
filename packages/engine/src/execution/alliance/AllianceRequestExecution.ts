@@ -4,6 +4,7 @@ import {
   UnitType,
 } from "@openfront/engine-api/game/GameTypes";
 import { wouldNukeBreakAlliance } from "@openfront/engine-lib/execution/NukeAlliance";
+import { warheadMagnitude } from "@openfront/engine-lib/game/Upgrades";
 import { zPlayerRef, zRef } from "@openfront/engine-lib/snapshot/SnapshotType";
 import { z } from "zod";
 import { AllianceRequest, Execution, Game, Player } from "../../game/Game";
@@ -170,7 +171,10 @@ export function cancelNukesBetween(
         if (!targetTile || mg.owner(targetTile) !== other) continue;
       } else {
         if (!targetTile) continue;
-        const magnitude = mg.config().nukeMagnitudes(unit.type());
+        const magnitude = warheadMagnitude(
+          mg.config().nukeMagnitudes(unit.type()),
+          unit.tiers(),
+        );
         if (
           !wouldNukeBreakAlliance({
             game: mg,

@@ -554,6 +554,7 @@ describe("ReplayFrameBuilder nuke telegraphs", () => {
     waitTicks: 0,
     pos: 0,
     lastPos: 0,
+    tiers: [0, 0, 0],
   } as unknown as UnitState;
   const frame = (tick: number) =>
     ({

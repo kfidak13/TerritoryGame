@@ -99,10 +99,7 @@ export function mirvLeakShare(
 
   let shots = 0;
   warheadsInRange.forEach((inRange, sam) => {
-    shots += Math.min(
-      missileTubes(sam.type(), sam.level(), sam.tiers()),
-      inRange,
-    );
+    shots += Math.min(missileTubes(sam.type(), sam.tiers()), inRange);
   });
   const intercepted = Math.min(coveredSamples * warheadsPerSample, shots);
   return 1 - intercepted / warheads;

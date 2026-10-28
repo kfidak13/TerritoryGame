@@ -603,6 +603,10 @@ export interface Game extends GameLike {
   executeNextTick(): GameUpdates;
   drainPackedTileUpdates(): Uint32Array;
   recordMotionPlan(record: MotionPlanRecord): void;
+  // Borderfall Plague nukes (PlagueExecution): land nobody can take yet.
+  poison(tile: TileRef, until: Tick): void;
+  unpoison(tile: TileRef, until: Tick): void;
+  isPoisoned(tile: TileRef): boolean;
   drainPackedMotionPlans(): Uint32Array | null;
   drainPackedPlayerUpdates(): Float64Array | null;
   drainPackedAttackUpdates(): Float64Array | null;

@@ -337,15 +337,11 @@ export function samRangeLevel(tiers: Tiers): number {
 /** Missiles a SAM holds, by Battery tier. */
 export const SAM_BATTERY_TUBES = [1, 1, 1, 2, 3, 4];
 
-/** Missiles a SAM or silo holds (a silo's is its level for now). */
-export function missileTubes(
-  type: UnitType,
-  level: number,
-  tiers: Tiers,
-): number {
+/** Missiles a SAM (Battery) or silo (Arsenal) holds. */
+export function missileTubes(type: UnitType, tiers: Tiers): number {
   return type === UnitType.SAMLauncher
     ? SAM_BATTERY_TUBES[tiers[SAM_PATH_BATTERY]]
-    : level;
+    : SILO_ARSENAL_TUBES[tiers[SILO_PATH_ARSENAL]];
 }
 /** Reload time as a % of Config.SAMCooldown, by Battery tier. */
 const SAM_BATTERY_RELOAD_PERCENT = [100, 85, 70, 70, 70, 50];
@@ -362,3 +358,50 @@ export const SAM_AEGIS_INTERVAL = [0, 80, 50, 50, 30, 20];
 export const SAM_AEGIS_WARSHIP_TIER = 3;
 /** Shell damage against warships, % by Aegis tier. */
 export const SAM_AEGIS_DAMAGE_PERCENT = [100, 100, 100, 100, 200, 300];
+
+// ---------------------------------------------------------------- silo
+
+export const SILO_PATH_WARHEAD = 0;
+export const SILO_PATH_ARSENAL = 1;
+export const SILO_PATH_PLAGUE = 2;
+
+/** Extra blast radius for every nuke from here, % by Warhead tier. */
+export const SILO_WARHEAD_BLAST_PERCENT = [0, 10, 20, 35, 55, 100];
+/** Extra levels a nuke from here takes off buildings, by Warhead tier. */
+export const SILO_WARHEAD_STRENGTH = [0, 0, 0, 1, 1, 2];
+
+/** A nuke's blast, grown by the Warhead tier it was launched with. */
+export function warheadMagnitude<M extends { inner: number; outer: number }>(
+  base: M,
+  tiers: Tiers,
+): M {
+  const percent = 100 + SILO_WARHEAD_BLAST_PERCENT[tiers[SILO_PATH_WARHEAD]];
+  return {
+    ...base,
+    inner: Math.floor((base.inner * percent) / 100),
+    outer: Math.floor((base.outer * percent) / 100),
+  };
+}
+
+/** Levels a nuke takes off a building it lands on. */
+export function nukeStrength(type: UnitType, tiers: Tiers): number {
+  return (
+    (NUKE_STRENGTH[type] ?? 1) + SILO_WARHEAD_STRENGTH[tiers[SILO_PATH_WARHEAD]]
+  );
+}
+
+/** Nukes a silo holds, by Arsenal tier. */
+export const SILO_ARSENAL_TUBES = [1, 1, 2, 3, 4, 5];
+/** Reload time as a % of Config.SiloCooldown, by Arsenal tier. */
+const SILO_ARSENAL_RELOAD_PERCENT = [100, 80, 80, 80, 80, 50];
+
+export function siloReloadTicks(cooldown: number, tiers: Tiers): number {
+  return Math.floor(
+    (cooldown * SILO_ARSENAL_RELOAD_PERCENT[tiers[SILO_PATH_ARSENAL]]) / 100,
+  );
+}
+
+/** Ticks a Plague nuke's land can't be taken, by tier (300 = 30 seconds). */
+export const SILO_PLAGUE_TICKS = [0, 300, 600, 1200, 2100, 3000];
+/** The poisoned area's radius as a % of the blast's, by Plague tier. */
+export const SILO_PLAGUE_AREA_PERCENT = [0, 100, 100, 125, 125, 150];

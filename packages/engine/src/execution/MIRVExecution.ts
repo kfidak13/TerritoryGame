@@ -4,6 +4,10 @@ import {
   TerraNullius,
   UnitType,
 } from "@openfront/engine-api/game/GameTypes";
+import {
+  SILO_PATH_PLAGUE,
+  SILO_PATH_WARHEAD,
+} from "@openfront/engine-lib/game/Upgrades";
 import { PseudoRandom } from "@openfront/engine-lib/PseudoRandom";
 import {
   zInt,
@@ -156,6 +160,11 @@ export class MirvExecution implements Execution {
         .find((silo) => silo.tile() === spawn);
       if (silo) {
         silo.launch();
+        // Borderfall: it carries its silo's levels down to its warheads.
+        for (const path of [SILO_PATH_WARHEAD, SILO_PATH_PLAGUE]) {
+          for (let i = 0; i < silo.tiers()[path]; i++)
+            this.nuke.raiseTier(path);
+        }
       }
     }
 
@@ -239,7 +248,7 @@ export class MirvExecution implements Execution {
         // order of extra speed assign does not matter, they all spawn at once.
         warheadSpeed + speedOffset,
         waitBase + this.random.nextInt(0, 15),
-      );
+      ).inheritTiers(this.nuke.tiers());
       this.warheadExecutions.push(execution);
       this.mg.addExecution(execution);
     }

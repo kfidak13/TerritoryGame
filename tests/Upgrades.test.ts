@@ -1,3 +1,4 @@
+import type { TileRef } from "@openfront/engine-api/game/GameMap";
 import {
   PlayerInfo,
   PlayerType,
@@ -5,10 +6,16 @@ import {
 } from "@openfront/engine-api/game/GameTypes";
 import {
   canRaiseTier,
+  missileTubes,
   navyScaled,
   SAM_PATH_AEGIS,
   samRangeLevel,
   sellRefund,
+  SILO_PATH_ARSENAL,
+  SILO_PATH_PLAGUE,
+  SILO_PATH_WARHEAD,
+  SILO_PLAGUE_TICKS,
+  siloReloadTicks,
   trainStopGold,
   upgradeGold,
   upgradeTicks,
@@ -21,6 +28,7 @@ import { TransportShipExecution } from "@openfront/engine/execution/TransportShi
 import { UpgradeStructureExecution } from "@openfront/engine/execution/UpgradeStructureExecution";
 import { Game, Player, Unit } from "@openfront/engine/game/Game";
 import { setup } from "./util/Setup";
+import { expectSnapshotRoundTrip } from "./util/Snapshot";
 import { executeTicks } from "./util/utils";
 
 describe("Upgrade paths", () => {
@@ -232,5 +240,67 @@ describe("Factory and SAM paths", () => {
     });
     executeTicks(game, 20);
     expect(boat.isActive()).toBe(false);
+  });
+});
+
+describe("Missile Silo paths", () => {
+  let game: Game;
+  let rome: Player;
+  let carthage: Player;
+
+  beforeEach(async () => {
+    game = await setup("plains", { infiniteGold: true }, [
+      new PlayerInfo("rome", PlayerType.Human, null, "rome"),
+      new PlayerInfo("carthage", PlayerType.Human, null, "carthage"),
+    ]);
+    rome = game.player("rome");
+    carthage = game.player("carthage");
+    for (let y = 0; y < 40; y++) {
+      for (let x = 0; x < 80; x++) {
+        (x < 40 ? rome : carthage).conquer(game.ref(x, y));
+      }
+    }
+    game.endSpawnPhase();
+  });
+
+  function nukeFrom(silo: Unit, tile: TileRef) {
+    game.addExecution(
+      new NukeExecution(UnitType.AtomBomb, carthage, tile, silo.tile()),
+    );
+    executeTicks(game, 200);
+  }
+
+  test("a Warhead silo's nukes blast wider and hit harder", () => {
+    const silo = carthage.buildUnit(UnitType.MissileSilo, game.ref(70, 5), {});
+    for (let i = 0; i < 5; i++) silo.raiseTier(SILO_PATH_WARHEAD);
+    const city = rome.buildUnit(UnitType.City, game.ref(10, 10), {});
+    for (let i = 0; i < 5; i++) city.raiseTier(0);
+    // The test blast is 1 tile; at Warhead 5 it is 2.
+    const near = rome.buildUnit(UnitType.City, game.ref(11, 10), {});
+    nukeFrom(silo, city.tile());
+    expect(city.tiers()).toEqual([2, 0, 0]);
+    expect(near.isActive()).toBe(false);
+  });
+
+  test("an Arsenal silo holds more nukes and reloads faster", () => {
+    const silo = carthage.buildUnit(UnitType.MissileSilo, game.ref(70, 5), {});
+    for (let i = 0; i < 5; i++) silo.raiseTier(SILO_PATH_ARSENAL);
+    expect(missileTubes(silo.type(), silo.tiers())).toBe(5);
+    expect(siloReloadTicks(100, silo.tiers())).toBe(50);
+  });
+
+  test("a Plague nuke's land can't be taken until it wears off", async () => {
+    const silo = carthage.buildUnit(UnitType.MissileSilo, game.ref(70, 5), {});
+    silo.raiseTier(SILO_PATH_PLAGUE);
+    const tile = game.ref(10, 10);
+    nukeFrom(silo, tile);
+    expect(game.owner(tile).isPlayer()).toBe(false);
+    rome.conquer(tile);
+    expect(game.owner(tile).isPlayer()).toBe(false);
+    await expectSnapshotRoundTrip(game, "plains", 5);
+
+    executeTicks(game, SILO_PLAGUE_TICKS[1]);
+    rome.conquer(tile);
+    expect(game.owner(tile)).toBe(rome);
   });
 });

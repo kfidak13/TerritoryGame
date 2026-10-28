@@ -6,6 +6,7 @@ import {
   UnitType,
 } from "@openfront/engine-api/game/GameTypes";
 import { OTHER_INDEX_DESTROY } from "@openfront/engine-api/StatsSchemas";
+import { SILO_PATH_ARSENAL } from "@openfront/engine-lib/game/Upgrades";
 import { ConstructionExecution } from "@openfront/engine/execution/ConstructionExecution";
 import { MissileSiloExecution } from "@openfront/engine/execution/MissileSiloExecution";
 import { NukeExecution } from "@openfront/engine/execution/NukeExecution";
@@ -370,12 +371,8 @@ describe("NukeExecution", () => {
 
   test("stacked atom bombs launch staggered and fly on distinct tiles", () => {
     const silo = player.buildUnit(UnitType.MissileSilo, game.ref(1, 1), {});
-    // A silo holds `level` concurrent missiles; raise to 3 so the whole stack launches.
-    silo.increaseLevel();
-    silo.increaseLevel();
-    // Each added level starts on reload cooldown — clear both so all tubes are ready.
-    silo.reloadMissile();
-    silo.reloadMissile();
+    // Arsenal 3 holds three nukes, so the whole stack launches.
+    for (let i = 0; i < 3; i++) silo.raiseTier(SILO_PATH_ARSENAL);
 
     game.addExecution(
       new ConstructionExecution(
@@ -409,9 +406,10 @@ describe("NukeExecution", () => {
     // degenerate first segment that stays on the launch tile.
     const siloA = player.buildUnit(UnitType.MissileSilo, game.ref(50, 50), {});
     const siloB = player.buildUnit(UnitType.MissileSilo, game.ref(50, 54), {});
+    // Arsenal 2: two nukes each.
     for (const silo of [siloA, siloB]) {
-      silo.increaseLevel();
-      silo.reloadMissile();
+      silo.raiseTier(SILO_PATH_ARSENAL);
+      silo.raiseTier(SILO_PATH_ARSENAL);
     }
 
     game.addExecution(
@@ -487,10 +485,8 @@ describe("NukeExecution", () => {
     (game.config() as TestConfig).setDefaultNukeSpeed(20);
 
     const silo = player.buildUnit(UnitType.MissileSilo, game.ref(50, 50), {});
-    for (let i = 0; i < 9; i++) {
-      silo.increaseLevel();
-      silo.reloadMissile();
-    }
+    // Arsenal 5: five nukes at once.
+    for (let i = 0; i < 5; i++) silo.raiseTier(SILO_PATH_ARSENAL);
 
     // Click 1: launch 3 nukes at current tick
     game.addExecution(
@@ -503,7 +499,7 @@ describe("NukeExecution", () => {
       ),
     );
 
-    // Advance 1 tick, then Click 2: launch 3 more nukes at next tick
+    // Advance 1 tick, then Click 2: launch 2 more nukes at next tick
     executeTicks(game, 1);
     game.addExecution(
       new ConstructionExecution(
@@ -511,18 +507,18 @@ describe("NukeExecution", () => {
         UnitType.AtomBomb,
         game.ref(150, 150),
         undefined,
-        3,
+        2,
       ),
     );
 
-    // Give all 6 nukes time to depart the silo
+    // Give all 5 nukes time to depart the silo
     executeTicks(game, 7);
 
     // Every launched nuke should occupy a distinct tile (no 2 nukes overlapping on same tile)
     const nukes = player.units(UnitType.AtomBomb);
-    expect(nukes).toHaveLength(6);
+    expect(nukes).toHaveLength(5);
     const tiles = nukes.map((n) => n.tile());
-    expect(new Set(tiles).size).toBe(6);
+    expect(new Set(tiles).size).toBe(5);
   });
 });
 

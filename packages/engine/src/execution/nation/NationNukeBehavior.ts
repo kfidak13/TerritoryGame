@@ -1326,7 +1326,7 @@ export class NationNukeBehavior {
 
       // Total interception capacity = sum of covering SAM tubes
       const totalInterceptions = coveringSams.reduce(
-        (sum, sam) => sum + missileTubes(sam.type(), sam.level(), sam.tiers()),
+        (sum, sam) => sum + missileTubes(sam.type(), sam.tiers()),
         0,
       );
       const bombsNeeded = totalInterceptions + 1;
@@ -1343,7 +1343,9 @@ export class NationNukeBehavior {
         interceptable: boolean;
       }[] = [];
       for (const silo of ourSilos) {
-        const availableSlots = silo.level() - silo.missileTimerQueue().length;
+        const availableSlots =
+          missileTubes(silo.type(), silo.tiers()) -
+          silo.missileTimerQueue().length;
         if (availableSlots <= 0) {
           continue;
         }

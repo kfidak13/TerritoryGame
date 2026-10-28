@@ -709,9 +709,9 @@ export class UnitImpl implements Unit {
     this.increaseLevel();
   }
 
-  /** Missiles it holds: a SAM's Battery tier, a silo's level. */
+  /** Missiles it holds: a SAM's Battery tier, a silo's Arsenal tier. */
   missileTubes(): number {
-    return missileTubes(this._type, this._level, this._tiers);
+    return missileTubes(this._type, this._tiers);
   }
 
   veterancy(): number {
@@ -806,10 +806,6 @@ export class UnitImpl implements Unit {
     // unitCount()/unitsOwned() are level-weighted and memoised on these versions
     this.mg.bumpUnitsVersion();
     this._owner._myUnitsVersion++;
-    // A silo's new tube starts empty (a SAM's tubes come from its Battery).
-    if (this._type === UnitType.MissileSilo) {
-      this._missileTimerQueue.push(this.mg.ticks());
-    }
     this.mg.addUpdate(this.toUpdate());
   }
 
@@ -818,9 +814,6 @@ export class UnitImpl implements Unit {
     const top = Math.max(...this._tiers);
     if (top > 0) this._tiers[this._tiers.indexOf(top)]--;
     this._level--;
-    if (this._type === UnitType.MissileSilo) {
-      this._missileTimerQueue.pop();
-    }
     if (this._type === UnitType.SAMLauncher) {
       this._samLauncherState = undefined;
     }

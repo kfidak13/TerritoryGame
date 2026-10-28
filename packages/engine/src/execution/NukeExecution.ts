@@ -10,8 +10,13 @@ import { NukeType } from "@openfront/engine-api/StatsSchemas";
 import { atan2 } from "@openfront/engine-lib/DetMath";
 import { listNukeBreakAlliance } from "@openfront/engine-lib/execution/NukeAlliance";
 import {
-  NUKE_STRENGTH,
+  nukeStrength,
   nukeTierDamage,
+  SILO_PATH_PLAGUE,
+  SILO_PATH_WARHEAD,
+  SILO_PLAGUE_AREA_PERCENT,
+  SILO_PLAGUE_TICKS,
+  warheadMagnitude,
 } from "@openfront/engine-lib/game/Upgrades";
 import { PseudoRandom } from "@openfront/engine-lib/PseudoRandom";
 import {
@@ -38,6 +43,7 @@ import type {
   SnapshotReader,
   SnapshotWriter,
 } from "../snapshot/SnapshotContext";
+import { PlagueExecution } from "./PlagueExecution";
 
 const SPRITE_RADIUS = 16;
 
@@ -47,6 +53,8 @@ export class NukeExecution implements Execution {
   private nuke: Unit | null = null;
   private tilesToDestroyCache: Set<TileRef> | undefined;
   private pathFinder: ParabolaUniversalPathFinder;
+  // Borderfall: silo upgrade tiers handed down by a MIRV to its warheads.
+  private launchTiers: readonly number[] | undefined;
 
   constructor(
     private nukeType: NukeType,
@@ -60,6 +68,12 @@ export class NukeExecution implements Execution {
     // with no warning, no name and no broken alliances.
     private divine = false,
   ) {}
+
+  /** A MIRV's warheads carry the Warhead and Plague levels of its silo. */
+  inheritTiers(tiers: readonly number[]): this {
+    this.launchTiers = [...tiers];
+    return this;
+  }
 
   init(mg: Game, ticks: number): void {
     this.mg = mg;
@@ -76,6 +90,14 @@ export class NukeExecution implements Execution {
     return this.mg.owner(this.dst);
   }
 
+  /** Its blast, grown by the Warhead level it was launched with. */
+  private magnitude() {
+    return warheadMagnitude(
+      this.mg.config().nukeMagnitudes(this.nuke!.type()),
+      this.nuke!.tiers(),
+    );
+  }
+
   private tilesToDestroy(): Set<TileRef> {
     if (this.tilesToDestroyCache !== undefined) {
       return this.tilesToDestroyCache;
@@ -83,7 +105,7 @@ export class NukeExecution implements Execution {
     if (this.nuke === null) {
       throw new Error("Not initialized");
     }
-    const magnitude = this.mg.config().nukeMagnitudes(this.nuke.type());
+    const magnitude = this.magnitude();
     const rand = new PseudoRandom(this.mg.ticks());
     const inner2 = magnitude.inner * magnitude.inner;
     const outer2 = magnitude.outer * magnitude.outer;
@@ -163,7 +185,7 @@ export class NukeExecution implements Execution {
       return;
     }
 
-    const magnitude = this.mg.config().nukeMagnitudes(this.nuke.type());
+    const magnitude = this.magnitude();
 
     const playersToBreakAllianceWith = listNukeBreakAlliance({
       game: this.mg,
@@ -245,6 +267,13 @@ export class NukeExecution implements Execution {
         targetTile: this.dst,
         trajectory: this.getTrajectory(this.dst),
       });
+      // Borderfall: it carries its silo's Warhead and Plague levels.
+      const tiers = silo?.tiers() ?? this.launchTiers;
+      if (tiers !== undefined) {
+        for (const path of [SILO_PATH_WARHEAD, SILO_PATH_PLAGUE]) {
+          for (let i = 0; i < tiers[path]; i++) this.nuke.raiseTier(path);
+        }
+      }
       this.nuke.updateNukeState({ waitTicks: this.waitTicks });
       this.recordMotionPlan(ticks);
       if (this.nuke.type() !== UnitType.MIRVWarhead) {
@@ -410,7 +439,7 @@ export class NukeExecution implements Execution {
     const mg = this.mg;
     const config = mg.config();
 
-    const magnitude = config.nukeMagnitudes(this.nuke.type());
+    const magnitude = this.magnitude();
     const toDestroy = this.tilesToDestroy();
 
     // Retrieve all impacted players and the number of tiles
@@ -481,7 +510,7 @@ export class NukeExecution implements Execution {
 
     const outer2 = magnitude.outer * magnitude.outer;
     const inner2 = magnitude.inner * magnitude.inner;
-    const strength = NUKE_STRENGTH[this.nukeType] ?? 1;
+    const strength = nukeStrength(this.nukeType, this.nuke.tiers());
     const dst = this.dst;
     for (const unit of mg.units()) {
       const type = unit.type();
@@ -514,6 +543,19 @@ export class NukeExecution implements Execution {
     }
 
     this.redrawBuildings(magnitude.outer + SPRITE_RADIUS);
+    // Borderfall Plague path: the land it hits can't be taken for a while.
+    const plague = this.nuke.tiers()[SILO_PATH_PLAGUE];
+    if (plague > 0) {
+      mg.addExecution(
+        new PlagueExecution(
+          this.dst,
+          Math.floor(
+            (magnitude.outer * SILO_PLAGUE_AREA_PERCENT[plague]) / 100,
+          ),
+          mg.ticks() + SILO_PLAGUE_TICKS[plague],
+        ),
+      );
+    }
     this.active = false;
     this.nuke.setReachedTarget();
     this.nuke.delete(false);
@@ -594,6 +636,7 @@ export class NukeExecution implements Execution {
       waitTicks: this.waitTicks,
       rocketDirectionUp: this.rocketDirectionUp,
       divine: this.divine || undefined,
+      launchTiers: this.launchTiers ? [...this.launchTiers] : undefined,
     });
   }
 
@@ -612,6 +655,7 @@ export class NukeExecution implements Execution {
     this.waitTicks = s.waitTicks;
     this.rocketDirectionUp = s.rocketDirectionUp;
     this.divine = s.divine ?? false;
+    this.launchTiers = s.launchTiers;
   }
 }
 
@@ -628,6 +672,7 @@ const NukeStateSchema = z.object({
   waitTicks: zInt(),
   rocketDirectionUp: z.boolean(),
   divine: z.boolean().optional(),
+  launchTiers: z.array(zInt()).optional(),
 });
 type NukeState = z.infer<typeof NukeStateSchema>;
 
