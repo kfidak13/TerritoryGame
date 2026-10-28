@@ -27,6 +27,7 @@ import { MoveWarshipExecutionSnapshot } from "../execution/MoveWarshipExecution"
 import { NationExecutionSnapshot } from "../execution/NationExecution";
 import { NoOpExecutionSnapshot } from "../execution/NoOpExecution";
 import { NukeExecutionSnapshot } from "../execution/NukeExecution";
+import { OilRigExecutionSnapshot } from "../execution/OilRigExecution";
 import { PauseExecutionSnapshot } from "../execution/PauseExecution";
 import { PlagueExecutionSnapshot } from "../execution/PlagueExecution";
 import { PlayerExecutionSnapshot } from "../execution/PlayerExecution";
@@ -89,6 +90,7 @@ export const EXECUTION_SNAPSHOT_TYPES = [
   MoveWarshipExecutionSnapshot,
   NationExecutionSnapshot,
   NoOpExecutionSnapshot,
+  OilRigExecutionSnapshot,
   PlagueExecutionSnapshot,
   NukeExecutionSnapshot,
   PauseExecutionSnapshot,

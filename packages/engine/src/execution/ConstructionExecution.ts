@@ -20,6 +20,7 @@ import { FactoryExecution } from "./FactoryExecution";
 import { MirvExecution } from "./MIRVExecution";
 import { MissileSiloExecution } from "./MissileSiloExecution";
 import { NukeExecution } from "./NukeExecution";
+import { OilRigExecution } from "./OilRigExecution";
 import { PortExecution } from "./PortExecution";
 import { SAMLauncherExecution } from "./SAMLauncherExecution";
 import { UpgradeStructureExecution } from "./UpgradeStructureExecution";
@@ -47,6 +48,8 @@ export function structureExecution(
       return new CityExecution(structure);
     case UnitType.Factory:
       return new FactoryExecution(structure);
+    case UnitType.OilRig:
+      return new OilRigExecution(structure);
     default:
       return null;
   }

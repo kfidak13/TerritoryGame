@@ -297,6 +297,7 @@ export class Config {
         info = {
           constructionDuration: this.instantBuild() ? 0 : 10 * 10,
           maxHealth: OIL_RIG_MAX_HEALTH,
+          upgradable: true,
         };
         break;
       case UnitType.TransportShip:

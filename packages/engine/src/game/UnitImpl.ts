@@ -18,6 +18,8 @@ import {
 import {
   missileTubes,
   navyScaled,
+  RIG_HULL_HEALTH_PERCENT,
+  RIG_PATH_HULL,
   samRangeLevel,
 } from "@openfront/engine-lib/game/Upgrades";
 import { maxHealthWithVeterancy } from "@openfront/engine-lib/game/Veterancy";
@@ -300,6 +302,11 @@ export class UnitImpl implements Unit {
       this.veterancy(),
       this.mg.config().warshipVeterancyHealthBonus(),
     );
+    if (this._type === UnitType.OilRig) {
+      return Math.floor(
+        (health * RIG_HULL_HEALTH_PERCENT[this._tiers[RIG_PATH_HULL]]) / 100,
+      );
+    }
     return this._type === UnitType.Warship
       ? navyScaled(health, this._tiers)
       : health;

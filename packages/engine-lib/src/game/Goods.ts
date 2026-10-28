@@ -9,6 +9,11 @@ import {
 import { PlayerLike } from "@openfront/engine-api/game/ReadViews";
 import { PseudoRandom } from "../PseudoRandom";
 import { simpleHash } from "../Util";
+import {
+  GOODS_OUTPUT_PERCENT,
+  RIG_DRILL_YIELD_PERCENT,
+  RIG_PATH_DRILL,
+} from "./Upgrades";
 
 /*
  * Borderfall regional goods.
@@ -514,8 +519,9 @@ export function canAffordGoods(
 /**
  * Goods a player's deposits produce per tick, by Good (PlayerLike.goodsIncome).
  * Every owned deposit tile gives UNWORKED_SHARE of its output; each finished
- * level of the good's building works up to one average field of them at
- * full output, and each finished Oil Rig adds OIL_RIG_YIELD_PER_TICK of Oil.
+ * building of the good works up to one average field of them, at full output
+ * grown by its Output tier, and each finished Oil Rig adds
+ * OIL_RIG_YIELD_PER_TICK of Oil, grown by its Drill tier.
  * `multiplier` covers trade pacts.
  */
 export function goodsIncome(
@@ -526,17 +532,35 @@ export function goodsIncome(
   const perTile = depositYield(map) * multiplier;
   const area = fieldArea(map);
   const deposits = player.deposits();
-  const levels = workingLevels(player);
   const income = GOODS.map((g) => {
-    const worked = Math.min(deposits[g], levels[g] * area);
+    // Borderfall upgrades: each working building works a field, and its
+    // Output tier sets what that field yields; the best fields go first.
+    const outputs = player
+      .units(GOOD_BUILDINGS[g])
+      .filter((u) => !u.isUnderConstruction() && !u.isDisrupted())
+      .map((u) => GOODS_OUTPUT_PERCENT[u.tiers()[0]])
+      .sort((a, b) => b - a);
+    let left = deposits[g];
+    let worked = 0;
+    for (const percent of outputs) {
+      if (left <= 0) break;
+      const field = Math.min(left, area);
+      worked += (field * percent) / 100;
+      left -= field;
+    }
     return (
       perTile * (UNWORKED_SHARE * deposits[g] + (1 - UNWORKED_SHARE) * worked)
     );
   }) as GoodsAmounts;
-  const rigs = player
-    .units(UnitType.OilRig)
-    .filter((u) => !u.isUnderConstruction()).length;
-  income[Good.Oil] += rigs * OIL_RIG_YIELD_PER_TICK * multiplier;
+  // Each finished rig's oil, grown by its Drill tier.
+  for (const rig of player.units(UnitType.OilRig)) {
+    if (rig.isUnderConstruction()) continue;
+    income[Good.Oil] +=
+      (OIL_RIG_YIELD_PER_TICK *
+        multiplier *
+        RIG_DRILL_YIELD_PERCENT[rig.tiers()[RIG_PATH_DRILL]]) /
+      100;
+  }
   return income;
 }
 

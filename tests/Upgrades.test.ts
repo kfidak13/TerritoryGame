@@ -6,12 +6,16 @@ import {
 } from "@openfront/engine-api/game/GameTypes";
 import {
   canRaiseTier,
+  GOODS_OUTPUT_PERCENT,
   maxPostReach,
   missileTubes,
   navyScaled,
   POST_PATH_BARRACKS,
   POST_PATH_WATCHTOWER,
   postReach,
+  RIG_DRILL_YIELD_PERCENT,
+  RIG_HULL_HEALTH_PERCENT,
+  RIG_PATH_PLATFORM,
   SAM_PATH_AEGIS,
   samRangeLevel,
   sellRefund,
@@ -28,6 +32,7 @@ import { DefensePostExecution } from "@openfront/engine/execution/DefensePostExe
 import { DeleteUnitExecution } from "@openfront/engine/execution/DeleteUnitExecution";
 import { Executor } from "@openfront/engine/execution/ExecutionManager";
 import { NukeExecution } from "@openfront/engine/execution/NukeExecution";
+import { OilRigExecution } from "@openfront/engine/execution/OilRigExecution";
 import { SAMLauncherExecution } from "@openfront/engine/execution/SAMLauncherExecution";
 import { TransportShipExecution } from "@openfront/engine/execution/TransportShipExecution";
 import { UpgradeStructureExecution } from "@openfront/engine/execution/UpgradeStructureExecution";
@@ -377,5 +382,40 @@ describe("Defense Post paths", () => {
     // A post reloads for defensePostShellAttackRate (10 s) from the start.
     executeTicks(game, 140);
     expect(boat.isActive()).toBe(false);
+  });
+});
+
+describe("Oil Rig and goods paths", () => {
+  test("a rig's Platform guns sink an enemy boat, and survive a snapshot", async () => {
+    // 16x16: land at x <= 7, ocean beyond.
+    const game = await setup(
+      "half_land_half_ocean",
+      { instantBuild: true, goods: true },
+      [
+        new PlayerInfo("rome", PlayerType.Human, null, "rome"),
+        new PlayerInfo("carthage", PlayerType.Human, null, "carthage"),
+      ],
+    );
+    const rome = game.player("rome");
+    const carthage = game.player("carthage");
+    rome.conquer(game.ref(7, 2));
+    carthage.conquer(game.ref(0, 15));
+    game.endSpawnPhase();
+    const rig = rome.buildUnit(UnitType.OilRig, game.ref(10, 2), {});
+    for (let i = 0; i < 2; i++) rig.raiseTier(RIG_PATH_PLATFORM);
+    game.addExecution(new OilRigExecution(rig));
+    executeTicks(game, 2);
+    await expectSnapshotRoundTrip(game, "half_land_half_ocean", 3);
+    const boat = carthage.buildUnit(UnitType.TransportShip, game.ref(12, 4), {
+      troops: 100,
+    });
+    executeTicks(game, 100);
+    expect(boat.isActive()).toBe(false);
+  });
+
+  test("Hull toughens a rig, Drill and Output grow goods", () => {
+    expect(RIG_HULL_HEALTH_PERCENT[5]).toBe(400);
+    expect(RIG_DRILL_YIELD_PERCENT[5]).toBe(400);
+    expect(GOODS_OUTPUT_PERCENT[5]).toBe(500);
   });
 });

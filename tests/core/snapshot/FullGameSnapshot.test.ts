@@ -199,7 +199,14 @@ describe.each(VARIANTS)("full game snapshots: %s", (_, overrides) => {
       // HeavenlyNuke wipes the map, which would end the scripted game;
       // Admin.test.ts round-trips it mid-wave. Plague needs an upgraded
       // silo; Upgrades.test.ts round-trips it while the land is poisoned.
-      const neverStored = new Set(["Pause", "HeavenlyNuke", "Plague"]);
+      // The scripted map has no offshore oil; Upgrades.test.ts round-trips
+      // a rig's OilRig execution.
+      const neverStored = new Set([
+        "Pause",
+        "HeavenlyNuke",
+        "Plague",
+        "OilRig",
+      ]);
       const missing = EXECUTION_SNAPSHOT_TYPES.map((t) => t.name).filter(
         (name) => !reference.execTypes.has(name) && !neverStored.has(name),
       );

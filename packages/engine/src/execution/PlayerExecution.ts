@@ -10,6 +10,10 @@ import {
   GOODS_STOCK_CAP,
   OIL_RIG_REPAIR_PER_TICK,
 } from "@openfront/engine-lib/game/Goods";
+import {
+  RIG_HULL_REPAIR,
+  RIG_PATH_HULL,
+} from "@openfront/engine-lib/game/Upgrades";
 import { isZombieHorde } from "@openfront/engine-lib/game/Zombies";
 import { zInt, zPlayerRef } from "@openfront/engine-lib/snapshot/SnapshotType";
 import { getMode, simpleHash } from "@openfront/engine-lib/Util";
@@ -98,7 +102,9 @@ export class PlayerExecution implements Execution {
       // Borderfall Oil Rigs stand at sea: never captured, only sunk, and
       // slowly repaired between attacks.
       if (u.type() === UnitType.OilRig) {
-        u.modifyHealth(OIL_RIG_REPAIR_PER_TICK);
+        u.modifyHealth(
+          OIL_RIG_REPAIR_PER_TICK * RIG_HULL_REPAIR[u.tiers()[RIG_PATH_HULL]],
+        );
         continue;
       }
 

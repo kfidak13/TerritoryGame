@@ -2,6 +2,8 @@ import { TileRef } from "@openfront/engine-api/game/GameMap";
 import { UnitType } from "@openfront/engine-api/game/GameTypes";
 import {
   navyScaled,
+  RIG_PATH_PLATFORM,
+  RIG_PLATFORM_DAMAGE_PERCENT,
   SAM_AEGIS_DAMAGE_PERCENT,
   SAM_PATH_AEGIS,
 } from "@openfront/engine-lib/game/Upgrades";
@@ -119,6 +121,16 @@ export class ShellExecution implements Execution {
     // Borderfall: warships from a Navy port hit harder.
     if (this.ownerUnit.type() === UnitType.Warship) {
       damageMultiplier = navyScaled(damageMultiplier, this.ownerUnit.tiers());
+    }
+    // A Platform rig's guns hit harder at its top tiers.
+    if (this.ownerUnit.type() === UnitType.OilRig) {
+      damageMultiplier = Math.floor(
+        (damageMultiplier *
+          RIG_PLATFORM_DAMAGE_PERCENT[
+            this.ownerUnit.tiers()[RIG_PATH_PLATFORM]
+          ]) /
+          100,
+      );
     }
     // An Aegis SAM's shells hit warships harder at its top tiers.
     if (this.ownerUnit.type() === UnitType.SAMLauncher) {

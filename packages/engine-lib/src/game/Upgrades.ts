@@ -49,7 +49,6 @@ const BASE_GOLD: Partial<Record<UnitType, number>> = {
   [UnitType.Mineshaft]: 100_000,
   [UnitType.OilExtractor]: 150_000,
   [UnitType.DefensePost]: 50_000,
-  // No paths yet: only for the sell refund.
   [UnitType.OilRig]: 200_000,
 };
 
@@ -83,6 +82,11 @@ const PATHS: Partial<Record<UnitType, readonly UpgradePath[]>> = {
     { key: "post_fortress", goods: g(0, 0, 20) },
     { key: "post_watchtower", goods: g(0, 20, 0) },
     { key: "post_barracks", goods: g(20, 0, 0) },
+  ],
+  [UnitType.OilRig]: [
+    { key: "rig_drill", goods: g(0, 0, 20) },
+    { key: "rig_hull", goods: g(0, 0, 20) },
+    { key: "rig_platform", goods: g(0, 20, 0) },
   ],
   // Goods buildings only grow their output: one path.
   [UnitType.Farm]: [{ key: "output", goods: g(0, 0, 20) }],
@@ -450,3 +454,29 @@ export function maxPostReach(base: number): number {
 export function barracksTroops(tiers: Tiers): number {
   return POST_BARRACKS_TROOPS[tiers[POST_PATH_BARRACKS]] * TROOP_SCALE;
 }
+
+// ---------------------------------------------------------------- goods
+
+/** What a goods building's worked field yields, % by its Output tier. */
+export const GOODS_OUTPUT_PERCENT = [100, 150, 225, 350, 425, 500];
+
+// ---------------------------------------------------------------- oil rig
+
+export const RIG_PATH_DRILL = 0;
+export const RIG_PATH_HULL = 1;
+export const RIG_PATH_PLATFORM = 2;
+
+/** The rig's oil, % of a plain rig's, by Drill tier. */
+export const RIG_DRILL_YIELD_PERCENT = [100, 120, 150, 200, 300, 400];
+/** The rig's health, % of a plain rig's, by Hull tier. */
+export const RIG_HULL_HEALTH_PERCENT = [100, 125, 125, 200, 300, 400];
+/** How fast it repairs, times a plain rig, by Hull tier. */
+export const RIG_HULL_REPAIR = [1, 1, 2, 2, 2, 4];
+/** Ticks between the rig's shots at enemy boats, by Platform tier (0: none). */
+export const RIG_PLATFORM_INTERVAL = [0, 150, 80, 80, 80, 80];
+/** How far its guns reach, in tiles, by Platform tier. */
+export const RIG_PLATFORM_RANGE = [0, 12, 12, 20, 20, 20];
+/** Its shell damage, % by Platform tier. */
+export const RIG_PLATFORM_DAMAGE_PERCENT = [100, 100, 100, 100, 200, 200];
+/** From this Platform tier it shells warships, not just boats. */
+export const RIG_PLATFORM_WARSHIP_TIER = 5;

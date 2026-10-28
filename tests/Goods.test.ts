@@ -174,6 +174,15 @@ describe("goods economy", () => {
       depositYield(game.map()) * UNWORKED_SHARE,
       10,
     );
+
+    // Borderfall Output level 5: the worked field yields five times as much.
+    const worked = player.goodsIncome()[Good.Metal] - trickle;
+    const [mine] = player.units(UnitType.Mineshaft);
+    for (let i = 0; i < 5; i++) mine.raiseTier(0);
+    expect(player.goodsIncome()[Good.Metal] - trickle).toBeCloseTo(
+      worked * 5,
+      6,
+    );
   });
 
   test("nations build on deposits they leave unworked", async () => {
