@@ -1,5 +1,11 @@
 import { TileRef } from "@openfront/engine-api/game/GameMap";
 import { GameType, UnitType } from "@openfront/engine-api/game/GameTypes";
+import {
+  SAM_AEGIS_INTERVAL,
+  SAM_AEGIS_WARSHIP_TIER,
+  SAM_PATH_AEGIS,
+  samReloadTicks,
+} from "@openfront/engine-lib/game/Upgrades";
 import { PseudoRandom } from "@openfront/engine-lib/PseudoRandom";
 import {
   zInt,
@@ -18,6 +24,7 @@ import type {
   SnapshotWriter,
 } from "../snapshot/SnapshotContext";
 import { SAMMissileExecution } from "./SAMMissileExecution";
+import { ShellExecution } from "./ShellExecution";
 
 type Target = {
   unit: Unit;
@@ -304,6 +311,7 @@ export class SAMLauncherExecution implements Execution {
 
   private pseudoRandom: PseudoRandom | undefined;
   private lastLevel: number = 1;
+  private lastAegisShot = -Infinity;
 
   constructor(
     private player: Player,
@@ -355,10 +363,14 @@ export class SAMLauncherExecution implements Execution {
       this.player = this.sam.owner();
     }
 
+    this.aegis(ticks);
+
     while (this.sam.missileTimerQueue().length > 0) {
       const frontTime = this.sam.missileTimerQueue()[0];
+      // Borderfall: a Battery SAM reloads faster.
       const cooldown =
-        this.mg.config().SAMCooldown() - (this.mg.ticks() - frontTime);
+        samReloadTicks(this.mg.config().SAMCooldown(), this.sam.tiers()) -
+        (this.mg.ticks() - frontTime);
 
       if (cooldown > 0) {
         break;
@@ -405,6 +417,39 @@ export class SAMLauncherExecution implements Execution {
     }
   }
 
+  /**
+   * Borderfall Aegis path: shells the nearest enemy boat in range, and from
+   * SAM_AEGIS_WARSHIP_TIER the nearest warship too, every few seconds.
+   */
+  private aegis(ticks: number): void {
+    const sam = this.sam!;
+    const tier = sam.tiers()[SAM_PATH_AEGIS];
+    const interval = SAM_AEGIS_INTERVAL[tier];
+    if (interval === 0 || ticks - this.lastAegisShot < interval) return;
+    const owner = sam.owner();
+    const types =
+      tier >= SAM_AEGIS_WARSHIP_TIER
+        ? [UnitType.TransportShip, UnitType.Warship]
+        : [UnitType.TransportShip];
+    const range = this.mg.config().dynamicSamRange(sam, ticks);
+    let best: Unit | null = null;
+    let bestDist = Infinity;
+    for (const { unit, distSquared } of this.mg.nearbyUnits(
+      sam.tile(),
+      range,
+      types,
+    )) {
+      if (unit.owner() === owner || owner.isFriendly(unit.owner())) continue;
+      if (distSquared < bestDist) {
+        best = unit;
+        bestDist = distSquared;
+      }
+    }
+    if (best === null) return;
+    this.lastAegisShot = ticks;
+    this.mg.addExecution(new ShellExecution(sam.tile(), owner, sam, best));
+  }
+
   isActive(): boolean {
     return this.active;
   }
@@ -421,6 +466,9 @@ export class SAMLauncherExecution implements Execution {
       tile: this.tile,
       sam: w.unitOrNull(this.sam),
       lastLevel: this.lastLevel,
+      lastAegisShot: Number.isFinite(this.lastAegisShot)
+        ? this.lastAegisShot
+        : undefined,
       // Created on the first tick with a SAM (always this.sam).
       targeting:
         this.targetingSystem === undefined
@@ -438,6 +486,7 @@ export class SAMLauncherExecution implements Execution {
     this.tile = s.tile;
     this.sam = r.unitOrNull(s.sam);
     this.lastLevel = s.lastLevel;
+    this.lastAegisShot = s.lastAegisShot ?? -Infinity;
     if (s.targeting !== null) {
       // The constructor only stores the SAM and reads the game config.
       this.targetingSystem = new SAMTargetingSystem(r.game, this.sam!);
@@ -467,6 +516,7 @@ const SAMLauncherStateSchema = z.object({
   tile: zInt().nullable(),
   sam: zRef().nullable(),
   lastLevel: zInt(),
+  lastAegisShot: zInt().optional(),
   targeting: TargetingStateSchema.nullable(),
   pseudoRandom: zRandom().nullable(),
 });

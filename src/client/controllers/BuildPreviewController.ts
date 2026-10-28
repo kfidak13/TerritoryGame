@@ -19,6 +19,7 @@ import {
   listNukeBreakAlliance,
   wouldNukeBreakAlliance,
 } from "@openfront/engine-lib/execution/NukeAlliance";
+import { mainPath, samRangeLevel } from "@openfront/engine-lib/game/Upgrades";
 import { EventBus } from "@openfront/shared/EventBus";
 import { Controller } from "../Controller";
 import {
@@ -404,7 +405,7 @@ export class BuildPreviewController implements Controller {
       ) {
         continue;
       }
-      const r = this.game.config().samRange(s.level());
+      const r = this.game.config().samRange(samRangeLevel(s.tiers()));
       sams.push({
         x: this.game.x(s.tile()),
         y: this.game.y(s.tile()),
@@ -677,7 +678,10 @@ export class BuildPreviewController implements Controller {
     if (buildableUnit.canUpgrade !== false) {
       const existing = this.game.unit(buildableUnit.canUpgrade);
       if (existing) {
-        return existing.level() + 1;
+        // The upgrade goes up the SAM's furthest path (Upgrades.ts).
+        const tiers = [...existing.tiers()];
+        tiers[mainPath(tiers)]++;
+        return samRangeLevel(tiers);
       } else {
         console.warn("Failed to find existing SAMLauncher for upgrade");
       }

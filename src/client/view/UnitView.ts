@@ -9,6 +9,10 @@ import {
 } from "@openfront/engine-api/game/GameTypes";
 import { UnitUpdate } from "@openfront/engine-api/game/GameUpdates";
 import { UnitLike } from "@openfront/engine-api/game/ReadViews";
+import {
+  missileTubes,
+  samReloadTicks,
+} from "@openfront/engine-lib/game/Upgrades";
 import type { UnitState } from "../render/types";
 import { TrainType as RendererTrainType } from "../render/types";
 import { applyUnitUpdateInPlace, unitStateFromUpdate } from "./EntityState";
@@ -188,7 +192,10 @@ export class UnitView implements UnitLike {
     return this.state.disrupted;
   }
   isInCooldown(): boolean {
-    return this.state.missileTimerQueue.length === this.state.level;
+    return (
+      this.state.missileTimerQueue.length >=
+      missileTubes(this.type(), this.state.level, this.state.tiers)
+    );
   }
   targetUnitId(): number | undefined {
     return this.state.targetUnitId ?? undefined;
@@ -199,7 +206,11 @@ export class UnitView implements UnitLike {
 
   // How "ready" this unit is from 0 to 1.
   missileReadinesss(): number {
-    const maxMissiles = this.state.level;
+    const maxMissiles = missileTubes(
+      this.type(),
+      this.state.level,
+      this.state.tiers,
+    );
     const missilesReloading = this.state.missileTimerQueue.length;
 
     if (missilesReloading === 0) {
@@ -218,7 +229,7 @@ export class UnitView implements UnitLike {
 
     const cooldownDuration =
       this.state.unitType === UnitType.SAMLauncher
-        ? this.gameView.config().SAMCooldown()
+        ? samReloadTicks(this.gameView.config().SAMCooldown(), this.state.tiers)
         : this.gameView.config().SiloCooldown();
 
     for (const cooldown of this.state.missileTimerQueue) {

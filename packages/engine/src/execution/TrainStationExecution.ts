@@ -1,4 +1,8 @@
 import { UnitType } from "@openfront/engine-api/game/GameTypes";
+import {
+  FACTORY_EXPRESS_ROLLS,
+  FACTORY_PATH_EXPRESS,
+} from "@openfront/engine-lib/game/Upgrades";
 import { PseudoRandom } from "@openfront/engine-lib/PseudoRandom";
 import {
   zInt,
@@ -70,7 +74,10 @@ export class TrainStationExecution implements Execution {
         this.unit.owner().unitCount(UnitType.Factory),
         this.mg.unitCount(UnitType.Train),
       );
-    for (let i = 0; i < this.unit!.level(); i++) {
+    // Borderfall: an Express factory rolls for more trains.
+    const rolls =
+      FACTORY_EXPRESS_ROLLS[this.unit!.tiers()[FACTORY_PATH_EXPRESS]];
+    for (let i = 0; i < rolls; i++) {
       if (this.random.chance(spawnRate)) {
         return true;
       }

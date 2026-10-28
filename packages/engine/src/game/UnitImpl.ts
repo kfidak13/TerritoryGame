@@ -15,7 +15,11 @@ import {
   GameUpdateType,
   UnitUpdate,
 } from "@openfront/engine-api/game/GameUpdates";
-import { navyScaled } from "@openfront/engine-lib/game/Upgrades";
+import {
+  missileTubes,
+  navyScaled,
+  samRangeLevel,
+} from "@openfront/engine-lib/game/Upgrades";
 import { maxHealthWithVeterancy } from "@openfront/engine-lib/game/Veterancy";
 import {
   snapshotType,
@@ -590,7 +594,7 @@ export class UnitImpl implements Unit {
   }
 
   isInCooldown(): boolean {
-    return this._missileTimerQueue.length === this._level;
+    return this._missileTimerQueue.length >= this.missileTubes();
   }
 
   missileTimerQueue(): number[] {
@@ -688,8 +692,26 @@ export class UnitImpl implements Unit {
   }
 
   raiseTier(path: number): void {
+    // A SAM's reach grows from where it stands to its new Range tier's.
+    const startRange =
+      this._type === UnitType.SAMLauncher
+        ? this.mg.config().dynamicSamRange(this, this.mg.ticks())
+        : 0;
     this._tiers[path]++;
+    if (this._type === UnitType.SAMLauncher) {
+      this._samLauncherState = {
+        upgradeStartTick: this.mg.ticks(),
+        startRange,
+        targetLevel: samRangeLevel(this._tiers),
+        duration: this.mg.config().samUpgradeDuration(),
+      };
+    }
     this.increaseLevel();
+  }
+
+  /** Missiles it holds: a SAM's Battery tier, a silo's level. */
+  missileTubes(): number {
+    return missileTubes(this._type, this._level, this._tiers);
   }
 
   veterancy(): number {
@@ -780,21 +802,12 @@ export class UnitImpl implements Unit {
   }
 
   increaseLevel(): void {
-    if (this._type === UnitType.SAMLauncher) {
-      const currentTick = this.mg.ticks();
-      const currentRange = this.mg.config().dynamicSamRange(this, currentTick);
-      this._samLauncherState = {
-        upgradeStartTick: currentTick,
-        startRange: currentRange,
-        targetLevel: this._level + 1,
-        duration: this.mg.config().samUpgradeDuration(),
-      };
-    }
     this._level++;
     // unitCount()/unitsOwned() are level-weighted and memoised on these versions
     this.mg.bumpUnitsVersion();
     this._owner._myUnitsVersion++;
-    if ([UnitType.MissileSilo, UnitType.SAMLauncher].includes(this.type())) {
+    // A silo's new tube starts empty (a SAM's tubes come from its Battery).
+    if (this._type === UnitType.MissileSilo) {
       this._missileTimerQueue.push(this.mg.ticks());
     }
     this.mg.addUpdate(this.toUpdate());
@@ -805,7 +818,7 @@ export class UnitImpl implements Unit {
     const top = Math.max(...this._tiers);
     if (top > 0) this._tiers[this._tiers.indexOf(top)]--;
     this._level--;
-    if ([UnitType.MissileSilo, UnitType.SAMLauncher].includes(this.type())) {
+    if (this._type === UnitType.MissileSilo) {
       this._missileTimerQueue.pop();
     }
     if (this._type === UnitType.SAMLauncher) {
@@ -1020,7 +1033,7 @@ export const UnitSnapshot = snapshotType({
       .object({
         upgradeStartTick: zInt().optional(),
         startRange: zNum(),
-        targetLevel: zInt(),
+        targetLevel: zNum(),
         duration: zInt(),
       })
       .nullable(),

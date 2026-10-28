@@ -257,3 +257,108 @@ export function bestTier(units: readonly UnitLike[], path: number): number {
   }
   return best;
 }
+
+// ---------------------------------------------------------------- factory
+
+export const FACTORY_PATH_FREIGHT = 0;
+export const FACTORY_PATH_EXPRESS = 1;
+export const FACTORY_PATH_BANDIT = 2;
+
+/** Extra gold per stop for trains from here, % by Freight tier. */
+export const FACTORY_FREIGHT_GOLD_PERCENT = [0, 15, 35, 70, 120, 200];
+/** Spawn rolls a factory makes for trains, by Express tier. */
+export const FACTORY_EXPRESS_ROLLS = [1, 2, 2, 3, 4, 5];
+/** Rail tiles a train from here covers a tick, by Express tier. */
+export const FACTORY_EXPRESS_SPEED = [2, 2, 2, 3, 3, 4];
+/** Extra gold at other nations' stations, % by Bandit tier. */
+export const FACTORY_BANDIT_GOLD_PERCENT = [0, 0, 10, 10, 10, 10];
+/** Share of a foreign station owner's cut a train takes, % by Bandit tier. */
+export const FACTORY_BANDIT_STEAL_PERCENT = [0, 0, 0, 10, 25, 50];
+/**
+ * A level-5 Bandit factory's owner takes this share of what foreign trains
+ * earn at their stations, unless those trains run from a Bandit factory too.
+ */
+export const FACTORY_BANDIT_TOLL_PERCENT = 25;
+
+/**
+ * How a stop's `base` gold splits between the train's owner and a foreign
+ * station's owner (who both get `base` without upgrades), given the tiers
+ * of the train's factory and the station owner's best Bandit tier.
+ */
+export function trainStopGold(
+  base: bigint,
+  foreign: boolean,
+  home: Tiers,
+  stationBandit: number,
+): { trainCut: bigint; stationCut: bigint } {
+  const pct = (gold: bigint, percent: number) =>
+    (gold * BigInt(percent)) / 100n;
+  const bandit = home[FACTORY_PATH_BANDIT];
+  let trainCut =
+    base +
+    pct(base, FACTORY_FREIGHT_GOLD_PERCENT[home[FACTORY_PATH_FREIGHT]]) +
+    (foreign ? pct(base, FACTORY_BANDIT_GOLD_PERCENT[bandit]) : 0n);
+  let stationCut = foreign ? base : 0n;
+  if (foreign) {
+    const stolen = pct(stationCut, FACTORY_BANDIT_STEAL_PERCENT[bandit]);
+    stationCut -= stolen;
+    trainCut += stolen;
+    // A Bandit factory's trains are never tolled.
+    if (bandit === 0 && stationBandit >= MAX_TIER) {
+      const toll = pct(trainCut, FACTORY_BANDIT_TOLL_PERCENT);
+      trainCut -= toll;
+      stationCut += toll;
+    }
+  }
+  return { trainCut, stationCut };
+}
+
+// ---------------------------------------------------------------- SAM
+
+export const SAM_PATH_RANGE = 0;
+export const SAM_PATH_BATTERY = 1;
+export const SAM_PATH_AEGIS = 2;
+
+/** Extra reach over a plain SAM's, % by Range tier. */
+export const SAM_RANGE_PERCENT = [0, 15, 30, 50, 75, 100];
+/** A plain SAM's reach: Config.samRange(1). */
+const SAM_BASE_RANGE = 70;
+
+/**
+ * The level Config.samRange (150 - 480 / (level + 5)) takes to give a SAM
+ * its Range path's reach, so every range check stays on that one formula.
+ */
+export function samRangeLevel(tiers: Tiers): number {
+  const reach =
+    (SAM_BASE_RANGE * (100 + SAM_RANGE_PERCENT[tiers[SAM_PATH_RANGE]])) / 100;
+  return 480 / (150 - reach) - 5;
+}
+
+/** Missiles a SAM holds, by Battery tier. */
+export const SAM_BATTERY_TUBES = [1, 1, 1, 2, 3, 4];
+
+/** Missiles a SAM or silo holds (a silo's is its level for now). */
+export function missileTubes(
+  type: UnitType,
+  level: number,
+  tiers: Tiers,
+): number {
+  return type === UnitType.SAMLauncher
+    ? SAM_BATTERY_TUBES[tiers[SAM_PATH_BATTERY]]
+    : level;
+}
+/** Reload time as a % of Config.SAMCooldown, by Battery tier. */
+const SAM_BATTERY_RELOAD_PERCENT = [100, 85, 70, 70, 70, 50];
+
+export function samReloadTicks(cooldown: number, tiers: Tiers): number {
+  return Math.floor(
+    (cooldown * SAM_BATTERY_RELOAD_PERCENT[tiers[SAM_PATH_BATTERY]]) / 100,
+  );
+}
+
+/** Ticks between an Aegis SAM's shots at ships, by tier (0: none). */
+export const SAM_AEGIS_INTERVAL = [0, 80, 50, 50, 30, 20];
+/** From this Aegis tier the SAM shells warships, not just boats. */
+export const SAM_AEGIS_WARSHIP_TIER = 3;
+/** Shell damage against warships, % by Aegis tier. */
+export const SAM_AEGIS_DAMAGE_PERCENT = [100, 100, 100, 100, 200, 300];

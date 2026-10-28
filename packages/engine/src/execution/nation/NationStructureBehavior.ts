@@ -17,7 +17,11 @@ import {
   GOOD_BUILDINGS,
   oilRigRange,
 } from "@openfront/engine-lib/game/Goods";
-import { mainPath, MAX_TIER } from "@openfront/engine-lib/game/Upgrades";
+import {
+  mainPath,
+  MAX_TIER,
+  samRangeLevel,
+} from "@openfront/engine-lib/game/Upgrades";
 import { PseudoRandom } from "@openfront/engine-lib/PseudoRandom";
 import {
   readVersioned,
@@ -1119,7 +1123,7 @@ export class NationStructureBehavior {
       const covered = sams.some(
         (sam) =>
           game.euclideanDistSquared(unit.tile(), sam.tile()) <=
-          config.samRange(sam.level()) ** 2,
+          config.samRange(samRangeLevel(sam.tiers())) ** 2,
       );
       if (!covered) {
         return false;
@@ -1137,7 +1141,7 @@ export class NationStructureBehavior {
     let bestLevels = -1;
     for (const sam of this.player.units(UnitType.SAMLauncher)) {
       if (!this.player.canUpgradeUnit(sam)) continue;
-      const rangeSquared = config.samRange(sam.level()) ** 2;
+      const rangeSquared = config.samRange(samRangeLevel(sam.tiers())) ** 2;
       let levels = 0;
       for (const unit of protectable) {
         if (
@@ -1217,7 +1221,7 @@ export class NationStructureBehavior {
 
       // Check if protected by any SAM, using per-SAM level-based range
       for (const sam of samLaunchers) {
-        const samRange = game.config().samRange(sam.level());
+        const samRange = game.config().samRange(samRangeLevel(sam.tiers()));
         const samRangeSquared = samRange * samRange;
         const distSquared = game.euclideanDistSquared(
           structure.tile(),
@@ -1734,7 +1738,7 @@ export class NationStructureBehavior {
       for (const entry of protectEntries) {
         let coverageScore = 0;
         for (const sam of existingSams) {
-          const samRange = game.config().samRange(sam.level());
+          const samRange = game.config().samRange(samRangeLevel(sam.tiers()));
           const dist = game.euclideanDistSquared(entry.tile, sam.tile());
           if (dist <= samRange * samRange) {
             coverageScore += sam.level();

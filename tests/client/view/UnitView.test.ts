@@ -220,7 +220,8 @@ describe("UnitView accessors", () => {
         game,
         makeUnitUpdate({
           unitType: UnitType.SAMLauncher,
-          level: 2,
+          level: 4,
+          tiers: [0, 3, 0], // Battery 3: two missiles
           missileTimerQueue: [0, 0], // both reloading, started at tick 0
         }),
       );
@@ -244,7 +245,8 @@ describe("UnitView accessors", () => {
         game,
         makeUnitUpdate({
           unitType: UnitType.SAMLauncher,
-          level: 2,
+          level: 4,
+          tiers: [0, 3, 0], // Battery 3: two missiles
           missileTimerQueue: [0, 0],
         }),
       );

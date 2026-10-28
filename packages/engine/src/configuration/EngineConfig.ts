@@ -16,6 +16,7 @@ import { Config } from "@openfront/engine-lib/configuration/Config";
 import { exp, log, pow2 } from "@openfront/engine-lib/DetMath";
 import {
   cityGold,
+  samRangeLevel,
   upgradeGold,
   upgradeGoods,
 } from "@openfront/engine-lib/game/Upgrades";
@@ -730,7 +731,7 @@ export class EngineConfig extends Config {
   dynamicSamRange(sam: Unit, currentTick: number): number {
     const state = sam.samLauncherState();
     if (state === undefined || state.upgradeStartTick === undefined) {
-      return this.samRange(sam.level());
+      return this.samRange(samRangeLevel(sam.tiers()));
     }
     const duration = state.duration ?? this.samUpgradeDuration();
     const elapsed = currentTick - state.upgradeStartTick;

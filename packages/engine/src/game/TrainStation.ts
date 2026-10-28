@@ -1,6 +1,11 @@
 import { TileRef } from "@openfront/engine-api/game/GameMap";
 import { UnitType } from "@openfront/engine-api/game/GameTypes";
 import { GameUpdateType } from "@openfront/engine-api/game/GameUpdates";
+import {
+  bestTier,
+  FACTORY_PATH_BANDIT,
+  trainStopGold,
+} from "@openfront/engine-lib/game/Upgrades";
 import { PseudoRandom } from "@openfront/engine-lib/PseudoRandom";
 import {
   snapshotType,
@@ -31,22 +36,31 @@ class TradeStationStopHandler implements TrainStopHandler {
   ): void {
     const stationOwner = station.unit.owner();
     const trainOwner = trainExecution.owner();
-    const gold = mg
+    const base = mg
       .config()
       .trainGold(
         rel(trainOwner, stationOwner),
         trainExecution.tradeStopsVisited(),
         trainOwner,
       );
+    const foreign = trainOwner !== stationOwner;
+    const { trainCut, stationCut } = trainStopGold(
+      base,
+      foreign,
+      trainExecution.homeTiers(),
+      foreign
+        ? bestTier(stationOwner.units(UnitType.Factory), FACTORY_PATH_BANDIT)
+        : 0,
+    );
     // Share revenue with the station owner if it's not the current player
-    if (trainOwner !== stationOwner) {
-      stationOwner.addGold(gold, station.tile());
-      stationOwner.addTrainGold(gold);
-      mg.stats().trainExternalTrade(stationOwner, gold);
+    if (foreign) {
+      stationOwner.addGold(stationCut, station.tile());
+      stationOwner.addTrainGold(stationCut);
+      mg.stats().trainExternalTrade(stationOwner, stationCut);
     }
-    trainOwner.addGold(gold, station.tile());
-    trainOwner.addTrainGold(gold);
-    mg.stats().trainSelfTrade(trainOwner, gold);
+    trainOwner.addGold(trainCut, station.tile());
+    trainOwner.addTrainGold(trainCut);
+    mg.stats().trainSelfTrade(trainOwner, trainCut);
   }
 }
 

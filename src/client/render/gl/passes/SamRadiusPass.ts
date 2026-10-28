@@ -13,6 +13,7 @@
  *   enemy → red    (1, 0, 0)
  */
 
+import { samRangeLevel } from "@openfront/engine-lib/game/Upgrades";
 import type { UnitState } from "../../types";
 import { UT_SAM_LAUNCHER } from "../../types";
 import { DynamicInstanceBuffer } from "../DynamicBuffer";
@@ -451,7 +452,7 @@ export class SAMRadiusPass {
       circles.push({
         x,
         y,
-        radius: samRange(u.level),
+        radius: samRange(samRangeLevel(u.tiers)),
         r: color[0],
         g: color[1],
         b: color[2],
@@ -464,7 +465,7 @@ export class SAMRadiusPass {
         circles.push({
           x,
           y,
-          radius: samRange(u.level),
+          radius: samRange(samRangeLevel(u.tiers)),
           r: color[0],
           g: color[1],
           b: color[2],

@@ -6,13 +6,17 @@ import {
 import {
   canRaiseTier,
   navyScaled,
+  SAM_PATH_AEGIS,
+  samRangeLevel,
   sellRefund,
+  trainStopGold,
   upgradeGold,
   upgradeTicks,
 } from "@openfront/engine-lib/game/Upgrades";
 import { DeleteUnitExecution } from "@openfront/engine/execution/DeleteUnitExecution";
 import { Executor } from "@openfront/engine/execution/ExecutionManager";
 import { NukeExecution } from "@openfront/engine/execution/NukeExecution";
+import { SAMLauncherExecution } from "@openfront/engine/execution/SAMLauncherExecution";
 import { TransportShipExecution } from "@openfront/engine/execution/TransportShipExecution";
 import { UpgradeStructureExecution } from "@openfront/engine/execution/UpgradeStructureExecution";
 import { Game, Player, Unit } from "@openfront/engine/game/Game";
@@ -179,5 +183,54 @@ describe("Upgraded buildings in a game", () => {
     expect(boats()).toHaveLength(1);
     for (let i = 0; i < 5; i++) port.raiseTier(2);
     expect(boats()).toHaveLength(2);
+  });
+});
+
+describe("Factory and SAM paths", () => {
+  test("Freight pays more, Bandits steal, and level-5 Bandits charge a toll", () => {
+    const base = 1000n;
+    expect(trainStopGold(base, false, [5, 0, 0], 0)).toEqual({
+      trainCut: 3000n,
+      stationCut: 0n,
+    });
+    // Bandit 5 abroad: +10%, plus half the station owner's cut.
+    expect(trainStopGold(base, true, [0, 0, 5], 0)).toEqual({
+      trainCut: 1600n,
+      stationCut: 500n,
+    });
+    // A plain train at a level-5 Bandit's station pays a quarter of its cut.
+    expect(trainStopGold(base, true, [0, 0, 0], 5)).toEqual({
+      trainCut: 750n,
+      stationCut: 1250n,
+    });
+    // A Bandit train is never tolled.
+    expect(trainStopGold(base, true, [0, 0, 1], 5).stationCut).toBe(1000n);
+  });
+
+  test("a Range-5 SAM reaches twice as far", () => {
+    const samRange = (level: number) => 150 - 480 / (level + 5);
+    expect(samRange(samRangeLevel([0, 0, 0]))).toBeCloseTo(70);
+    expect(samRange(samRangeLevel([5, 0, 0]))).toBeCloseTo(140);
+  });
+
+  test("an Aegis SAM sinks an enemy boat in range", async () => {
+    // 16x16: land at x <= 7, ocean beyond.
+    const game = await setup("half_land_half_ocean", { instantBuild: true }, [
+      new PlayerInfo("rome", PlayerType.Human, null, "rome"),
+      new PlayerInfo("carthage", PlayerType.Human, null, "carthage"),
+    ]);
+    const rome = game.player("rome");
+    const carthage = game.player("carthage");
+    rome.conquer(game.ref(7, 2));
+    carthage.conquer(game.ref(0, 15));
+    game.endSpawnPhase();
+    const sam = rome.buildUnit(UnitType.SAMLauncher, game.ref(7, 2), {});
+    sam.raiseTier(SAM_PATH_AEGIS);
+    game.addExecution(new SAMLauncherExecution(rome, null, sam));
+    const boat = carthage.buildUnit(UnitType.TransportShip, game.ref(9, 3), {
+      troops: 100,
+    });
+    executeTicks(game, 20);
+    expect(boat.isActive()).toBe(false);
   });
 });

@@ -6,6 +6,11 @@ import {
 } from "@openfront/engine-api/game/GameTypes";
 import { GameID } from "@openfront/engine-api/Schemas";
 import { NukeType } from "@openfront/engine-api/StatsSchemas";
+import {
+  SAM_PATH_BATTERY,
+  SAM_PATH_RANGE,
+  samRangeLevel,
+} from "@openfront/engine-lib/game/Upgrades";
 import { NukeExecution } from "@openfront/engine/execution/NukeExecution";
 import { SAMLauncherExecution } from "@openfront/engine/execution/SAMLauncherExecution";
 import { SpawnExecution } from "@openfront/engine/execution/SpawnExecution";
@@ -331,11 +336,11 @@ describe("SAM", () => {
   });
 
   test("SAM should reload expired missile timers even when not in cooldown", async () => {
-    // Upgrading to level 2 pushes a timer for the new slot. queue.length(1) < level(2)
+    // Battery 3 holds two missiles; with one fired, queue.length(1) < tubes(2)
     // so isInCooldown() is false, but the expired timer still needs to be cleaned up.
     const sam = defender.buildUnit(UnitType.SAMLauncher, game.ref(1, 1), {});
-    sam.increaseLevel();
-    expect(sam.level()).toBe(2);
+    for (let i = 0; i < 3; i++) sam.raiseTier(SAM_PATH_BATTERY);
+    sam.launch();
 
     game.addExecution(new SAMLauncherExecution(defender, null, sam));
 
@@ -385,9 +390,8 @@ describe("SAM", () => {
 
   test("upgraded SAM launcher should launch multiple missiles in a single tick if multiple targets arrive", async () => {
     const sam = defender.buildUnit(UnitType.SAMLauncher, game.ref(1, 1), {});
-    sam.increaseLevel(); // Level 2 allows 2 missile slots
-    sam.reloadMissile(); // Reload the slot added by increaseLevel()
-    expect(sam.level()).toBe(2);
+    // Battery 3 holds two missiles.
+    for (let i = 0; i < 3; i++) sam.raiseTier(SAM_PATH_BATTERY);
     expect(sam.isInCooldown()).toBeFalsy();
 
     game.addExecution(new SAMLauncherExecution(defender, null, sam));
@@ -412,7 +416,7 @@ describe("SAM", () => {
 
     executeTicks(game, 3);
 
-    // Both nukes should be intercepted simultaneously by the level-2 SAM launcher
+    // Both nukes should be intercepted simultaneously by the two-missile SAM launcher
     expect(nuke1.reachedTarget()).toBeFalsy();
     expect(nuke1.wasDestroyedByEnemy()).toBeTruthy();
     expect(nuke2.reachedTarget()).toBeFalsy();
@@ -421,17 +425,14 @@ describe("SAM", () => {
 
   test("high-level SAM launcher should shoot down multiple MIRV warheads arriving in the same tick", async () => {
     const sam = defender.buildUnit(UnitType.SAMLauncher, game.ref(1, 1), {});
-    for (let i = 1; i < 50; i++) {
-      sam.increaseLevel();
-      sam.reloadMissile();
-    }
-    expect(sam.level()).toBe(50);
+    // Battery 5: four missiles at once.
+    for (let i = 0; i < 5; i++) sam.raiseTier(SAM_PATH_BATTERY);
     expect(sam.isInCooldown()).toBeFalsy();
 
     game.addExecution(new SAMLauncherExecution(defender, null, sam));
 
     const warheads: Unit[] = [];
-    for (let i = 0; i < 10; i++) {
+    for (let i = 0; i < 4; i++) {
       const warhead = attacker.buildUnit(
         UnitType.MIRVWarhead,
         game.ref(1, 2 + i),
@@ -447,7 +448,7 @@ describe("SAM", () => {
       warheads.push(warhead);
     }
 
-    expect(attacker.units(UnitType.MIRVWarhead)).toHaveLength(10);
+    expect(attacker.units(UnitType.MIRVWarhead)).toHaveLength(4);
 
     executeTicks(game, 3);
 
@@ -557,13 +558,13 @@ describe("SAM", () => {
     game.executeNextTick();
 
     const baseRange = game.config().samRange(1); // 20
-    const targetRange = game.config().samRange(2); // 30
+    const targetRange = game.config().samRange(samRangeLevel([1, 0, 0])); // 30
     const duration = Math.floor(game.config().SAMCooldown() / 2);
 
     expect(game.config().dynamicSamRange(sam, game.ticks())).toBe(baseRange);
 
     // Trigger upgrade
-    sam.increaseLevel();
+    sam.raiseTier(SAM_PATH_RANGE);
     const startTick = game.ticks();
 
     // At start: range is baseRange
@@ -587,12 +588,12 @@ describe("SAM", () => {
     game.executeNextTick();
 
     const baseRange = game.config().samRange(1); // 20
-    const level2Range = game.config().samRange(2); // 30
-    const level3Range = game.config().samRange(3); // 40
+    const level2Range = game.config().samRange(samRangeLevel([1, 0, 0])); // 30
+    const level3Range = game.config().samRange(samRangeLevel([2, 0, 0])); // 40
     const duration = Math.floor(game.config().SAMCooldown() / 2);
 
     // Level 1 -> Level 2
-    sam.increaseLevel();
+    sam.raiseTier(SAM_PATH_RANGE);
 
     // Advance 20 ticks into upgrade
     executeTicks(game, 20);
@@ -603,10 +604,10 @@ describe("SAM", () => {
     expect(currentDynamicRange).toBeLessThan(level2Range);
 
     // Chain Level 2 -> Level 3 mid-transition
-    sam.increaseLevel();
+    sam.raiseTier(SAM_PATH_RANGE);
     const state = sam.samLauncherState()!;
     expect(state.startRange).toBe(currentDynamicRange);
-    expect(state.targetLevel).toBe(3);
+    expect(state.targetLevel).toBe(samRangeLevel([2, 0, 0]));
     expect(state.upgradeStartTick).toBe(game.ticks());
 
     // Advance to end of new duration
@@ -620,12 +621,13 @@ describe("SAM", () => {
     game.executeNextTick();
 
     // Start upgrade to Level 2 (range expands from 20 to 30 over 45 ticks)
-    sam.increaseLevel();
+    sam.raiseTier(SAM_PATH_RANGE);
 
-    // Advance 25 ticks: dynamic range expands to 20 + (10 * 25 / 45) = 25.555...
+    // Advance 25 ticks: dynamic range grows 25/45 of the way to Range 1's reach
     executeTicks(game, 25);
     const dynamicRange = game.config().dynamicSamRange(sam, game.ticks());
-    expect(dynamicRange).toBeCloseTo(25.555, 2);
+    const range1 = game.config().samRange(samRangeLevel([1, 0, 0]));
+    expect(dynamicRange).toBeCloseTo(20 + ((range1 - 20) * 25) / 45, 5);
 
     // Build nuke that flies along x towards (25, 1) (distance 24 from SAM at (1,1))
     // Base Level 1 range is 20 (so Level 1 could never intercept at x = 25)
@@ -657,7 +659,7 @@ describe("SAM", () => {
     expect(game.config().dynamicSamRange(sam, game.ticks())).toBe(20);
 
     // Upgrade to level 2
-    sam.increaseLevel();
+    sam.raiseTier(SAM_PATH_RANGE);
     executeTicks(game, 10);
     expect(game.config().dynamicSamRange(sam, game.ticks())).toBeGreaterThan(
       20,

@@ -6,6 +6,10 @@ import {
   PlayerType,
   UnitType,
 } from "@openfront/engine-api/game/GameTypes";
+import {
+  missileTubes,
+  samRangeLevel,
+} from "@openfront/engine-lib/game/Upgrades";
 import { PseudoRandom } from "@openfront/engine-lib/PseudoRandom";
 import {
   readVersioned,
@@ -82,7 +86,8 @@ export function mirvLeakShare(
     )) {
       const owner = sam.owner();
       if (owner === attacker || owner.isFriendly(attacker)) continue;
-      if (distSquared > config.samRange(sam.level()) ** 2) continue;
+      if (distSquared > config.samRange(samRangeLevel(sam.tiers())) ** 2)
+        continue;
       warheadsInRange.set(
         sam,
         (warheadsInRange.get(sam) ?? 0) + warheadsPerSample,
@@ -94,7 +99,10 @@ export function mirvLeakShare(
 
   let shots = 0;
   warheadsInRange.forEach((inRange, sam) => {
-    shots += Math.min(sam.level(), inRange);
+    shots += Math.min(
+      missileTubes(sam.type(), sam.level(), sam.tiers()),
+      inRange,
+    );
   });
   const intercepted = Math.min(coveredSamples * warheadsPerSample, shots);
   return 1 - intercepted / warheads;

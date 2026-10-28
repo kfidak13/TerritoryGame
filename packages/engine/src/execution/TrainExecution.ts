@@ -2,6 +2,11 @@ import { TileRef } from "@openfront/engine-api/game/GameMap";
 import { TrainType, UnitType } from "@openfront/engine-api/game/GameTypes";
 import { MotionPlanRecord } from "@openfront/engine-lib/game/MotionPlans";
 import {
+  FACTORY_EXPRESS_SPEED,
+  FACTORY_PATH_EXPRESS,
+  NO_TIERS,
+} from "@openfront/engine-lib/game/Upgrades";
+import {
   zInt,
   zPlayerRef,
   zRef,
@@ -51,8 +56,18 @@ export class TrainExecution implements Execution {
     return this._tradeStopsVisited;
   }
 
+  /** Borderfall: the upgrade tiers of the factory this train runs from. */
+  public homeTiers(): readonly number[] {
+    const home = this.source.unit;
+    return home.type() === UnitType.Factory && home.isActive()
+      ? home.tiers()
+      : NO_TIERS;
+  }
+
   init(mg: Game, ticks: number): void {
     this.mg = mg;
+    // Borderfall: an Express factory's trains run faster.
+    this.speed = FACTORY_EXPRESS_SPEED[this.homeTiers()[FACTORY_PATH_EXPRESS]];
     const stations = this.railNetwork.findStationsPath(
       this.source,
       this.destination,

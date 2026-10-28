@@ -4,6 +4,7 @@ import {
   PlayerType,
   UnitType,
 } from "@openfront/engine-api/game/GameTypes";
+import { SAM_PATH_BATTERY } from "@openfront/engine-lib/game/Upgrades";
 import { PseudoRandom } from "@openfront/engine-lib/PseudoRandom";
 import { MirvExecution } from "@openfront/engine/execution/MIRVExecution";
 import { NationEmojiBehavior } from "@openfront/engine/execution/nation/NationEmojiBehavior";
@@ -65,17 +66,17 @@ describe("MIRV warheads getting past SAMs", () => {
     ).toBeCloseTo(0);
   });
 
-  // ~15 warheads land in range of one SAM covering all of the leader, which shoots its level in warheads
+  // ~15 warheads land in range of one SAM covering all of the leader, which shoots a warhead per missile it holds
   it.each([
-    [1, 0.85, 1],
-    [15, 0, 0.2],
-  ])("a level %i SAM lets through between %d and %d", (level, min, max) => {
+    [0, 0.85, 1],
+    [5, 0.6, 0.85],
+  ])("a Battery %i SAM lets through between %d and %d", (battery, min, max) => {
     const { game, nation, leader } = setupLeader(Difficulty.Hard, {
       sams: false,
     });
     vi.spyOn(game.config(), "samRange").mockReturnValue(130);
     const sam = leader.buildUnit(UnitType.SAMLauncher, game.ref(122, 100), {});
-    for (let l = 1; l < level; l++) sam.increaseLevel();
+    for (let t = 0; t < battery; t++) sam.raiseTier(SAM_PATH_BATTERY);
     const leak = mirvLeakShare(game, nation, leader);
     expect(leak).toBeGreaterThanOrEqual(min);
     expect(leak).toBeLessThanOrEqual(max);

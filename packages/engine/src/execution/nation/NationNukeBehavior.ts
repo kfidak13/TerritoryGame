@@ -11,6 +11,10 @@ import {
   UnitType,
 } from "@openfront/engine-api/game/GameTypes";
 import { euclDistFN } from "@openfront/engine-lib/game/GameMapImpl";
+import {
+  missileTubes,
+  samRangeLevel,
+} from "@openfront/engine-lib/game/Upgrades";
 import { PseudoRandom } from "@openfront/engine-lib/PseudoRandom";
 import {
   readVersioned,
@@ -1116,7 +1120,8 @@ export class NationNukeBehavior {
         if (excludedSamIds?.has(sam.unit.id())) {
           continue;
         }
-        const rangeSquared = this.game.config().samRange(sam.unit.level()) ** 2;
+        const rangeSquared =
+          this.game.config().samRange(samRangeLevel(sam.unit.tiers())) ** 2;
         if (sam.distSquared <= rangeSquared) {
           return true;
         }
@@ -1201,7 +1206,7 @@ export class NationNukeBehavior {
       );
 
       for (const sam of nearbySams) {
-        const samLevel = sam.unit.level();
+        const samLevel = samRangeLevel(sam.unit.tiers());
         if (samLevel >= 5) continue; // Can't outrange level 5+ SAMs
 
         const samRange = this.game.config().samRange(samLevel);
@@ -1319,9 +1324,9 @@ export class NationNukeBehavior {
       const coveringSams = this.findEnemySamsCoveringTile(targetTile);
       const coveringSamIds = new Set(coveringSams.map((s) => s.id()));
 
-      // Total interception capacity = sum of covering SAM levels
+      // Total interception capacity = sum of covering SAM tubes
       const totalInterceptions = coveringSams.reduce(
-        (sum, sam) => sum + sam.level(),
+        (sum, sam) => sum + missileTubes(sam.type(), sam.level(), sam.tiers()),
         0,
       );
       const bombsNeeded = totalInterceptions + 1;
@@ -1520,7 +1525,9 @@ export class NationNukeBehavior {
       if (owner === this.player || this.player.isFriendly(owner)) {
         continue;
       }
-      const range = this.game.config().samRange(sam.unit.level());
+      const range = this.game
+        .config()
+        .samRange(samRangeLevel(sam.unit.tiers()));
       if (sam.distSquared <= range * range) {
         result.push(sam.unit);
       }
@@ -1575,7 +1582,7 @@ export class NationNukeBehavior {
 
       let protection = 0;
       for (const sam of ourSams) {
-        const range = this.game.config().samRange(sam.level());
+        const range = this.game.config().samRange(samRangeLevel(sam.tiers()));
         const distSquared = this.game.euclideanDistSquared(
           silo.tile(),
           sam.tile(),
