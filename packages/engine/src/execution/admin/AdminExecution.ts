@@ -4,25 +4,12 @@ import {
   GOODS,
   GoodsAmounts,
   MessageType,
-  PlayerInfo,
-  PlayerType,
   Structures,
   UnitType,
 } from "@openfront/engine-api/game/GameTypes";
 import { GameUpdateType } from "@openfront/engine-api/game/GameUpdates";
 import { AdminAction } from "@openfront/engine-api/Schemas";
 import { MAX_TIER, upgradePaths } from "@openfront/engine-lib/game/Upgrades";
-import {
-  ZOMBIE_MIN_PATCH_RADIUS,
-  ZOMBIE_NAME,
-  ZOMBIE_PATCH_RADIUS,
-  ZOMBIE_ROT_AFTER_TICKS,
-  ZOMBIE_SHIELD_TICKS,
-  ZOMBIE_START_TROOPS,
-  ZOMBIE_TROOPS_PER_TILE,
-  ZOMBIE_VICTIM_LOSS,
-} from "@openfront/engine-lib/game/Zombies";
-import { PseudoRandom } from "@openfront/engine-lib/PseudoRandom";
 import { zPlayerRef } from "@openfront/engine-lib/snapshot/SnapshotType";
 import { simpleHash } from "@openfront/engine-lib/Util";
 import { z } from "zod";
@@ -40,7 +27,7 @@ import { NukeExecution } from "../NukeExecution";
 import { PlayerExecution } from "../PlayerExecution";
 import { WarshipExecution } from "../WarshipExecution";
 import { HeavenlyNukeExecution } from "./HeavenlyNukeExecution";
-import { ZombieExecution } from "./ZombieExecution";
+import { forEachInDisc, raiseZombies } from "./ZombieExecution";
 
 const DIPLOMACY_MESSAGES = {
   ally: "events_display.divine_ally",
@@ -334,49 +321,8 @@ export class AdminExecution implements Execution {
 
   /** A zombie horde rises in the middle of the victim's land. */
   private zombies(victimID: string, ticks: number): void {
-    const mg = this.mg!;
     const victim = this.player(victimID);
-    if (victim === null || !victim.isAlive() || victim.isGod()) return;
-    const center = centralTile(mg, victim);
-    const radius = Math.max(
-      ZOMBIE_MIN_PATCH_RADIUS,
-      Math.round(Math.sqrt(victim.numTilesOwned()) * ZOMBIE_PATCH_RADIUS),
-    );
-    const density = victim.troops() / Math.max(1, victim.numTilesOwned());
-    const id = new PseudoRandom(ticks * 1009 + victim.smallID()).nextID();
-    const horde = mg.addPlayer(
-      new PlayerInfo(ZOMBIE_NAME, PlayerType.Nation, null, id),
-    );
-    forEachInDisc(mg, center, radius, (t) => {
-      if (mg.owner(t) === victim) horde.conquer(t);
-    });
-    if (!horde.isAlive()) horde.conquer(center);
-    horde.setTroops(victim.troops() * ZOMBIE_START_TROOPS);
-    // It rises shielded; ZombieExecution lifts the shield.
-    horde.setGod(true);
-    victim.removeTroops(victim.troops() * ZOMBIE_VICTIM_LOSS);
-    // Upkeep only (PlayerExecution skips the horde's economy): it hands
-    // over buildings on land it loses, and its cut-off pieces fall.
-    mg.addExecution(
-      new PlayerExecution(horde),
-      new ZombieExecution(
-        horde,
-        victim,
-        density * ZOMBIE_TROOPS_PER_TILE,
-        ticks + ZOMBIE_SHIELD_TICKS,
-        ticks + ZOMBIE_ROT_AFTER_TICKS,
-      ),
-    );
-    mg.addUpdate({
-      type: GameUpdateType.Disaster,
-      kind: DisasterKind.Zombies,
-      tile: center,
-      radius,
-      victim: victim.id(),
-    });
-    this.tell(null, "events_display.zombie_apocalypse", {
-      name: victim.displayName(),
-    });
+    if (victim !== null) raiseZombies(this.mg!, victim, ticks);
   }
 
   snapshot(w: SnapshotWriter): ExecRecord {
@@ -397,48 +343,6 @@ export class AdminExecution implements Execution {
 }
 
 /** The victim's tile nearest the middle of its land. */
-function centralTile(mg: Game, p: Player): TileRef {
-  let sx = 0;
-  let sy = 0;
-  let n = 0;
-  for (const t of p.tiles()) {
-    sx += mg.x(t);
-    sy += mg.y(t);
-    n++;
-  }
-  const cx = sx / n;
-  const cy = sy / n;
-  let best: TileRef | null = null;
-  let bestD = Infinity;
-  for (const t of p.tiles()) {
-    const d = (mg.x(t) - cx) ** 2 + (mg.y(t) - cy) ** 2;
-    if (d < bestD) {
-      bestD = d;
-      best = t;
-    }
-  }
-  return best!;
-}
-
-function forEachInDisc(
-  mg: Game,
-  center: TileRef,
-  radius: number,
-  fn: (t: TileRef) => void,
-): void {
-  const cx = mg.x(center);
-  const cy = mg.y(center);
-  for (let y = Math.max(0, cy - radius); y <= cy + radius; y++) {
-    if (y >= mg.height()) break;
-    for (let x = Math.max(0, cx - radius); x <= cx + radius; x++) {
-      if (x >= mg.width()) break;
-      const dx = x - cx;
-      const dy = y - cy;
-      if (dx * dx + dy * dy <= radius * radius) fn(mg.ref(x, y));
-    }
-  }
-}
-
 const AdminStateSchema = z.object({
   active: z.boolean(),
   initialized: z.boolean(),

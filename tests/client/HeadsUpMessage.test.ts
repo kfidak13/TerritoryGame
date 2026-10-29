@@ -1,3 +1,5 @@
+import { MessageType } from "@openfront/engine-api/game/GameTypes";
+import { GameUpdateType } from "@openfront/engine-api/game/GameUpdates";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { HeadsUpMessage } from "../../src/client/hud/layers/HeadsUpMessage";
 
@@ -109,5 +111,67 @@ describe("HeadsUpMessage toast gestures", () => {
       element.querySelector<HTMLElement>("[data-game-toast-content]")?.style
         .transform,
     ).toBe("translate3d(0px, 0px, 0)");
+  });
+});
+
+describe("HeadsUpMessage disaster banner", () => {
+  let element: HeadsUpMessage;
+
+  beforeEach(async () => {
+    vi.stubGlobal("localStorage", {
+      getItem: () => null,
+      setItem: () => {},
+    });
+    if (!customElements.get("heads-up-message")) {
+      customElements.define("heads-up-message", HeadsUpMessage);
+    }
+    element = document.createElement("heads-up-message") as HeadsUpMessage;
+    document.body.appendChild(element);
+  });
+
+  afterEach(() => {
+    element.remove();
+    vi.unstubAllGlobals();
+  });
+
+  function tickWith(playerID: number) {
+    element.game = {
+      updatesSinceLastTick: () => ({
+        [GameUpdateType.DisplayEvent]: [
+          {
+            type: GameUpdateType.DisplayEvent,
+            message: "events_display.disaster_earthquake",
+            messageType: MessageType.DISASTER,
+            playerID,
+            params: { troops: "1.2K", buildings: 2 },
+          },
+        ],
+      }),
+      myPlayer: () => ({ smallID: () => 7 }),
+      ticks: () => 5000,
+      inSpawnPhase: () => false,
+      isSpawnImmunityActive: () => false,
+      isCatchingUp: () => false,
+      elapsedGameSeconds: () => 500,
+      config: () => ({
+        numSpawnPhaseTurns: () => 100,
+        hasExtendedSpawnImmunity: () => false,
+        isReplay: () => false,
+        overtimeConfig: () => ({ enabled: false, startMinutes: 20 }),
+      }),
+    } as any;
+    element.tick();
+    return element.updateComplete;
+  }
+
+  it("shouts the disaster at the player it hit", async () => {
+    await tickWith(7);
+    const banner = element.querySelector("[role=alert]");
+    expect(banner?.textContent).toContain("disaster_banner.earthquake");
+  });
+
+  it("stays quiet for everyone else", async () => {
+    await tickWith(8);
+    expect(element.querySelector("[role=alert]")).toBeNull();
   });
 });

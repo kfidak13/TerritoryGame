@@ -1,10 +1,25 @@
-import { PlayerType } from "@openfront/engine-api/game/GameTypes";
+import { TileRef } from "@openfront/engine-api/game/GameMap";
 import {
+  DisasterKind,
+  MessageType,
+  PlayerInfo,
+  PlayerType,
+} from "@openfront/engine-api/game/GameTypes";
+import { GameUpdateType } from "@openfront/engine-api/game/GameUpdates";
+import {
+  isZombieHorde,
   ZOMBIE_ATTACK_SHARE,
   ZOMBIE_ATTACK_TICKS,
+  ZOMBIE_MIN_PATCH_RADIUS,
+  ZOMBIE_NAME,
+  ZOMBIE_PATCH_RADIUS,
+  ZOMBIE_ROT_AFTER_TICKS,
   ZOMBIE_ROT_SHARE,
+  ZOMBIE_SHIELD_TICKS,
+  ZOMBIE_START_TROOPS,
   ZOMBIE_TROOP_CAP,
-  isZombieHorde,
+  ZOMBIE_TROOPS_PER_TILE,
+  ZOMBIE_VICTIM_LOSS,
 } from "@openfront/engine-lib/game/Zombies";
 import { PseudoRandom } from "@openfront/engine-lib/PseudoRandom";
 import {
@@ -22,6 +37,102 @@ import type {
   SnapshotWriter,
 } from "../../snapshot/SnapshotContext";
 import { AttackExecution } from "../AttackExecution";
+import { PlayerExecution } from "../PlayerExecution";
+
+/**
+ * A zombie apocalypse: a horde rises inside `victim`, shielded at first, and
+ * everyone is told. Raised by an admin or by the disaster cycle.
+ */
+export function raiseZombies(mg: Game, victim: Player, ticks: number): void {
+  if (!victim.isAlive() || victim.isGod() || isZombieHorde(victim)) return;
+  const center = centralTile(mg, victim);
+  const radius = Math.max(
+    ZOMBIE_MIN_PATCH_RADIUS,
+    Math.round(Math.sqrt(victim.numTilesOwned()) * ZOMBIE_PATCH_RADIUS),
+  );
+  const density = victim.troops() / Math.max(1, victim.numTilesOwned());
+  const id = new PseudoRandom(ticks * 1009 + victim.smallID()).nextID();
+  const horde = mg.addPlayer(
+    new PlayerInfo(ZOMBIE_NAME, PlayerType.Nation, null, id),
+  );
+  forEachInDisc(mg, center, radius, (t) => {
+    if (mg.owner(t) === victim) horde.conquer(t);
+  });
+  if (!horde.isAlive()) horde.conquer(center);
+  horde.setTroops(victim.troops() * ZOMBIE_START_TROOPS);
+  // It rises shielded; ZombieExecution lifts the shield.
+  horde.setGod(true);
+  victim.removeTroops(victim.troops() * ZOMBIE_VICTIM_LOSS);
+  // Upkeep only (PlayerExecution skips the horde's economy): it hands
+  // over buildings on land it loses, and its cut-off pieces fall.
+  mg.addExecution(
+    new PlayerExecution(horde),
+    new ZombieExecution(
+      horde,
+      victim,
+      density * ZOMBIE_TROOPS_PER_TILE,
+      ticks + ZOMBIE_SHIELD_TICKS,
+      ticks + ZOMBIE_ROT_AFTER_TICKS,
+    ),
+  );
+  mg.addUpdate({
+    type: GameUpdateType.Disaster,
+    kind: DisasterKind.Zombies,
+    tile: center,
+    radius,
+    victim: victim.id(),
+  });
+  mg.displayMessage(
+    "events_display.zombie_apocalypse",
+    MessageType.DISASTER,
+    null,
+    undefined,
+    { name: victim.displayName() },
+  );
+}
+
+/** The player's tile nearest the middle of their land. */
+function centralTile(mg: Game, p: Player): TileRef {
+  let sx = 0;
+  let sy = 0;
+  let n = 0;
+  for (const t of p.tiles()) {
+    sx += mg.x(t);
+    sy += mg.y(t);
+    n++;
+  }
+  const cx = sx / n;
+  const cy = sy / n;
+  let best: TileRef | null = null;
+  let bestD = Infinity;
+  for (const t of p.tiles()) {
+    const d = (mg.x(t) - cx) ** 2 + (mg.y(t) - cy) ** 2;
+    if (d < bestD) {
+      bestD = d;
+      best = t;
+    }
+  }
+  return best!;
+}
+
+export function forEachInDisc(
+  mg: Game,
+  center: TileRef,
+  radius: number,
+  fn: (t: TileRef) => void,
+): void {
+  const cx = mg.x(center);
+  const cy = mg.y(center);
+  for (let y = Math.max(0, cy - radius); y <= cy + radius; y++) {
+    if (y >= mg.height()) break;
+    for (let x = Math.max(0, cx - radius); x <= cx + radius; x++) {
+      if (x >= mg.width()) break;
+      const dx = x - cx;
+      const dy = y - cy;
+      if (dx * dx + dy * dy <= radius * radius) fn(mg.ref(x, y));
+    }
+  }
+}
 
 /**
  * Drives a zombie horde (engine-lib/game/Zombies.ts): attacks its victim,

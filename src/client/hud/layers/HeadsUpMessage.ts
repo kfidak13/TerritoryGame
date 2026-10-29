@@ -2,6 +2,7 @@ import {
   DisasterKind,
   GameMode,
   GameType,
+  MessageType,
   RankedType,
 } from "@openfront/engine-api/game/GameTypes";
 import { GameUpdateType } from "@openfront/engine-api/game/GameUpdates";
@@ -12,6 +13,22 @@ import { translateText } from "../../Utils";
 import { GameView } from "../../view";
 
 const COLLUSION_WARNING_CLOSED_KEY = "hasClosedCollusionWarning";
+
+/**
+ * Borderfall: a disaster's event-log message, and the big banner it raises
+ * for the player it hit (disaster_banner.<kind> and <kind>_effect, which
+ * take the message's params).
+ */
+const DISASTER_BANNERS: Record<string, { kind: string; color: string }> = {
+  "events_display.disaster_earthquake": {
+    kind: "earthquake",
+    color: "#f59e0b",
+  },
+  "events_display.disaster_hurricane": { kind: "hurricane", color: "#38bdf8" },
+  "events_display.disaster_drought": { kind: "drought", color: "#fb923c" },
+  "events_display.disaster_tornado": { kind: "tornado", color: "#a78bfa" },
+  "events_display.disease_outbreak": { kind: "outbreak", color: "#f43f5e" },
+};
 
 @customElement("heads-up-message")
 export class HeadsUpMessage extends LitElement implements Controller {
@@ -41,6 +58,14 @@ export class HeadsUpMessage extends LitElement implements Controller {
   @state()
   private zombieVictim: string | null = null;
   private zombieUntil = 0;
+  // Borderfall disaster that hit this player, until when to shout.
+  @state()
+  private disaster: {
+    kind: string;
+    color: string;
+    params: Record<string, string | number>;
+  } | null = null;
+  private disasterUntil = 0;
   // Borderfall admin heavenly nuke: when to stop showing its banner.
   private heavenlyUntil = 0;
   private static readonly ZOMBIE_BANNER_MS = 7000;
@@ -169,6 +194,23 @@ export class HeadsUpMessage extends LitElement implements Controller {
     if (this.zombieVictim !== null && Date.now() > this.zombieUntil) {
       this.zombieVictim = null;
     }
+    const me = this.game.myPlayer();
+    for (const e of updates?.[GameUpdateType.DisplayEvent] ?? []) {
+      const banner = DISASTER_BANNERS[e.message];
+      if (
+        banner === undefined ||
+        e.messageType !== MessageType.DISASTER ||
+        me === null ||
+        e.playerID !== me.smallID()
+      ) {
+        continue;
+      }
+      this.disaster = { ...banner, params: e.params ?? {} };
+      this.disasterUntil = Date.now() + HeadsUpMessage.ZOMBIE_BANNER_MS;
+    }
+    if (this.disaster !== null && Date.now() > this.disasterUntil) {
+      this.disaster = null;
+    }
     const pauseUpdates = updates?.[GameUpdateType.GamePaused];
     if (pauseUpdates && pauseUpdates.length > 0) {
       this.isPaused = pauseUpdates[pauseUpdates.length - 1].paused;
@@ -259,38 +301,63 @@ export class HeadsUpMessage extends LitElement implements Controller {
   render() {
     return html`
       <div style="pointer-events: none;">
-        ${Date.now() < this.heavenlyUntil
-          ? html`<div
-              class="fixed top-[28%] left-1/2 -translate-x-1/2 z-[1003]
-                     w-max max-w-[90vw] px-8 py-5 rounded-xl text-center
+        <div
+          class="fixed top-[28%] left-1/2 -translate-x-1/2 z-[1003]
+                 flex flex-col items-center gap-3 max-w-[90vw]"
+        >
+          ${Date.now() < this.heavenlyUntil
+            ? html`<div
+                class="w-max max-w-[90vw] px-8 py-5 rounded-xl text-center
                      bg-black/80 border-2 border-amber-300 animate-pulse"
-              style="box-shadow: 0 0 60px rgba(252,211,77,0.7);"
-            >
-              <div class="text-4xl lg:text-6xl font-black text-amber-200">
-                ${translateText("heavenly.title")}
-              </div>
-              <div class="text-lg lg:text-2xl text-white mt-2">
-                ${translateText("heavenly.subtitle")}
-              </div>
-            </div>`
-          : null}
-        ${this.zombieVictim !== null
-          ? html`<div
-              class="fixed top-[28%] left-1/2 -translate-x-1/2 z-[1003]
-                     w-max max-w-[90vw] px-8 py-5 rounded-xl text-center
+                style="box-shadow: 0 0 60px rgba(252,211,77,0.7);"
+              >
+                <div class="text-4xl lg:text-6xl font-black text-amber-200">
+                  ${translateText("heavenly.title")}
+                </div>
+                <div class="text-lg lg:text-2xl text-white mt-2">
+                  ${translateText("heavenly.subtitle")}
+                </div>
+              </div>`
+            : null}
+          ${this.zombieVictim !== null
+            ? html`<div
+                class="w-max max-w-[90vw] px-8 py-5 rounded-xl text-center
                      bg-black/80 border-2 border-lime-500 animate-pulse"
-              style="box-shadow: 0 0 40px rgba(132,204,22,0.6);"
-            >
-              <div class="text-4xl lg:text-6xl font-black text-lime-400">
-                ${translateText("zombies.title")}
-              </div>
-              <div class="text-lg lg:text-2xl text-white mt-2">
-                ${translateText("zombies.subtitle", {
-                  name: this.zombieVictim,
-                })}
-              </div>
-            </div>`
-          : null}
+                style="box-shadow: 0 0 40px rgba(132,204,22,0.6);"
+              >
+                <div class="text-4xl lg:text-6xl font-black text-lime-400">
+                  ${translateText("zombies.title")}
+                </div>
+                <div class="text-lg lg:text-2xl text-white mt-2">
+                  ${translateText("zombies.subtitle", {
+                    name: this.zombieVictim,
+                  })}
+                </div>
+              </div>`
+            : null}
+          ${this.disaster !== null
+            ? html`<div
+                role="alert"
+                class="w-max max-w-[90vw] px-8 py-5 rounded-xl text-center
+                     bg-black/80 border-2 animate-pulse"
+                style="border-color: ${this.disaster.color};
+                     box-shadow: 0 0 40px ${this.disaster.color}99;"
+              >
+                <div
+                  class="text-4xl lg:text-6xl font-black uppercase"
+                  style="color: ${this.disaster.color};"
+                >
+                  ${translateText(`disaster_banner.${this.disaster.kind}`)}
+                </div>
+                <div class="text-base lg:text-xl text-white/90 mt-2">
+                  ${translateText(
+                    `disaster_banner.${this.disaster.kind}_effect`,
+                    this.disaster.params,
+                  )}
+                </div>
+              </div>`
+            : null}
+        </div>
         ${this.toastMessage
           ? html`
               <div

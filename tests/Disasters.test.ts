@@ -16,6 +16,7 @@ import {
   TORNADO_TICKS,
 } from "@openfront/engine-lib/game/Disasters";
 import { workingLevels } from "@openfront/engine-lib/game/Goods";
+import { isZombieHorde } from "@openfront/engine-lib/game/Zombies";
 import { PseudoRandom } from "@openfront/engine-lib/PseudoRandom";
 import { DisasterExecution } from "@openfront/engine/execution/DisasterExecution";
 import { NationStructureBehavior } from "@openfront/engine/execution/nation/NationStructureBehavior";
@@ -61,6 +62,18 @@ describe("Disasters", () => {
     const off = await setup(MAP, {});
     expect(off.config().disastersEnabled()).toBe(false);
     expect(game.config().disastersEnabled()).toBe(true);
+  });
+
+  test("one roll in twenty raises a zombie horde instead", () => {
+    (disasters as any).quietUntil = 0;
+    // Every roll comes up 0: a disaster strikes, it is zombies, and the
+    // picked tile is (0, 0), so they rise inside Rome.
+    (disasters as any).random.next = () => 0;
+    executeTicks(game, 1);
+    const horde = game.players().find((p) => isZombieHorde(p));
+    expect(horde).toBeDefined();
+    expect(rome.numTilesOwned()).toBeLessThan(8 * (coastX + 1));
+    expect(carthage.numTilesOwned()).toBe(8 * (coastX + 1));
   });
 
   test("an earthquake kills troops by the land it shakes and damages buildings", () => {

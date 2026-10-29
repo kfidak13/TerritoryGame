@@ -16,6 +16,9 @@ import { GameLike, PlayerLike } from "@openfront/engine-api/game/ReadViews";
  *   Tornado     cuts a wandering path, killing troops and wrecking
  *               buildings along it
  *
+ * One roll in twenty is a zombie apocalypse instead: a horde rises inside
+ * the player whose land was picked (ZombieExecution.raiseZombies).
+ *
  * Disease: industry (Factories and Ports) next to where people live makes
  * them sick. A city with too many levels of its owner's industry close by
  * may break out: the outbreak drains the player's troops and stops the
@@ -28,6 +31,8 @@ import { GameLike, PlayerLike } from "@openfront/engine-api/game/ReadViews";
 
 /** Average ticks between disasters (3 minutes). */
 export const DISASTER_MEAN_TICKS = 3 * 60 * 10;
+/** Chance a disaster roll is a zombie apocalypse instead. */
+export const ZOMBIE_DISASTER_CHANCE = 0.05;
 /** No disasters this long after the spawn phase (3 minutes). */
 export const DISASTER_GRACE_TICKS = 3 * 60 * 10;
 

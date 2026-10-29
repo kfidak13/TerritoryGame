@@ -968,6 +968,18 @@
     "info_troops_same": "the same max troops as a human",
     "medium": "Medium"
   },
+  "disaster_banner": {
+    "drought": "Drought",
+    "drought_effect": "{farms, plural, one {# of your Farms has} other {# of your Farms have}} dried up for 3 minutes",
+    "earthquake": "Earthquake",
+    "earthquake_effect": "{troops} troops lost and {buildings, plural, one {# building} other {# buildings}} damaged",
+    "hurricane": "Hurricane",
+    "hurricane_effect": "{troops} troops lost, {ships, plural, one {# ship} other {# ships}} hit and {buildings, plural, one {# port} other {# ports}} damaged",
+    "outbreak": "Disease outbreak",
+    "outbreak_effect": "Troops are dying and {cities, plural, one {# city has} other {# cities have}} stopped for 90 seconds. Keep cities away from factories and ports.",
+    "tornado": "Tornado",
+    "tornado_effect": "{troops} troops lost and {buildings, plural, one {# building} other {# buildings}} wrecked"
+  },
   "discord_user_header": {
     "avatar_alt": "Avatar"
   },

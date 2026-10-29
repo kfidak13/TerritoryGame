@@ -30,6 +30,7 @@ import {
   TORNADO_SPEED,
   TORNADO_TICKS,
   TORNADO_TROOP_LOSS,
+  ZOMBIE_DISASTER_CHANCE,
 } from "@openfront/engine-lib/game/Disasters";
 import { regionSize } from "@openfront/engine-lib/game/Goods";
 import { PseudoRandom } from "@openfront/engine-lib/PseudoRandom";
@@ -49,6 +50,7 @@ import type {
   SnapshotReader,
   SnapshotWriter,
 } from "../snapshot/SnapshotContext";
+import { raiseZombies } from "./admin/ZombieExecution";
 
 const DISASTERS = [
   DisasterKind.Earthquake,
@@ -177,6 +179,11 @@ export class DisasterExecution implements Execution {
       ticks >= this.quietUntil &&
       this.random.next() < 1 / DISASTER_MEAN_TICKS
     ) {
+      if (this.random.next() < ZOMBIE_DISASTER_CHANCE) {
+        const tile = this.pickTile(DisasterKind.Earthquake);
+        if (tile !== null) raiseZombies(mg, mg.owner(tile) as Player, ticks);
+        return;
+      }
       const kind = this.random.randElement([...DISASTERS]);
       const tile = this.pickTile(kind);
       if (tile !== null) this.strike(kind, tile);
