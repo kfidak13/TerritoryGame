@@ -123,16 +123,6 @@ export async function renderHtmlContent(
       assetManifest,
       cdnBase,
     ),
-    desktopLogoImageUrl: buildAssetUrl(
-      "images/BorderfallLogo.png",
-      assetManifest,
-      cdnBase,
-    ),
-    mobileLogoImageUrl: buildAssetUrl(
-      "images/BorderfallMark.png",
-      assetManifest,
-      cdnBase,
-    ),
   });
 }
 

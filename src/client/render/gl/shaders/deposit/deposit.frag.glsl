@@ -8,40 +8,37 @@ uniform usampler2D uDeposits;
 
 // Colors indexed by Good: Food, Oil, Metal.
 uniform vec3 uColors[3];
-// Faint tint over every deposit tile, readable at any zoom.
-uniform float uTintAlpha;
-// Dots on a sparse lattice (every uDotSpacing tiles) mark deposits once
-// zoomed in; one dot per tile would read as noise.
-uniform float uDotAlpha;
-uniform float uDotRadius;  // in tiles
-uniform float uDotSpacing; // in tiles
-uniform float uZoom;       // screen pixels per tile
-uniform float uDotMinZoom;
-uniform float uDotFullZoom;
+// A soft fill over every deposit tile, and a crisp outline round each field.
+uniform float uFillAlpha;
+uniform float uEdgeAlpha;
+uniform float uEdgeWidth; // in tiles
+uniform float uZoom;      // CSS pixels per tile
 
 in vec2 vUV;
 out vec4 fragColor;
 
-uint depositAt(vec2 tilePos) {
-  ivec2 tc = clamp(ivec2(tilePos), ivec2(0), ivec2(MAP_W - 1, MAP_H - 1));
+uint depositAt(ivec2 tc) {
+  if (tc.x < 0 || tc.y < 0 || tc.x >= MAP_W || tc.y >= MAP_H) return 0u;
   return texelFetch(uDeposits, tc, 0).r;
 }
 
 void main() {
   vec2 tilePos = vUV * vec2(float(MAP_W), float(MAP_H));
-  uint here = depositAt(tilePos);
+  ivec2 tc = ivec2(floor(tilePos));
+  uint here = depositAt(tc);
+  if (here == 0u) discard;
 
-  // Nearest lattice point, and the deposit under it.
-  vec2 center = (floor(tilePos / uDotSpacing) + 0.5) * uDotSpacing;
-  uint dotDeposit = depositAt(center);
-  float aa = 1.0 / uZoom;
-  float spot = dotDeposit == 0u
-    ? 0.0
-    : 1.0 - smoothstep(uDotRadius - aa, uDotRadius + aa, length(tilePos - center));
-  spot *= smoothstep(uDotMinZoom, uDotFullZoom, uZoom) * uDotAlpha;
+  // Outline: the strip of this tile along any side whose neighbor is
+  // another good or none.
+  vec2 f = fract(tilePos);
+  float w = min(uEdgeWidth, 0.5);
+  bool edge =
+    (f.x < w && depositAt(tc + ivec2(-1, 0)) != here) ||
+    (f.x > 1.0 - w && depositAt(tc + ivec2(1, 0)) != here) ||
+    (f.y < w && depositAt(tc + ivec2(0, -1)) != here) ||
+    (f.y > 1.0 - w && depositAt(tc + ivec2(0, 1)) != here);
+  // Far out a tile is under a pixel; there the outline would swamp the fill.
+  float edgeAlpha = edge ? uEdgeAlpha * smoothstep(0.4, 1.5, uZoom) : 0.0;
 
-  float tint = here == 0u ? 0.0 : uTintAlpha;
-  if (spot <= 0.0 && tint <= 0.0) discard;
-  uint shown = spot > tint ? dotDeposit : here;
-  fragColor = vec4(uColors[int(shown) - 1], max(spot, tint));
+  fragColor = vec4(uColors[int(here) - 1], max(uFillAlpha, edgeAlpha));
 }

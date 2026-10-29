@@ -182,16 +182,19 @@ export interface RenderSettings {
     foodColor: string;
     oilColor: string;
     metalColor: string;
-    /** Tint over every deposit tile, at any zoom. */
-    tintAlpha: number;
-    dotAlpha: number;
-    /** Dot radius, in tiles. */
-    dotRadius: number;
-    /** Tiles between dots; one dot per tile reads as noise. */
-    dotSpacing: number;
-    /** Zoom (screen px per tile) where dots start fading in / are fully in. */
-    dotMinZoom: number;
-    dotFullZoom: number;
+    /** Soft fill over every deposit tile. */
+    fillAlpha: number;
+    /** Outline round each field, and its width on screen. */
+    edgeAlpha: number;
+    edgeWidthPx: number;
+    /** Badge at the middle of each field: size on screen, opacity. */
+    iconSizePx: number;
+    iconAlpha: number;
+    /** Zoom (screen px per tile) where badges start fading in / are fully in. */
+    iconMinZoom: number;
+    iconFullZoom: number;
+    /** Fields smaller than this get no badge. */
+    iconMinTiles: number;
   };
   /** TileMaskPass: e.g. trade land (first = you give, second = you ask). */
   tileMask: {

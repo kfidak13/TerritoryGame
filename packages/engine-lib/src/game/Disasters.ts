@@ -31,6 +31,11 @@ import { GameLike, PlayerLike } from "@openfront/engine-api/game/ReadViews";
 
 /** Average ticks between disasters (3 minutes). */
 export const DISASTER_MEAN_TICKS = 3 * 60 * 10;
+/**
+ * Share of disasters (and zombie apocalypses) aimed at a random human
+ * player's land; the rest land anywhere. Players should see them.
+ */
+export const HUMAN_DISASTER_SHARE = 0.6;
 /** Chance a disaster roll is a zombie apocalypse instead. */
 export const ZOMBIE_DISASTER_CHANCE = 0.05;
 /** No disasters this long after the spawn phase (3 minutes). */

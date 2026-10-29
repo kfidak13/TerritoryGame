@@ -64,6 +64,28 @@ describe("Disasters", () => {
     expect(game.config().disastersEnabled()).toBe(true);
   });
 
+  test("mostly strike people rather than nations", async () => {
+    const g = await setup(MAP, { disasters: true }, [
+      new PlayerInfo("rome", PlayerType.Human, null, "rome"),
+      new PlayerInfo("carthage", PlayerType.Nation, null, "carthage"),
+    ]);
+    const r = g.player("rome");
+    const c = g.player("carthage");
+    for (let y = 0; y < 16; y++) {
+      for (let x = 0; x <= coastX; x++) (y < 8 ? r : c).conquer(g.ref(x, y));
+    }
+    const exec = new DisasterExecution(7);
+    g.addExecution(exec);
+    executeTicks(g, 1);
+    let onRome = 0;
+    for (let i = 0; i < 400; i++) {
+      const t = (exec as any).pickTile(DisasterKind.Earthquake);
+      if (g.owner(t) === r) onRome++;
+    }
+    // Equal land: 60% aimed at Rome plus half of the rest, about 80%.
+    expect(onRome / 400).toBeGreaterThan(0.7);
+  });
+
   test("one roll in twenty raises a zombie horde instead", () => {
     (disasters as any).quietUntil = 0;
     // Every roll comes up 0: a disaster strikes, it is zombies, and the

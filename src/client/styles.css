@@ -1,5 +1,4 @@
 @import "tailwindcss";
-@import "./halloween.css";
 
 @custom-variant dark (&:where(.dark, .dark *));
 @custom-variant hover (&:hover);
@@ -11,34 +10,36 @@
   --default-ring-color: var(--color-malibu-blue);
   --font-display: "Borderfall", Inter, Arial, sans-serif;
 
-  /* Openfront.io brand palette — see Openfront_Brand_Guidelines.pdf §4 */
-  --color-malibu-blue: #0084d1;
-  --color-aquarius: #3fa9f5;
+  /* Borderfall palette: bronze on charcoal, from the logo. The token names
+     are OpenFront's, kept so every component picks the palette up. */
+  --color-malibu-blue: #a8743c;
+  --color-aquarius: #d6a463;
   --color-dawn-blue: #cccccc;
   --color-bright-white: #ffffff;
-  --color-bright-blue: #1e90ff;
+  --color-bright-blue: #b98547;
 
-  /* Openfront Masters sub-brand */
-  --color-cyber-yellow: #ffd700;
+  /* Masters sub-brand accent, here a light bronze */
+  --color-cyber-yellow: #e2bb7c;
   --color-limestone: #999999;
 
   /* Background & decorative — not for standalone UI use */
-  --color-deep-navy: #0a1628;
-  --color-hex-cyan: #00c8ff;
+  --color-deep-navy: #0c0b09;
+  --color-hex-cyan: #d6a463;
   --color-frame-orange: #f97316;
 
   /* App-specific surface colors */
-  --color-surface: #0a1628;
+  --color-surface: #15130f;
 
-  --shadow-malibu-blue: 0 0 15px rgba(0, 132, 209, 0.2);
-  --shadow-malibu-blue-soft: 0 0 12px rgba(0, 132, 209, 0.2);
-  --shadow-malibu-blue-strong: 0 0 15px rgba(0, 132, 209, 0.3);
-  --shadow-malibu-blue-pill: 0 0 6px rgba(0, 132, 209, 0.35);
-  --shadow-malibu-blue-ring-sm: 0 0 0 4px rgba(0, 132, 209, 0.2);
-  --shadow-malibu-blue-ring-lg: 0 0 0 6px rgba(0, 132, 209, 0.3);
-  --shadow-lobby-card-hover: 0 0 0 2px #0084d1, 0 0 20px rgba(0, 132, 209, 0.5);
+  --shadow-malibu-blue: 0 0 15px rgba(168, 116, 60, 0.2);
+  --shadow-malibu-blue-soft: 0 0 12px rgba(168, 116, 60, 0.2);
+  --shadow-malibu-blue-strong: 0 0 15px rgba(168, 116, 60, 0.3);
+  --shadow-malibu-blue-pill: 0 0 6px rgba(168, 116, 60, 0.35);
+  --shadow-malibu-blue-ring-sm: 0 0 0 4px rgba(168, 116, 60, 0.2);
+  --shadow-malibu-blue-ring-lg: 0 0 0 6px rgba(168, 116, 60, 0.3);
+  --shadow-lobby-card-hover:
+    0 0 0 2px #a8743c, 0 0 20px rgba(168, 116, 60, 0.5);
   --shadow-action-card-hover:
-    0 0 0 1px #0084d1, 0 0 12px rgba(0, 132, 209, 0.35);
+    0 0 0 1px #a8743c, 0 0 12px rgba(168, 116, 60, 0.35);
 }
 
 @layer base {

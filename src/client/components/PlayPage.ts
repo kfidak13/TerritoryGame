@@ -59,7 +59,7 @@ export class PlayPage extends LitElement {
               <img
                 src=${assetUrl("images/BorderfallLogo.png")}
                 alt="Borderfall"
-                class="h-full w-auto"
+                class="block h-7 w-auto max-w-full object-contain"
               />
             </div>
 
@@ -87,6 +87,43 @@ export class PlayPage extends LitElement {
           <div
             class="lg:hidden h-[calc(env(safe-area-inset-top)+56px)] -mb-4"
           ></div>
+
+          <!-- Borderfall hero: the logo (the mobile top bar has its own), the
+               pitch, and what sets the game apart. -->
+          <section
+            class="flex flex-col items-center gap-3 pt-2 pb-1 text-center lg:pt-6 lg:pb-3"
+          >
+            <img
+              src=${assetUrl("images/BorderfallLogo.png")}
+              alt="Borderfall"
+              class="hidden lg:block w-full max-w-[560px] h-auto drop-shadow-[0_6px_24px_rgba(0,0,0,0.6)]"
+            />
+            <div class="flex w-full max-w-[720px] items-center gap-4">
+              <span
+                class="h-px flex-1 bg-gradient-to-r from-transparent to-aquarius/60"
+              ></span>
+              <p
+                class="text-sm lg:text-base font-medium tracking-[0.14em] uppercase text-stone-200 text-balance"
+                data-i18n="home_hero.tagline"
+              ></p>
+              <span
+                class="h-px flex-1 bg-gradient-to-l from-transparent to-aquarius/60"
+              ></span>
+            </div>
+            <ul class="flex flex-wrap justify-center gap-2">
+              ${[
+                "home_hero.feature_upgrades",
+                "home_hero.feature_goods",
+                "home_hero.feature_disasters",
+              ].map(
+                (k) =>
+                  html`<li
+                    class="rounded-full bg-black/40 px-3 py-1 text-[11px] font-semibold uppercase tracking-wider text-aquarius ring-1 ring-aquarius/40 backdrop-blur-sm"
+                    data-i18n=${k}
+                  ></li>`,
+              )}
+            </ul>
+          </section>
 
           <!-- Left column: identity row. Borderfall (standalone): the news
                banner and the Streaming Now panel showed OpenFront's news and

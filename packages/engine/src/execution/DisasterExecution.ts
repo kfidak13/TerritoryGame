@@ -16,6 +16,7 @@ import {
   DROUGHT_TICKS,
   EARTHQUAKE_RADIUS,
   EARTHQUAKE_TROOP_LOSS,
+  HUMAN_DISASTER_SHARE,
   HURRICANE_RADIUS,
   HURRICANE_RIG_DAMAGE,
   HURRICANE_SHIP_DAMAGE,
@@ -193,6 +194,18 @@ export class DisasterExecution implements Execution {
   /** A random tile the disaster can hit; null if none turns up. */
   private pickTile(kind: Disaster): TileRef | null {
     const mg = this.mg!;
+    // Borderfall: most disasters go for a person, so players meet them.
+    const humans = mg
+      .players()
+      .filter((p) => p.type() === PlayerType.Human && p.isAlive());
+    if (humans.length > 0 && this.random.next() < HUMAN_DISASTER_SHARE) {
+      const p = this.random.randElement(humans);
+      const tiles =
+        kind === DisasterKind.Hurricane
+          ? [...p.borderTiles()].filter((t) => mg.isOceanShore(t))
+          : [...p.tiles()];
+      if (tiles.length > 0) return this.random.randElement(tiles);
+    }
     const fits =
       kind === DisasterKind.Hurricane
         ? (t: TileRef) => mg.isOceanShore(t)

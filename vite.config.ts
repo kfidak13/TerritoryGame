@@ -246,16 +246,6 @@ export default defineConfig(({ mode }) => {
       assetManifest,
       cdnBase,
     ),
-    desktopLogoImageUrl: buildAssetUrl(
-      "images/BorderfallLogo.png",
-      assetManifest,
-      cdnBase,
-    ),
-    mobileLogoImageUrl: buildAssetUrl(
-      "images/BorderfallMark.png",
-      assetManifest,
-      cdnBase,
-    ),
   };
 
   // Vite's HTML transform replaces the source <script src="/src/client/Main.ts">

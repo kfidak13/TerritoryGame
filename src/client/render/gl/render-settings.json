@@ -115,15 +115,17 @@
     "enemyB": 0
   },
   "deposit": {
-    "foodColor": "#ffcc00",
-    "oilColor": "#111111",
-    "metalColor": "#1e90ff",
-    "tintAlpha": 0.15,
-    "dotAlpha": 0.85,
-    "dotRadius": 0.9,
-    "dotSpacing": 4,
-    "dotMinZoom": 1.5,
-    "dotFullZoom": 3
+    "foodColor": "#f0b429",
+    "oilColor": "#2dd4bf",
+    "metalColor": "#7aa7ff",
+    "fillAlpha": 0.22,
+    "edgeAlpha": 0.85,
+    "edgeWidthPx": 1.6,
+    "iconSizePx": 24,
+    "iconAlpha": 0.95,
+    "iconMinZoom": 1.2,
+    "iconFullZoom": 2.4,
+    "iconMinTiles": 8
   },
   "tileMask": {
     "firstColor": "#ff9f1c",

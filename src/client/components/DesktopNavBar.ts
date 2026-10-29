@@ -53,9 +53,10 @@ export class DesktopNavBar extends LitElement {
         class="hidden lg:flex w-full bg-zinc-900/90 backdrop-blur-md items-center justify-center gap-8 py-4 shrink-0 z-50 relative"
       >
         <div class="flex flex-col items-center justify-center">
-          <div class="h-8">
+          <!-- The home page's hero carries the big logo; other pages show it here. -->
+          <div class="h-8 hidden in-[.page-open]:block">
             <img
-              class="block h-full aspect-[1364/259]"
+              class="block h-full aspect-[1200/271]"
               src=${assetUrl("images/BorderfallLogo.png")}
               alt="Borderfall"
             />
