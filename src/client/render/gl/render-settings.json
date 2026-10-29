@@ -115,9 +115,9 @@
     "enemyB": 0
   },
   "deposit": {
-    "foodColor": "#f0b429",
-    "oilColor": "#2dd4bf",
-    "metalColor": "#7aa7ff",
+    "foodColor": "#22c55e",
+    "oilColor": "#111111",
+    "metalColor": "#9ca3af",
     "fillAlpha": 0.22,
     "edgeAlpha": 0.85,
     "edgeWidthPx": 1.6,
