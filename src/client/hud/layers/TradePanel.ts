@@ -319,18 +319,18 @@ export class TradePanel extends LitElement implements Controller {
         aria-label=${translateText("trade.title", {
           name: this.target.displayName(),
         })}
-        class="pointer-events-auto fixed left-2 top-1/2 z-[1000] w-[22rem] max-w-[calc(100vw-1rem)] max-h-[90vh] -translate-y-1/2 overflow-y-auto rounded-xl bg-zinc-900/95 p-3 text-sm text-zinc-200 shadow-2xl ring-1 ring-zinc-700"
+        class="pointer-events-auto fixed left-2 top-1/2 z-[1000] w-[22rem] max-w-[calc(100vw-1rem)] max-h-[90vh] -translate-y-1/2 overflow-y-auto rounded-2xl bg-slate-950/90 p-3 text-sm text-slate-200 shadow-2xl ring-1 ring-white/10 backdrop-blur-md"
         @contextmenu=${(e: MouseEvent) => e.preventDefault()}
         @keydown=${(e: KeyboardEvent) => e.stopPropagation()}
       >
         <div class="mb-2 flex items-center justify-between gap-2">
-          <div class="text-base font-bold text-white">
+          <div class="font-black tracking-wide text-amber-400">
             ${translateText("trade.title", {
               name: this.target.displayName(),
             })}
           </div>
           <button
-            class="flex h-7 w-7 items-center justify-center rounded-full bg-zinc-700 text-white hover:bg-red-500"
+            class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/10 text-base font-bold text-slate-100 ring-1 ring-white/15 transition-colors hover:bg-rose-600 hover:text-white outline-none focus-visible:ring-2 focus-visible:ring-amber-400"
             aria-label=${translateText("common.close")}
             @click=${() => this.close()}
           >

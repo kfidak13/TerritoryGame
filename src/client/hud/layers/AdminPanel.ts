@@ -375,7 +375,7 @@ export class AdminPanel extends LitElement implements Controller {
     onClick: () => void,
   ) {
     return html`<button
-      class="px-2.5 py-1 rounded-full text-xs font-semibold transition-colors
+      class="px-2.5 py-1 rounded-full text-xs font-semibold transition-colors outline-none focus-visible:ring-2 focus-visible:ring-amber-400
         ${active
         ? "bg-amber-500 text-slate-950"
         : "bg-white/5 text-slate-200 hover:bg-white/10 ring-1 ring-white/10"}"
@@ -389,6 +389,7 @@ export class AdminPanel extends LitElement implements Controller {
     label: string,
     onClick: () => void,
     tone: "go" | "stop" | "plain" = "plain",
+    disabled = false,
   ) {
     const colors = {
       go: "bg-emerald-500 hover:bg-emerald-400 text-slate-950",
@@ -396,7 +397,9 @@ export class AdminPanel extends LitElement implements Controller {
       plain: "bg-white/10 hover:bg-white/15 text-slate-100",
     }[tone];
     return html`<button
-      class="flex-1 px-3 py-2 rounded-lg text-sm font-bold transition-colors ${colors}"
+      class="flex-1 px-3 py-2 rounded-lg text-sm font-bold transition-colors outline-none focus-visible:ring-2 focus-visible:ring-amber-400
+        disabled:bg-white/5 disabled:text-slate-500 disabled:cursor-not-allowed ${colors}"
+      ?disabled=${disabled}
       @click=${onClick}
     >
       ${label}
@@ -475,7 +478,7 @@ export class AdminPanel extends LitElement implements Controller {
                 type="number"
                 min="0"
                 class="w-28 bg-slate-900 ring-1 ring-white/10 focus:ring-amber-500
-                     rounded-md px-2 py-1 text-right text-sm outline-none"
+                     rounded-md px-2 py-1 text-right text-sm text-slate-100 tabular-nums outline-none"
                 .value=${String(this.amounts[r])}
                 @input=${(e: Event) => {
                   this.amounts = {
@@ -507,11 +510,13 @@ export class AdminPanel extends LitElement implements Controller {
           translateText("admin_panel.give_to", { name: target }),
           () => this.sendResources(1),
           "go",
+          this.target === null,
         )}
         ${this.action(
           translateText("admin_panel.take_from", { name: target }),
           () => this.sendResources(-1),
           "stop",
+          this.target === null,
         )}
       </div>
       <label
@@ -852,7 +857,7 @@ export class AdminPanel extends LitElement implements Controller {
       </div>
       <input
         type="password"
-        class="bg-slate-900 ring-1 ring-white/10 focus:ring-amber-500 rounded-lg px-3 py-2 outline-none"
+        class="bg-slate-900 ring-1 ring-white/10 focus:ring-amber-500 rounded-lg px-3 py-2 text-slate-100 outline-none"
         .value=${this.passwordDraft}
         @input=${(e: Event) =>
           (this.passwordDraft = (e.target as HTMLInputElement).value)}
@@ -878,26 +883,36 @@ export class AdminPanel extends LitElement implements Controller {
   render() {
     if (!this.isAdminAccount) return null;
     if (!this.open) {
+      // Sits in the top-right HUD column, under the timer bar.
       return html`<button
-        class="fixed bottom-24 right-3 z-[1001] px-4 py-2 rounded-full text-sm font-bold
-               bg-amber-500 hover:bg-amber-400 text-slate-950 shadow-lg shadow-amber-500/20"
+        class="mr-2 flex items-center gap-1.5 rounded-full bg-slate-950/85 px-3 py-1.5
+               text-xs font-bold text-amber-400 shadow-lg ring-1 ring-amber-500/40
+               backdrop-blur-md transition-colors hover:bg-amber-500 hover:text-slate-950 outline-none focus-visible:ring-2 focus-visible:ring-amber-400"
+        title=${translateText("admin_panel.toggle_hint")}
         @click=${() => this.setOpen(true)}
       >
+        <span aria-hidden="true">★</span>
         ${translateText("admin_panel.title")}
       </button>`;
     }
     const unlocked = this.password !== null;
     return html`<div
-      class="fixed top-16 right-3 z-[1001] w-[360px] max-w-[calc(100vw-1.5rem)]
-             max-h-[calc(100vh-8rem)] flex flex-col rounded-2xl overflow-hidden
+      role="dialog"
+      aria-label=${translateText("admin_panel.title")}
+      class="fixed top-14 right-2 z-[1001] w-[360px] max-w-[calc(100vw-1rem)]
+             max-h-[calc(100vh-5rem)] flex flex-col rounded-2xl overflow-hidden
              bg-slate-950/90 backdrop-blur-md ring-1 ring-white/10 shadow-2xl text-slate-100"
       @contextmenu=${(e: MouseEvent) => e.preventDefault()}
     >
       <div
-        class="flex items-center justify-between px-4 py-3 border-b border-white/10"
+        class="flex items-center justify-between gap-3 px-4 py-3 border-b border-white/10
+               bg-gradient-to-r from-amber-500/15 to-transparent"
       >
-        <div>
-          <div class="font-black tracking-wide text-amber-400">
+        <div class="min-w-0">
+          <div
+            class="flex items-center gap-1.5 font-black tracking-wide text-amber-400"
+          >
+            <span aria-hidden="true">★</span>
             ${translateText("admin_panel.title")}
           </div>
           <div class="text-[11px] text-slate-400">
@@ -907,8 +922,11 @@ export class AdminPanel extends LitElement implements Controller {
           </div>
         </div>
         <button
-          class="w-8 h-8 rounded-full hover:bg-white/10 text-slate-400"
+          class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/10
+                 text-base font-bold text-slate-100 ring-1 ring-white/15 transition-colors
+                 hover:bg-rose-600 hover:text-white outline-none focus-visible:ring-2 focus-visible:ring-amber-400"
           aria-label=${translateText("admin_panel.close")}
+          title=${translateText("admin_panel.close")}
           @click=${() => this.setOpen(false)}
         >
           ✕
@@ -921,7 +939,7 @@ export class AdminPanel extends LitElement implements Controller {
                 ${(["resources", "map", "control", "intel"] as const).map(
                   (t) =>
                     html`<button
-                      class="py-1.5 rounded-md text-xs font-bold transition-colors
+                      class="py-1.5 rounded-md text-xs font-bold transition-colors outline-none focus-visible:ring-2 focus-visible:ring-amber-400
                         ${this.tab === t
                         ? "bg-amber-500 text-slate-950"
                         : "text-slate-300 hover:bg-white/10"}"

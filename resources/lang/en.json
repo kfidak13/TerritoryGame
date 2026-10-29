@@ -242,6 +242,7 @@
     "take_from": "Take from {name}",
     "target_stats": "{tiles} tiles · {troops} troops · {gold} gold",
     "title": "Admin",
+    "toggle_hint": "Admin tools (` key)",
     "tool_disaster": "Disaster",
     "tool_disaster_desc": "Summon a disaster where you click",
     "tool_paint": "Paint land",
