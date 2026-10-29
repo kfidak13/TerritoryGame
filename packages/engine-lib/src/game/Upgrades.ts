@@ -192,13 +192,13 @@ export const CITY_PATH_MARKET = 1;
 export const CITY_PATH_CAPITAL = 2;
 
 /** Population (in displayed troops) each city path adds, by tier. */
-const CITY_POP: readonly (readonly number[])[] = [
+export const CITY_POP: readonly (readonly number[])[] = [
   [0, 500_000, 1_500_000, 3_000_000, 6_000_000, 10_000_000],
   [0, 200_000, 500_000, 1_000_000, 2_000_000, 3_000_000],
   [0, 300_000, 1_000_000, 2_000_000, 4_000_000, 6_000_000],
 ];
 /** Gold per tick each city path makes, by tier. */
-const CITY_GOLD: readonly (readonly number[])[] = [
+export const CITY_GOLD: readonly (readonly number[])[] = [
   [0, 0, 0, 0, 0, 0],
   [0, 50, 150, 400, 1_000, 2_500],
   [0, 20, 60, 150, 400, 1_000],
@@ -276,7 +276,7 @@ export const FACTORY_PATH_BANDIT = 2;
 /** Extra gold per stop for trains from here, % by Freight tier. */
 export const FACTORY_FREIGHT_GOLD_PERCENT = [0, 15, 35, 70, 120, 200];
 /** Spawn rolls a factory makes for trains, by Express tier. */
-export const FACTORY_EXPRESS_ROLLS = [1, 2, 2, 3, 4, 5];
+export const FACTORY_EXPRESS_ROLLS = [1, 2, 3, 3, 4, 5];
 /** Rail tiles a train from here covers a tick, by Express tier. */
 export const FACTORY_EXPRESS_SPEED = [2, 2, 2, 3, 3, 4];
 /** Extra gold at other nations' stations, % by Bandit tier. */
@@ -331,7 +331,7 @@ export const SAM_PATH_AEGIS = 2;
 /** Extra reach over a plain SAM's, % by Range tier. */
 export const SAM_RANGE_PERCENT = [0, 15, 30, 50, 75, 100];
 /** A plain SAM's reach: Config.samRange(1). */
-const SAM_BASE_RANGE = 70;
+export const SAM_BASE_RANGE = 70;
 
 /**
  * The level Config.samRange (150 - 480 / (level + 5)) takes to give a SAM
@@ -353,7 +353,7 @@ export function missileTubes(type: UnitType, tiers: Tiers): number {
     : SILO_ARSENAL_TUBES[tiers[SILO_PATH_ARSENAL]];
 }
 /** Reload time as a % of Config.SAMCooldown, by Battery tier. */
-const SAM_BATTERY_RELOAD_PERCENT = [100, 85, 70, 70, 70, 50];
+export const SAM_BATTERY_RELOAD_PERCENT = [100, 85, 70, 70, 70, 50];
 
 export function samReloadTicks(cooldown: number, tiers: Tiers): number {
   return Math.floor(
@@ -402,7 +402,7 @@ export function nukeStrength(type: UnitType, tiers: Tiers): number {
 /** Nukes a silo holds, by Arsenal tier. */
 export const SILO_ARSENAL_TUBES = [1, 1, 2, 3, 4, 5];
 /** Reload time as a % of Config.SiloCooldown, by Arsenal tier. */
-const SILO_ARSENAL_RELOAD_PERCENT = [100, 80, 80, 80, 80, 50];
+export const SILO_ARSENAL_RELOAD_PERCENT = [100, 80, 80, 80, 80, 50];
 
 export function siloReloadTicks(cooldown: number, tiers: Tiers): number {
   return Math.floor(
@@ -434,7 +434,7 @@ export const POST_WATCHTOWER_WARSHIP_TIER = 4;
 /** Extra troop regrowth from the owner's best Barracks, % by tier. */
 export const POST_BARRACKS_REGROWTH_PERCENT = [0, 5, 10, 20, 35, 50];
 /** Troops (shown) each Barracks post adds to its owner's cap, by tier. */
-const POST_BARRACKS_TROOPS = [0, 0, 0, 100_000, 250_000, 500_000];
+export const POST_BARRACKS_TROOPS = [0, 0, 0, 100_000, 250_000, 500_000];
 
 /** A post's reach, grown by its Watchtower tier. */
 export function postReach(base: number, tiers: Tiers): number {

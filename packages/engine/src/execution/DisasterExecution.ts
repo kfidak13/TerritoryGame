@@ -1,6 +1,7 @@
 import { TileRef } from "@openfront/engine-api/game/GameMap";
 import {
   DisasterKind,
+  Good,
   MessageType,
   PlayerType,
   Structures,
@@ -12,15 +13,18 @@ import {
   BUILDING_DAMAGE_CHANCE,
   DISASTER_GRACE_TICKS,
   DISASTER_MEAN_TICKS,
+  DROUGHT_FOOD_SPOIL,
   DROUGHT_RADIUS,
   DROUGHT_TICKS,
   EARTHQUAKE_RADIUS,
   EARTHQUAKE_TROOP_LOSS,
+  EARTHQUAKE_TROOP_SHOCK,
   HUMAN_DISASTER_SHARE,
   HURRICANE_RADIUS,
   HURRICANE_RIG_DAMAGE,
   HURRICANE_SHIP_DAMAGE,
   HURRICANE_TROOP_LOSS,
+  HURRICANE_TROOP_SHOCK,
   OUTBREAK_CHECK_TICKS,
   OUTBREAK_TICKS,
   OUTBREAK_TROOP_DRAIN_PER_TICK,
@@ -31,6 +35,7 @@ import {
   TORNADO_SPEED,
   TORNADO_TICKS,
   TORNADO_TROOP_LOSS,
+  TORNADO_TROOP_SHOCK,
   ZOMBIE_DISASTER_CHANCE,
 } from "@openfront/engine-lib/game/Disasters";
 import { regionSize } from "@openfront/engine-lib/game/Goods";
@@ -243,7 +248,12 @@ export class DisasterExecution implements Execution {
     const mg = this.mg!;
     const radius = this.radius(EARTHQUAKE_RADIUS);
     this.announce(DisasterKind.Earthquake, tile, radius);
-    const killed = this.killTroops(tile, radius, EARTHQUAKE_TROOP_LOSS);
+    const killed = this.killTroops(
+      tile,
+      radius,
+      EARTHQUAKE_TROOP_SHOCK,
+      EARTHQUAKE_TROOP_LOSS,
+    );
     const damaged = this.damageBuildings(tile, radius, (u) =>
       mg.isLand(u.tile()),
     );
@@ -259,7 +269,12 @@ export class DisasterExecution implements Execution {
     const mg = this.mg!;
     const radius = this.radius(HURRICANE_RADIUS);
     this.announce(DisasterKind.Hurricane, tile, radius);
-    const killed = this.killTroops(tile, radius, HURRICANE_TROOP_LOSS);
+    const killed = this.killTroops(
+      tile,
+      radius,
+      HURRICANE_TROOP_SHOCK,
+      HURRICANE_TROOP_LOSS,
+    );
     const damaged = this.damageBuildings(
       tile,
       radius,
@@ -300,8 +315,22 @@ export class DisasterExecution implements Execution {
       this.disrupt(unit, mg.ticks() + DROUGHT_TICKS);
       farms.set(unit.owner(), (farms.get(unit.owner()) ?? 0) + 1);
     }
-    for (const [p, n] of farms) {
-      this.tell(p, "events_display.disaster_drought", { farms: n });
+    // The granaries of everyone whose land it parches spoil.
+    const spoiled = new Map<Player, number>();
+    this.forEachInDisc(tile, radius, (t) => {
+      const owner = mg.owner(t);
+      if (owner.isPlayer() && !spoiled.has(owner as Player)) {
+        const p = owner as Player;
+        const food = p.goods()[Good.Food] * DROUGHT_FOOD_SPOIL;
+        p.removeGoods([food, 0, 0]);
+        spoiled.set(p, food);
+      }
+    });
+    for (const p of this.affected(farms, spoiled)) {
+      this.tell(p, "events_display.disaster_drought", {
+        farms: farms.get(p) ?? 0,
+        food: Math.floor(spoiled.get(p) ?? 0),
+      });
     }
   }
 
@@ -349,7 +378,11 @@ export class DisasterExecution implements Execution {
     const loss = (p: Player) => {
       let l = t.losses.get(p);
       if (l === undefined) {
-        l = { troops: 0, buildings: 0 };
+        // The first touch shakes the whole army.
+        l = {
+          troops: p.removeTroops(p.troops() * TORNADO_TROOP_SHOCK),
+          buildings: 0,
+        };
         t.losses.set(p, l);
       }
       return l;
@@ -433,6 +466,7 @@ export class DisasterExecution implements Execution {
   private killTroops(
     center: TileRef,
     radius: number,
+    shock: number,
     share: number,
   ): Map<Player, number> {
     const mg = this.mg!;
@@ -446,7 +480,7 @@ export class DisasterExecution implements Execution {
     const killed = new Map<Player, number>();
     for (const [p, n] of tiles) {
       const covered = Math.min(1, n / Math.max(1, p.numTilesOwned()));
-      killed.set(p, p.removeTroops(p.troops() * share * covered));
+      killed.set(p, p.removeTroops(p.troops() * (shock + share * covered)));
     }
     return killed;
   }

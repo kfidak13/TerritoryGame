@@ -6,8 +6,10 @@ import {
   UnitType,
 } from "@openfront/engine-api/game/GameTypes";
 import {
+  DROUGHT_FOOD_SPOIL,
   DROUGHT_TICKS,
   EARTHQUAKE_TROOP_LOSS,
+  EARTHQUAKE_TROOP_SHOCK,
   OUTBREAK_CHECK_TICKS,
   OUTBREAK_TICKS,
   outbreakChance,
@@ -107,8 +109,12 @@ describe("Disasters", () => {
     disasters.strike(DisasterKind.Earthquake, game.ref(3, 3));
 
     expect(rome.troops()).toBeLessThan(100_000);
+    // Everyone it touches loses the shock share, more for more land.
+    expect(rome.troops()).toBeLessThanOrEqual(
+      100_000 * (1 - EARTHQUAKE_TROOP_SHOCK),
+    );
     expect(rome.troops()).toBeGreaterThanOrEqual(
-      100_000 * (1 - EARTHQUAKE_TROOP_LOSS),
+      100_000 * (1 - EARTHQUAKE_TROOP_SHOCK - EARTHQUAKE_TROOP_LOSS) - 1,
     );
     expect(levels(rome, UnitType.City)).toBeLessThan(before);
   });
@@ -133,11 +139,13 @@ describe("Disasters", () => {
     expect(rome.troops()).toBeLessThan(100_000);
   });
 
-  test("a drought stops Farms for a while", () => {
+  test("a drought stops Farms for a while and spoils stored food", () => {
     const farm = rome.buildUnit(UnitType.Farm, game.ref(2, 2), {});
     expect(workingLevels(rome)[Good.Food]).toBe(1);
+    rome.addGoods([400, 0, 0]);
 
     disasters.strike(DisasterKind.Drought, game.ref(2, 3));
+    expect(rome.goods()[Good.Food]).toBeCloseTo(400 * (1 - DROUGHT_FOOD_SPOIL));
     expect(farm.isDisrupted()).toBe(true);
     expect(workingLevels(rome)[Good.Food]).toBe(0);
 

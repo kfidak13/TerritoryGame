@@ -231,7 +231,10 @@ describe("goods economy", () => {
 
   test("hungry troops slow growth in proportion", async () => {
     const { game, player } = await goodsGame();
-    player.conquer(depositTiles(game, Good.Oil, 1)[0]);
+    const tile = depositTiles(game, Good.Oil, 1)[0];
+    player.conquer(tile);
+    // A city houses troops past what the land feeds; those eat.
+    player.buildUnit(UnitType.City, tile, {});
     const landFed = game.config().foodLandFed(player);
     // A quarter of what the land feeds goes hungry: a quarter of the penalty.
     player.setTroops(landFed * 1.25);
@@ -245,21 +248,37 @@ describe("goods economy", () => {
     expect(starving / fed).toBeCloseTo(1 - (1 - FOOD_SHORTAGE_GROWTH) / 4, 3);
   });
 
-  // Land feeds half the city-free troop cap, so a fresh spawn with no food
+  // Land feeds the whole city-free troop cap, so a fresh spawn with no food
   // deposit (and an empty granary) is not starving.
   test("troops the land feeds eat nothing", async () => {
     const { game, player } = await goodsGame();
     player.conquer(depositTiles(game, Good.Oil, 1)[0]);
     const landFed = game.config().foodLandFed(player);
-    expect(landFed).toBeCloseTo(
-      game.config().maxTroopsWithoutCities(player) / 2,
-    );
+    expect(landFed).toBeCloseTo(game.config().maxTroopsWithoutCities(player));
     player.setTroops(landFed - 1);
     expect(game.config().foodUpkeep(player)).toBe(0);
     expect(foodState(player, landFed)).toBe("normal");
 
-    player.setTroops(landFed + 300_000);
+    player.setTroops(landFed + 10_000_000);
     expect(game.config().foodUpkeep(player)).toBeCloseTo(0.1);
+  });
+
+  test("one level-1 Farm feeds a level-2 Metropolis", async () => {
+    const { game, player } = await goodsGame();
+    const food = depositTiles(game, Good.Food, fieldArea(game.map()));
+    for (const t of food) player.conquer(t);
+    player.addGold(10_000_000n);
+    game.addExecution(
+      new ConstructionExecution(player, UnitType.Farm, food[0]),
+    );
+    for (let i = 0; i < 5; i++) game.executeNextTick();
+    const city = player.buildUnit(UnitType.City, food[food.length - 1], {});
+    city.raiseTier(0);
+    city.raiseTier(0);
+    player.setTroops(game.config().maxTroops(player));
+    expect(game.config().foodUpkeep(player)).toBeLessThan(
+      player.goodsIncome()[Good.Food],
+    );
   });
 
   test("food income feeds troops even with an empty granary", async () => {

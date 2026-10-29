@@ -42,20 +42,26 @@ export const ZOMBIE_DISASTER_CHANCE = 0.05;
 export const DISASTER_GRACE_TICKS = 3 * 60 * 10;
 
 /** Disaster radii, as fractions of the region size. */
-export const EARTHQUAKE_RADIUS = 0.35;
-export const HURRICANE_RADIUS = 0.45;
-export const DROUGHT_RADIUS = 0.5;
-export const TORNADO_RADIUS = 0.05;
+export const EARTHQUAKE_RADIUS = 0.5;
+export const HURRICANE_RADIUS = 0.6;
+export const DROUGHT_RADIUS = 0.6;
+export const TORNADO_RADIUS = 0.08;
 
 /**
- * Share of a player's troops a disaster kills if it covered all their land;
- * it kills that share of the troops times the share of their land it covers.
+ * Troops a disaster kills: a shock share of the troops of anyone it touches
+ * at all, plus the loss share times the share of their land it covers
+ * (so a disaster over all their land kills shock + loss).
  */
-export const EARTHQUAKE_TROOP_LOSS = 0.5;
-export const HURRICANE_TROOP_LOSS = 0.35;
-export const TORNADO_TROOP_LOSS = 0.6;
+export const EARTHQUAKE_TROOP_SHOCK = 0.2;
+export const EARTHQUAKE_TROOP_LOSS = 0.6;
+export const HURRICANE_TROOP_SHOCK = 0.15;
+export const HURRICANE_TROOP_LOSS = 0.5;
+export const TORNADO_TROOP_SHOCK = 0.1;
+export const TORNADO_TROOP_LOSS = 0.8;
 /** Chance each building an earthquake or hurricane hits loses a level. */
-export const BUILDING_DAMAGE_CHANCE = 0.5;
+export const BUILDING_DAMAGE_CHANCE = 0.8;
+/** Share of the stored food a drought spoils for the land it parches. */
+export const DROUGHT_FOOD_SPOIL = 0.5;
 /** Damage a hurricane does to warships and oil rigs. */
 export const HURRICANE_SHIP_DAMAGE = 500;
 export const HURRICANE_RIG_DAMAGE = 1000;

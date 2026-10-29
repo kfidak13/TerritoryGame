@@ -40,7 +40,7 @@ import {
  * A worked field yields the same per second on every map scale: owned
  * deposits only trickle until a Farm, Mineshaft or Oil Extractor works them.
  * Food is a soft rule
- * (land feeds half a player's city-free troop cap; troops beyond that eat,
+ * (land feeds a player's city-free troop cap; the troops cities house eat,
  * and hungry troops slow troop growth), Oil moves (warships, missiles) and
  * Metal stands (defense posts, SAMs, silos, structure upgrades).
  */
@@ -51,10 +51,18 @@ export const FIELD_YIELD_PER_TICK = 0.1;
 export const FARM_FOOD_BOOST = 2;
 /** Share of its output an owned deposit tile gives with no building working it. */
 export const UNWORKED_SHARE = 0.25;
-/** Food one troop beyond the land-fed share eats per tick: a field feeds 300k. */
-export const FOOD_PER_TROOP = FIELD_YIELD_PER_TICK / 300_000;
-/** Share of the city-free troop cap that land feeds for free. */
-export const FOOD_LAND_FED_FRACTION = 0.5;
+/**
+ * Food one troop beyond what the land feeds eats per tick. A whole field's
+ * yield feeds 10M (1M shown), so one level-1 Farm (Farms work twice as
+ * hard) feeds about what a level-2 Metropolis houses, and a couple of
+ * level-5 Farms feed a level-5 one.
+ */
+export const FOOD_PER_TROOP = FIELD_YIELD_PER_TICK / 10_000_000;
+/**
+ * Share of the city-free troop cap that land feeds for free: all of it, so
+ * only the troops cities and Barracks house eat.
+ */
+export const FOOD_LAND_FED_FRACTION = 1;
 /** Stockpiles stop growing here. */
 export const GOODS_STOCK_CAP = 2000;
 /** Troop growth multiplier at the worst of a food shortage. */

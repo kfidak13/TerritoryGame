@@ -20,6 +20,7 @@ import { translateText } from "../../Utils";
 import { GameView, UnitView } from "../../view";
 import { goodsCostText } from "../GoodsText";
 import { flattenedBuildTable } from "./BuildMenu";
+import { levelEffects } from "./UpgradeEffects";
 
 const FOCUS = "outline-none focus-visible:ring-2 focus-visible:ring-amber-400";
 
@@ -134,6 +135,30 @@ export class BuildingPanel extends LitElement implements Controller {
         <div class="mt-1 text-xs leading-snug text-slate-400">
           ${translateText(`build_paths.${info.key}_desc`)}
         </div>
+        <ol class="mt-2 flex flex-col gap-0.5">
+          ${levelEffects(type, path).map((text, i) => {
+            const lvl = i + 1;
+            const done = lvl <= level;
+            const next = lvl === level + 1 && !shut;
+            return html`<li
+              class="flex gap-2 text-[11px] leading-snug ${done
+                ? "text-amber-100"
+                : next
+                  ? "text-slate-100"
+                  : "text-slate-500"}"
+            >
+              <span
+                class="w-3 shrink-0 font-bold tabular-nums ${done
+                  ? "text-amber-400"
+                  : next
+                    ? "text-emerald-400"
+                    : ""}"
+                >${lvl}</span
+              >
+              <span>${text}</span>
+            </li>`;
+          })}
+        </ol>
         ${maxed
           ? html`<div
               class="mt-2 text-xs font-bold uppercase tracking-wider text-amber-400"
